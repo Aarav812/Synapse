@@ -57,7 +57,7 @@ initFirebaseAdmin();
 // only if FRONTEND_ORIGIN is unset (development convenience).
 const corsOptions = process.env.FRONTEND_ORIGIN
   ? { origin: process.env.FRONTEND_ORIGIN.split(",").map((o) => o.trim()) }
-  : {};
+  : { origin: false };
 app.use(cors(corsOptions));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
@@ -72,6 +72,11 @@ function rateLimit(req, res, next) {
   const userId = req.user?.uid || req.ip;
   const now = Date.now();
   
+  if (rateLimitMap.size > 10000) {
+    console.warn("Rate limit map size exceeded 10000, clearing to prevent memory leak");
+    rateLimitMap.clear();
+  }
+
   if (!rateLimitMap.has(userId)) {
     rateLimitMap.set(userId, []);
   }
@@ -101,13 +106,7 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 // ── Auth Middleware ──
-// DISABLE_AUTH (set in .env) bypasses Firebase token verification for LOCAL
-// TESTING ONLY. Never enable this in production — it lets anyone call /api/chat.
 async function verifyFirebaseToken(req, res, next) {
-  if (process.env.DISABLE_AUTH === "true") {
-    req.user = { uid: "local-test-user", email: "local@test" };
-    return next();
-  }
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ error: "Unauthorized — no token provided" });
@@ -166,16 +165,47 @@ app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
     return res.status(400).json({ error: "Messages array is required" });
   }
 
+  // Validate all messages
+  for (const msg of messages) {
+    if (msg.role !== "user" && msg.role !== "assistant") {
+      return res.status(400).json({ error: "Invalid role" });
+    }
+    if (typeof msg.content !== "string" && !Array.isArray(msg.content)) {
+      return res.status(400).json({ error: "Invalid content format" });
+    }
+  }
+
   // Check if any message in the conversation contains an image, audio, or video
   let hasImage = false;
   let hasAudioVideo = false;
   for (const msg of messages) {
     if (Array.isArray(msg.content)) {
-      if (msg.content.some(block => block.type === "image_url")) {
-        hasImage = true;
-      }
-      if (msg.content.some(block => ["audio_url", "video_url", "input_audio"].includes(block.type))) {
-        hasAudioVideo = true;
+      for (const block of msg.content) {
+        if (block.type === "image_url") {
+          hasImage = true;
+          if (block.image_url && block.image_url.url) {
+            const url = block.image_url.url;
+            if (url.length > 10 * 1024 * 1024) {
+              return res.status(400).json({ error: "Image too large" });
+            }
+            if (!url.startsWith("data:") && !url.startsWith("http://") && !url.startsWith("https://")) {
+               return res.status(400).json({ error: "Invalid image URL" });
+            }
+          }
+        }
+        if (["audio_url", "video_url", "input_audio"].includes(block.type)) {
+          hasAudioVideo = true;
+          const urlObj = block[block.type];
+          if (urlObj && urlObj.url) {
+            const url = urlObj.url;
+            if (url.length > 10 * 1024 * 1024) {
+              return res.status(400).json({ error: "Media file too large" });
+            }
+            if (!url.startsWith("data:") && !url.startsWith("http://") && !url.startsWith("https://")) {
+               return res.status(400).json({ error: "Invalid media URL" });
+            }
+          }
+        }
       }
     }
   }

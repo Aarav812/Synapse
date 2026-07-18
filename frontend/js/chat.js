@@ -2112,9 +2112,21 @@ function renderMarkdown(text, isStreaming = false) {
   // Blockquotes
   html = html.replace(/^&gt;\s?(.+)$/gm, "<blockquote>$1</blockquote>");
   // Images (must come before links so ![alt](url) isn't consumed by [alt](url))
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="max-w-full rounded-lg my-2 shadow-lg border border-outline-variant/30" />');
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
+    const cleanUrl = url.trim().replace(/['"]/g, '');
+    if (/^(javascript:|vbscript:|data:text\/html)/i.test(cleanUrl)) {
+      return `[Blocked Image]`;
+    }
+    return `<img src="${cleanUrl}" alt="${alt}" class="max-w-full rounded-lg my-2 shadow-lg border border-outline-variant/30" />`;
+  });
   // Links
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
+    const cleanUrl = url.trim().replace(/['"]/g, '');
+    if (/^(javascript:|vbscript:|data:)/i.test(cleanUrl)) {
+      return `[Blocked Link]`;
+    }
+    return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+  });
 
   // Paragraphs and Newlines
   html = html.replace(/\n\n/g, "</p><p>");
