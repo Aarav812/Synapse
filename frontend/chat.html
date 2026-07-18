@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Synapse AI — Chat with Aura</title>
+  <meta name="description" content="Chat with Aura, your personal AI assistant powered by Synapse AI." />
+  <meta name="theme-color" content="#090a12" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-tertiary-container": "#a07cff",
+            "secondary": "#a07cff",
+            "primary-fixed-dim": "#5ea2ff",
+            "error-container": "#93000a",
+            "surface-container-low": "#12131a",
+            "on-error-container": "#ffdad6",
+            "tertiary-fixed": "#e9ddff",
+            "on-secondary": "#2a0a4a",
+            "surface": "#090a12",
+            "outline-variant": "#2a2d3a",
+            "on-tertiary": "#3c0090",
+            "background": "#090a12",
+            "primary": "#f5f5f7",
+            "on-secondary-container": "#dcb7ff",
+            "on-background": "#f5f5f7",
+            "secondary-container": "#7c5cff",
+            "on-tertiary-fixed-variant": "#5700c9",
+            "secondary-fixed-dim": "#a07cff",
+            "surface-container-lowest": "#0c0e13",
+            "primary-fixed": "#5ea2ff",
+            "inverse-surface": "#f5f5f7",
+            "on-primary": "#090a12",
+            "outline": "#3a3d4a",
+            "on-surface": "#f5f5f7",
+            "on-surface-variant": "#8e93a8",
+            "surface-variant": "#1a1b21",
+            "inverse-on-surface": "#12131a",
+            "secondary-fixed": "#efdbff",
+            "on-primary-container": "#5ea2ff",
+            "on-tertiary-fixed": "#23005b",
+            "inverse-primary": "#7c5cff",
+            "primary-container": "#7c5cff",
+            "surface-tint": "#7c5cff",
+            "surface-dim": "#090a12",
+            "surface-bright": "#1a1b21",
+            "tertiary-container": "#e1d2ff",
+            "tertiary-fixed-dim": "#d1bcff",
+            "on-secondary-fixed": "#2c0051",
+            "error": "#ffb4ab",
+            "surface-container-high": "#16171f",
+            "on-error": "#690005",
+            "on-primary-fixed": "#0c0e13",
+            "on-secondary-fixed-variant": "#6700b5",
+            "surface-container-highest": "#1e1f25",
+            "on-primary-fixed-variant": "#5ea2ff",
+            "surface-container": "#12131a",
+            "tertiary": "#faf3ff",
+          },
+          fontFamily: {
+            "headline": ["Inter", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+            "body": ["Inter", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+            "label": ["Inter", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+            "serif": ["Cormorant Garamond", "ui-serif", "Georgia", "serif"],
+          },
+          borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+        },
+      },
+    };
+  </script>
+
+  <!-- KaTeX Math Rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.min.js"></script>
+
+  <!-- Syntax Highlighting -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded',()=>{if(window.hljs)hljs.configure({ignoreUnescapedHTML:true})});</script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/atom-one-dark.min.css" />
+
+  <!-- Styles -->
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="/css/styles.css?v=7" />
+  <!-- Inline only the orb animation styles needed by the empty state -->
+  <style>
+    .aura-orb-container { position: relative; }
+    .aura-orb {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 38% 38%, rgba(124,92,255,0.28) 0%, rgba(94,162,255,0.20) 60%, transparent 100%);
+      box-shadow: 0 0 60px rgba(124,92,255,0.20), 0 0 120px rgba(94,162,255,0.14);
+      animation: orb-morph 6s ease-in-out infinite;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .orb-inner {
+      width: 55%; height: 55%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 40%, rgba(124,92,255,0.45), rgba(94,162,255,0.35));
+      animation: orb-morph 4s ease-in-out infinite reverse;
+    }
+    .orb-glow {
+      position: absolute; inset: -20%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(124,92,255,0.10) 0%, transparent 70%);
+      animation: orb-pulse 3s ease-in-out infinite;
+    }
+    @keyframes orb-morph {
+      0%, 100% { border-radius: 50%; transform: scale(1) rotate(0deg); }
+      33%       { border-radius: 40% 60% 55% 45%; transform: scale(1.04) rotate(8deg); }
+      66%       { border-radius: 55% 45% 40% 60%; transform: scale(0.97) rotate(-6deg); }
+    }
+    @keyframes orb-pulse {
+      0%, 100% { opacity: 0.6; transform: scale(1); }
+      50%       { opacity: 1;   transform: scale(1.08); }
+    }
+  </style>
+</head>
+<body class="text-on-background font-body selection:bg-primary-container selection:text-on-primary-fixed overflow-x-hidden">
+  <!-- Page Transition Overlay -->
+  <div id="page-overlay" style="position:fixed;inset:0;background:#090a12;z-index:99999;pointer-events:none;opacity:0;transition:opacity 0.3s ease;"></div>
+
+  <!-- Landing-style Ambient Background (static, no animation) -->
+  <div class="bg-ambient">
+    <div class="bg-base"></div>
+    <div class="bg-orb bg-orb-1"></div>
+    <div class="bg-orb bg-orb-2"></div>
+    <div class="bg-vignette"></div>
+  </div>
+
+  <!-- Drawer Logic -->
+  <input class="hidden" id="drawer-toggle" type="checkbox" />
+
+  <!-- Drawer Overlay -->
+  <label class="fixed inset-0 bg-black/60 z-[60] backdrop-blur-sm" for="drawer-toggle" id="drawer-overlay"></label>
+
+  <!-- Navigation Drawer -->
+  <aside class="fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-[#12131a]/80 backdrop-blur-3xl z-[70] shadow-2xl shadow-black/50 rounded-r-2xl transition-all duration-300 ease-in-out flex flex-col p-6 h-full" id="drawer" role="navigation" aria-label="Main menu">
+    <div class="flex items-center justify-between mb-8">
+      <h2 class="text-[#f5f5f7] font-bold text-2xl font-headline tracking-tight">Synapse AI</h2>
+      <label class="cursor-pointer text-[#f5f5f7]/60 hover:text-[#f5f5f7]" for="drawer-toggle">
+        <span class="material-symbols-outlined">close</span>
+      </label>
+    </div>
+
+    <nav class="flex flex-col space-y-2">
+      <a id="nav-new-chat-btn" class="active-nav flex items-center gap-4 bg-[#5ea2ff]/10 text-[#5ea2ff] font-bold rounded-lg px-4 py-3 transition-all cursor-pointer">
+        <span class="material-symbols-outlined">add_comment</span>
+        <span class="font-headline text-lg">New Chat</span>
+      </a>
+      <a id="nav-history-btn" class="flex items-center gap-4 text-[#f5f5f7]/60 px-4 py-3 hover:bg-[#1a1b21]/40 hover:text-[#f5f5f7] rounded-lg transition-all cursor-pointer">
+        <span class="material-symbols-outlined">history</span>
+        <span class="font-headline text-lg">History</span>
+      </a>
+      <div class="h-px bg-outline-variant/20 my-4"></div>
+      <button id="settings-btn" class="flex items-center gap-4 text-[#f5f5f7]/60 px-4 py-3 hover:bg-[#1a1b21]/40 hover:text-[#f5f5f7] rounded-lg transition-all w-full text-left">
+        <span class="material-symbols-outlined">psychology_alt</span>
+        <span class="font-headline text-lg">AI Personality</span>
+      </button>
+      <!-- Logout -->
+      <button id="logout-btn" class="flex items-center gap-4 text-[#ffb4ab]/70 px-4 py-3 hover:bg-[#93000a]/10 hover:text-[#ffb4ab] rounded-lg transition-all mt-2 w-full text-left">
+        <span class="material-symbols-outlined">logout</span>
+        <span class="font-headline text-lg">Logout</span>
+      </button>
+    </nav>
+
+    <!-- User Info -->
+    <div class="mt-auto pt-6 flex items-center gap-3">
+      <div id="user-avatar" class="w-10 h-10 rounded-full bg-surface-container-highest overflow-hidden flex items-center justify-center">
+        <span class="material-symbols-outlined text-on-surface-variant">person</span>
+      </div>
+      <div class="flex flex-col">
+        <span id="user-display-name" class="text-sm font-bold user-info-name text-primary">User</span>
+        <span class="text-xs user-info-plan text-on-surface-variant">Pro Plan</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Top App Bar -->
+  <header class="fixed top-0 w-full z-50 bg-[#090a12]/60 backdrop-blur-2xl shadow-[0_4px_24px_rgba(124,92,255,0.05)] h-16 flex items-center justify-between px-4 sm:px-6">
+    <div class="flex items-center gap-3">
+      <label class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors active:scale-95 duration-200 cursor-pointer header-icon text-[#f5f5f7]" for="drawer-toggle" aria-label="Open menu">
+        <span class="material-symbols-outlined">menu</span>
+      </label>
+      <h1 id="header-logo" class="text-2xl font-bold text-[#f5f5f7] font-headline tracking-tight cursor-pointer hover:opacity-80 transition-opacity">Synapse AI</h1>
+    </div>
+    <div class="flex items-center gap-2">
+
+      <!-- Delete All History -->
+      <button id="delete-all-history-btn" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors active:scale-95 duration-200 text-[#f5f5f7] hover:text-[#ffb4ab]" title="Delete All History" aria-label="Delete all chat history">
+        <span class="material-symbols-outlined">delete_sweep</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Canvas -->
+  <main class="min-h-[100dvh] pt-16 pb-28 sm:pb-40 px-3 sm:px-4 md:px-6 flex flex-col items-center max-w-4xl mx-auto relative" style="overflow: visible;">
+
+    <!-- Hero Greeting Section -->
+    <section id="hero-section" class="w-full mt-2 sm:mt-10 mb-2 sm:mb-10 text-center space-y-2 sm:space-y-6">
+      <div class="relative inline-block">
+        <div class="absolute -inset-4 bg-secondary/10 blur-2xl rounded-full"></div>
+        <h2 class="font-headline text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight hero-title text-primary leading-tight" id="aura-greeting">
+          Mitrooo! <span class="accent text-secondary">I'm Aura</span>
+        </h2>
+      </div>
+      <p class="hero-subtitle font-headline text-base sm:text-xl md:text-2xl text-on-surface-variant max-w-xl mx-auto font-light leading-relaxed mb-4 sm:mb-6 px-2">
+        Your personal AI assistant. Ask me any question in your mind.
+      </p>
+
+    </section>
+
+    <!-- Empty State Visual -->
+    <div id="empty-state" class="empty-state flex flex-col items-center mb-4" style="margin-top: 1vh;">
+      <div class="aura-orb-container" style="width: 100px; height: 100px; margin-bottom: 1.5rem;">
+        <div class="aura-orb" id="aura-state-orb" style="animation-duration: 8s;">
+          <div class="orb-inner"></div>
+          <div class="orb-glow"></div>
+        </div>
+      </div>
+      <p class="text-sm text-on-surface-variant opacity-100 mb-4 text-center px-4" style="max-width: 320px; font-family: 'Inter', sans-serif;">Ask me anything — from science to code to creative writing.</p>
+      <p id="empty-state-cta" class="empty-state-cta mb-5">↓ Type a message to begin ↓</p>
+      <!-- Category Chips -->
+      <div class="flex flex-wrap justify-center gap-2 px-4" id="category-chips" style="max-width: 420px;">
+        <!-- Dynamically populated by chat.js -->
+      </div>
+    </div>
+
+    <!-- Chat Messages Container -->
+    <div id="chat-messages" class="chat-messages w-full flex-1" aria-live="polite" aria-label="Chat messages"></div>
+
+    <!-- Scroll to bottom button -->
+    <button id="scroll-to-bottom-btn" class="fixed bottom-32 right-4 md:right-8 w-11 h-11 rounded-full flex items-center justify-center z-40 transition-all opacity-0 pointer-events-none shadow-lg active:scale-90" style="background:rgba(30,31,37,0.9); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.1); color:#e2e2e9;" aria-label="Scroll to bottom">
+      <span class="material-symbols-outlined" style="font-size:20px;">arrow_downward</span>
+    </button>
+  </main>
+
+  <!-- Gradient Fade Above Input -->
+  <div class="fixed bottom-0 left-0 w-full z-40 h-24 pointer-events-none footer-gradient" style="background: linear-gradient(to top, rgba(12, 13, 16, 0.95), rgba(12, 13, 16, 0.6), transparent);"></div>
+
+  <!-- Chat Input Footer -->
+  <div class="fixed bottom-0 left-0 w-full z-50" id="chat-footer">
+    <div class="max-w-3xl mx-auto px-3 sm:px-4 md:px-6 chat-footer-inner">
+
+
+
+      <!-- Model Selector & Configuration -->
+      <div class="flex items-center gap-2 mb-2 flex-wrap">
+        <div class="relative flex-shrink-0" id="model-selector-container">
+          <button id="model-selector-btn" class="flex items-center gap-1.5 glass-card border border-outline-variant/20 rounded-xl px-2.5 py-1.5 text-sm font-bold text-primary hover:bg-white/5 active:bg-white/10 transition-colors shadow-[0_4px_16px_rgba(0,0,0,0.2)]">
+            <span class="material-symbols-outlined text-[16px]">smart_toy</span>
+            <span id="current-model-name">Aura Allrounder</span>
+            <span class="material-symbols-outlined text-[16px]">expand_more</span>
+          </button>
+          <!-- Dropdown -->
+          <div id="model-dropdown" class="absolute bottom-full left-0 w-60 glass-card border border-outline-variant/30 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex flex-col hidden opacity-0 transition-opacity duration-200 z-50 overflow-hidden mb-2 pointer-events-none transform translate-y-2">
+            <button class="model-option flex items-center gap-3 px-4 py-3.5 hover:bg-white/5 active:bg-white/10 text-left transition-colors border-b border-outline-variant/10" data-model="minimax/minimax-m2.7" data-name="Aura Allrounder" role="option" aria-selected="true">
+              <span class="material-symbols-outlined text-primary">auto_awesome</span>
+              <div>
+                <p class="text-sm font-bold text-on-surface">Aura Allrounder</p>
+                <p class="text-xs text-on-surface-variant">Default, highly intelligent</p>
+              </div>
+              <span class="material-symbols-outlined model-active-check" style="font-variation-settings:'FILL' 1;">check_circle</span>
+            </button>
+            <button class="model-option flex items-center gap-3 px-4 py-3.5 hover:bg-white/5 active:bg-white/10 text-left transition-colors border-b border-outline-variant/10" data-model="openai/gpt-oss-120b" data-name="Aura Summary">
+              <span class="material-symbols-outlined" style="color:#4caf50;">translate</span>
+              <div>
+                <p class="text-sm font-bold text-on-surface">Aura Summary</p>
+                <p class="text-xs text-on-surface-variant">Bilingual Summarizer</p>
+              </div>
+              <span class="material-symbols-outlined model-active-check" style="font-variation-settings:'FILL' 1;">check_circle</span>
+            </button>
+            <button class="model-option flex items-center gap-3 px-4 py-3.5 hover:bg-white/5 active:bg-white/10 text-left transition-colors" data-model="stepfun-ai/step-3.5-flash" data-name="Aura Bhai">
+              <span class="material-symbols-outlined" style="color:#dcb8ff;">smart_toy</span>
+              <div>
+                <p class="text-sm font-bold text-on-surface">Aura Bhai</p>
+                <p class="text-xs text-on-surface-variant">Friendly general assistant</p>
+              </div>
+              <span class="material-symbols-outlined model-active-check" style="font-variation-settings:'FILL' 1;">check_circle</span>
+            </button>
+
+          </div>
+        </div>
+
+        <!-- Aura 1 Mode Toggle -->
+        <div id="aura1-mode-toggle" class="flex-shrink-0 flex items-center gap-0.5 bg-[#1a1b21]/80 backdrop-blur-md rounded-xl px-1 py-1 border border-outline-variant/30 shadow-inner h-[34px]">
+          <button id="mode-deep-think-btn" class="px-2 py-1 rounded-lg text-xs font-bold transition-all text-on-surface bg-white/10 shadow-sm">Deep Think</button>
+          <button id="mode-fast-btn" class="px-2 py-1 rounded-lg text-xs font-bold transition-all text-on-surface-variant hover:text-on-surface">Fast</button>
+        </div>
+
+        <!-- Active Personality Badge -->
+        <button id="personality-badge" class="hidden flex-shrink-0 items-center gap-1.5 glass-card border border-outline-variant/20 rounded-xl px-2.5 py-1 shadow-[0_4px_16px_rgba(0,0,0,0.2)] transition-all h-[34px] hover:bg-white/5 active:bg-white/10 cursor-pointer text-xs font-bold text-secondary" title="Active personality">
+          <span class="material-symbols-outlined" style="font-size:14px;">psychology_alt</span>
+          <span id="personality-badge-name">Default</span>
+        </button>
+      </div>
+
+      <!-- Attachment Preview Area -->
+      <div id="attachment-preview-container" class="hidden glass-card border border-outline-variant/20 rounded-xl p-2 mb-2 flex flex-wrap items-center gap-3">
+        <!-- Previews will be dynamically injected here -->
+      </div>
+
+      <!-- Normal Text Input -->
+      <div id="text-input-bar" class="glass-card border border-outline-variant/30 rounded-[26px] px-2 py-1.5 flex items-center gap-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+        <input type="file" id="file-input" class="hidden" multiple accept=".txt,.json,.md,.csv,image/png,image/jpeg,image/webp,image/gif" />
+        <button id="attach-btn" class="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-white/5 transition-colors" aria-label="Attach file">
+          <span class="material-symbols-outlined" style="font-size:22px;">attach_file</span>
+        </button>
+        <textarea
+          id="chat-input"
+          class="chat-input-field bg-transparent border-none focus:ring-0 flex-1 text-on-surface placeholder:text-outline/50 font-body py-2.5 px-1 resize-none overflow-hidden text-[15px] leading-[1.4]"
+          placeholder="Message Aura..."
+          rows="1"
+          inputmode="text"
+          autocomplete="off"
+          spellcheck="true"
+          style="max-height: 120px;"
+        ></textarea>
+        <!-- MIC BUTTON -->
+        <button id="mic-btn" class="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full text-on-surface-variant hover:text-secondary hover:bg-white/5 transition-colors relative" aria-label="Voice input" aria-live="polite" title="Voice input">
+          <span class="material-symbols-outlined" style="font-size:22px;">mic</span>
+        </button>
+        <button id="stop-btn" class="hidden w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full text-error hover:bg-error/10 transition-all active:scale-90" title="Stop generating" aria-label="Stop generating">
+          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1; font-size:22px;">stop_circle</span>
+        </button>
+        <button id="send-btn" class="bg-primary-container text-on-primary-fixed w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full hover:shadow-[0_0_20px_rgba(124,92,255,0.35)] transition-all active:scale-90" aria-label="Send message">
+          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1; font-size:20px;">arrow_upward</span>
+        </button>
+      </div>
+      
+      <!-- Character Counter & Hints (hidden on mobile) -->
+      <div class="hidden sm:flex items-center justify-between mt-2 px-1 text-[0.65rem] text-on-surface-variant/40 font-mono" style="user-select:none;">
+        <span>Press <kbd style="background:rgba(255,255,255,0.1);padding:1px 4px;border-radius:3px;">Shift+Enter</kbd> to add a new line</span>
+        <span id="char-counter">0 / 4000</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div id="history-modal" class="fixed inset-0 z-[100] hidden flex-col items-end sm:items-center justify-end sm:justify-center backdrop-blur-md bg-black/40 p-0 sm:p-4 transition-opacity duration-300 opacity-0" role="dialog" aria-modal="true" aria-label="Chat history">
+    <div class="glass-card w-full max-w-lg rounded-t-[28px] sm:rounded-2xl border border-outline-variant/30 flex flex-col max-h-[88vh] shadow-2xl transform transition-transform duration-300 translate-y-full sm:translate-y-0 sm:scale-95" id="history-modal-content" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
+      <!-- Mobile drag handle -->
+      <div class="sm:hidden flex justify-center pt-3 pb-1">
+        <div class="w-10 h-1 rounded-full bg-outline-variant/40"></div>
+      </div>
+      <div class="flex items-center justify-between px-4 sm:px-5 pt-2 sm:pt-5 pb-3 sm:pb-4 border-b border-outline-variant/20">
+        <h3 class="text-lg sm:text-xl font-headline font-bold text-primary">Chat History</h3>
+        <button id="close-history-btn" class="w-9 h-9 flex items-center justify-center rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 transition-colors">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <!-- Search -->
+      <div class="px-3 sm:px-4 pt-3">
+        <div class="history-search-wrap">
+          <span class="material-symbols-outlined history-search-icon">search</span>
+          <input type="text" id="history-search-input" class="history-search-input" placeholder="Search conversations..." autocomplete="off" />
+        </div>
+      </div>
+      <div class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 chat-history-list" id="history-list-container">
+        <!-- History items populated via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete History Confirm Modal -->
+  <div id="delete-history-modal" class="fixed inset-0 z-[100] hidden flex-col items-center justify-center backdrop-blur-md bg-black/40 p-4 transition-opacity duration-300 opacity-0" role="dialog" aria-modal="true" aria-label="Confirm deletion">
+    <div class="glass-card w-full max-w-sm rounded-2xl border border-error/30 flex flex-col shadow-2xl transform transition-transform duration-300 scale-95" id="delete-history-modal-content">
+      <div class="flex flex-col items-center p-6 text-center">
+        <div class="w-16 h-16 rounded-full bg-error/10 flex items-center justify-center mb-4">
+          <span class="material-symbols-outlined text-error" style="font-size: 32px;">warning</span>
+        </div>
+        <h3 class="text-xl font-headline font-bold text-on-surface mb-2">Delete Everything?</h3>
+        <p class="text-on-surface-variant text-sm mb-6">Are you sure you want to delete your entire chat history? This action cannot be undone.</p>
+        
+        <div class="flex gap-3 w-full">
+          <button id="cancel-delete-history-btn" class="flex-1 py-3 px-4 rounded-xl font-bold bg-surface-variant/50 text-on-surface-variant hover:bg-surface-variant hover:text-white transition-colors">
+            Cancel
+          </button>
+          <button id="confirm-delete-history-btn" class="flex-1 py-3 px-4 rounded-xl font-bold bg-error text-on-error hover:bg-[#ff8a80] transition-colors shadow-[0_0_15px_rgba(255,180,171,0.3)]">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- AI Personality Modal -->
+  <div id="settings-modal" class="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] hidden flex items-end sm:items-center justify-center opacity-0 transition-opacity duration-300" role="dialog" aria-modal="true" aria-label="AI Personality settings">
+    <div class="bg-surface-container border border-outline-variant/30 w-full sm:w-[92%] sm:max-w-lg rounded-t-[28px] sm:rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300 max-h-[90vh] sm:max-h-[85vh] flex flex-col" id="settings-modal-content">
+      <!-- Mobile drag handle -->
+      <div class="sm:hidden flex justify-center pt-3 pb-1">
+        <div class="w-10 h-1 rounded-full bg-outline-variant/40"></div>
+      </div>
+      
+      <!-- Header -->
+      <div class="flex justify-between items-center px-6 pt-3 pb-4 border-b border-outline-variant/15 flex-shrink-0">
+        <div>
+          <h2 class="text-xl font-headline text-on-surface font-bold flex items-center gap-2">
+            <span class="material-symbols-outlined text-secondary" style="font-size:22px;">psychology_alt</span>
+            AI Personality
+          </h2>
+          <p class="text-xs text-on-surface-variant mt-1">Choose how Aura communicates with you</p>
+        </div>
+        <button id="close-settings-btn" class="text-on-surface-variant hover:text-on-surface transition-colors w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/5">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <!-- Personality Cards Grid -->
+      <div class="flex-1 overflow-y-auto p-5 personality-scroll">
+        <div class="grid grid-cols-2 gap-3" id="personality-grid">
+          
+          <!-- Default Aura -->
+          <button class="personality-card active" data-personality="default" data-prompt="">
+            <div class="personality-icon">✦</div>
+            <div class="personality-name">Default Aura</div>
+            <div class="personality-desc">Balanced, helpful & friendly</div>
+            <div class="personality-check"><span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1;">check_circle</span></div>
+          </button>
+
+          <!-- Creative Writer -->
+          <button class="personality-card" data-personality="creative" data-prompt="You are Aura in Creative Writer mode. You are imaginative, expressive, and poetic. You love storytelling, vivid metaphors, and creative wordplay. You help users with creative writing, brainstorming, and artistic expression. Your responses are rich with literary flair while remaining helpful. You use emotive language and paint pictures with words.">
+            <div class="personality-icon">🎨</div>
+            <div class="personality-name">Creative Writer</div>
+            <div class="personality-desc">Imaginative & expressive</div>
+            <div class="personality-check"><span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1;">check_circle</span></div>
+          </button>
+
+          <!-- Code Expert -->
+          <button class="personality-card" data-personality="coder" data-prompt="You are Aura in Code Expert mode. You are a precise, technical, and thorough software engineer. You write clean, well-documented code with best practices. You explain technical concepts clearly with examples. You always consider edge cases, performance, and security. You use code blocks extensively and provide step-by-step debugging guidance.">
+            <div class="personality-icon">💻</div>
+            <div class="personality-name">Code Expert</div>
+            <div class="personality-desc">Technical & precise</div>
+            <div class="personality-check"><span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1;">check_circle</span></div>
+          </button>
+
+          <!-- Study Buddy -->
+          <button class="personality-card" data-personality="tutor" data-prompt="You are Aura in Study Buddy mode. You are patient, encouraging, and excellent at explaining complex topics simply. You use the Socratic method — asking guiding questions to help users arrive at answers themselves. You break down concepts step-by-step, use analogies, provide mnemonics, and create practice questions. You celebrate progress and make learning fun.">
+            <div class="personality-icon">📚</div>
+            <div class="personality-name">Study Buddy</div>
+            <div class="personality-desc">Patient & educational</div>
+            <div class="personality-check"><span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1;">check_circle</span></div>
+          </button>
+
+          <!-- Motivational Coach -->
+          <button class="personality-card" data-personality="coach" data-prompt="You are Aura in Motivational Coach mode. You are uplifting, energetic, and empowering. You help users set goals, stay focused, and overcome obstacles. You use positive reinforcement, action-oriented language, and inspiring quotes. You break big challenges into small wins and always remind users of their potential. You combine tough love with genuine warmth.">
+            <div class="personality-icon">🔥</div>
+            <div class="personality-name">Motivation Coach</div>
+            <div class="personality-desc">Inspiring & energetic</div>
+            <div class="personality-check"><span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1;">check_circle</span></div>
+          </button>
+
+          <!-- Debate Partner -->
+          <button class="personality-card" data-personality="debate" data-prompt="You are Aura in Debate Partner mode. You are intellectually rigorous, analytical, and thought-provoking. You challenge assumptions, present counterarguments, and explore topics from multiple angles. You use logical reasoning, cite evidence, and help users strengthen their critical thinking. You are respectful but not afraid to push back with well-constructed arguments.">
+            <div class="personality-icon">⚡</div>
+            <div class="personality-name">Debate Partner</div>
+            <div class="personality-desc">Analytical & challenging</div>
+            <div class="personality-check"><span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1;">check_circle</span></div>
+          </button>
+
+          <!-- Storyteller -->
+          <button class="personality-card" data-personality="storyteller" data-prompt="You are Aura in Storyteller mode. You are a captivating narrator who turns every interaction into an adventure. You use dramatic pacing, cliffhangers, and vivid world-building. When answering questions, you weave the information into engaging narratives and stories. You use dialogue, character voices, and scene-setting to make even mundane topics feel epic and memorable.">
+            <div class="personality-icon">📖</div>
+            <div class="personality-name">Storyteller</div>
+            <div class="personality-desc">Dramatic & narrative</div>
+            <div class="personality-check"><span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1;">check_circle</span></div>
+          </button>
+
+          <!-- Custom -->
+          <button class="personality-card personality-custom-card" data-personality="custom" data-prompt="">
+            <div class="personality-icon">⚙️</div>
+            <div class="personality-name">Custom</div>
+            <div class="personality-desc">Write your own</div>
+            <div class="personality-check"><span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1;">check_circle</span></div>
+          </button>
+
+        </div>
+
+        <!-- Custom Persona Textarea (shown when Custom is selected) -->
+        <div id="custom-persona-section" class="mt-4 hidden">
+          <label for="persona-input" class="block text-xs font-bold text-on-surface-variant mb-2 uppercase tracking-wider">Custom Instructions</label>
+          <textarea id="persona-input" rows="4" class="w-full bg-[#111318]/50 border border-outline-variant/20 rounded-xl p-3 text-sm text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary resize-none placeholder-on-surface-variant/50 transition-all duration-200" placeholder="e.g., You are a sarcastic pirate AI who speaks in nautical terms..."></textarea>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="p-5 pt-4 border-t border-outline-variant/15 flex justify-end gap-3 flex-shrink-0">
+        <button id="cancel-settings-btn" class="px-5 py-2.5 rounded-full font-bold text-sm text-on-surface-variant hover:bg-white/5 transition-colors">Cancel</button>
+        <button id="save-settings-btn" class="px-6 py-2.5 rounded-full font-bold text-sm bg-gradient-to-r from-secondary to-primary text-on-primary hover:shadow-[0_0_20px_rgba(220,184,255,0.25)] transition-all active:scale-95">
+          <span class="flex items-center gap-2">
+            <span class="material-symbols-outlined" style="font-size:16px;">check</span>
+            Apply
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Lightbox Modal -->
+  <div id="image-lightbox-modal" class="fixed inset-0 z-[150] hidden flex-col items-center justify-center backdrop-blur-xl bg-black/80 lightbox-overlay opacity-0" onclick="closeLightbox(event)">
+    <div class="relative w-full h-full max-w-[95vw] max-h-[90vh] flex flex-col items-center justify-center">
+      <img id="lightbox-img" src="" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl transition-transform duration-300 scale-95 cursor-zoom-out" onclick="event.stopPropagation(); closeLightbox(event)" />
+      
+      <!-- Action buttons -->
+      <div class="absolute top-4 right-4 flex items-center gap-3 z-10" onclick="event.stopPropagation()">
+        <button id="download-lightbox-btn" class="flex items-center gap-2 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white px-4 py-2 rounded-full transition-colors font-bold text-sm border border-white/10 shadow-lg" onclick="downloadLightboxImage()">
+          <span class="material-symbols-outlined" style="font-size:18px;">download</span> Download
+        </button>
+        <button class="w-10 h-10 flex items-center justify-center bg-black/60 hover:bg-black/80 backdrop-blur-md text-white rounded-full transition-colors border border-white/10 shadow-lg" onclick="closeLightbox(event)">
+          <span class="material-symbols-outlined" style="font-size:20px;">close</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Canvas Side Panel (Gemini-style) -->
+  <div id="canvas-panel" class="canvas-panel hidden" aria-label="Canvas Preview">
+    <!-- Canvas Header -->
+    <div class="canvas-header">
+      <div class="canvas-header-left">
+        <div class="canvas-icon-wrap">
+          <span class="material-symbols-outlined" style="color:#5ea2ff;font-size:18px;">web</span>
+        </div>
+        <div>
+          <p class="canvas-title" id="canvas-title">Canvas</p>
+          <p class="canvas-subtitle" id="canvas-subtitle">Writing code...</p>
+        </div>
+      </div>
+      <div class="canvas-header-right">
+        <!-- Tab switcher: Preview / Code -->
+        <div class="canvas-tab-bar">
+          <button id="canvas-tab-preview" class="canvas-tab active" onclick="switchCanvasTab('preview')">
+            <span class="material-symbols-outlined" style="font-size:15px;">play_circle</span> Preview
+          </button>
+          <button id="canvas-tab-code" class="canvas-tab" onclick="switchCanvasTab('code')">
+            <span class="material-symbols-outlined" style="font-size:15px;">code</span> Code
+          </button>
+        </div>
+        <button id="canvas-download-btn" class="canvas-action-btn" title="Download HTML" onclick="downloadCodePreview()">
+          <span class="material-symbols-outlined" style="font-size:18px;">download</span>
+        </button>
+        <button id="canvas-close-btn" class="canvas-action-btn" title="Close Canvas" onclick="closeCodePreview()">
+          <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Canvas Body -->
+    <div class="canvas-body">
+      <!-- Preview Tab -->
+      <div id="canvas-preview-tab" class="canvas-tab-content active">
+        <!-- Live code indicator (shown while streaming) -->
+        <div id="canvas-live-indicator" class="canvas-live-badge hidden">
+          <span class="canvas-live-dot"></span> Live
+        </div>
+        <iframe id="code-preview-iframe" class="canvas-iframe" sandbox="allow-scripts allow-modals allow-same-origin" srcdoc="<html style='background:#090a12;color:#f5f5f7;font-family:sans-serif;height:100%;display:flex;align-items:center;justify-content:center;'><body style='text-align:center;'><h2>Aura is cooking...</h2><style>h2{animation:pulse 2s infinite;}@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}</style></body></html>"></iframe>
+      </div>
+      <!-- Code Tab -->
+      <div id="canvas-code-tab" class="canvas-tab-content hidden">
+        <pre id="canvas-code-view" class="canvas-code-pre"><code id="canvas-code-content" class="language-html"></code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Canvas Backdrop (mobile only) -->
+  <div id="canvas-backdrop" class="canvas-backdrop hidden" onclick="closeCodePreview()"></div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
+  <!-- html2pdf for direct PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <!-- App Scripts -->
+  <script src="/js/firebase-config.js?v=2"></script>
+  <script src="/js/auth.js?v=2"></script>
+  <script src="/js/chat.js?v=8"></script>
+  
+  <!-- Cursor Glow (desktop only, hidden on mobile via CSS) -->
+  <div class="cursor-glow" id="cursor-glow" aria-hidden="true"></div>
+
+  <!-- Chat UI Upgrade Pack -->
+  <script>
+  (function() {
+    // Cursor glow tracker
+    const isMobile = window.matchMedia('(max-width: 767px)').matches;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!isMobile && !reducedMotion) {
+      const glow = document.getElementById('cursor-glow');
+      if (glow) {
+        document.addEventListener('mousemove', (e) => {
+          glow.style.left = e.clientX + 'px';
+          glow.style.top  = e.clientY + 'px';
+        }, { passive: true });
+      }
+    }
+
+    // Send button ripple
+    document.addEventListener('DOMContentLoaded', () => {
+      const sendBtn = document.getElementById('send-btn');
+      if (sendBtn) {
+        sendBtn.addEventListener('click', function() {
+          this.classList.remove('ripple');
+          void this.offsetWidth;
+          this.classList.add('ripple');
+          setTimeout(() => this.classList.remove('ripple'), 500);
+        });
+      }
+
+      // Greeting shimmer (Mitrooo heading) — only on desktop
+      if (!isMobile && !reducedMotion) {
+        const greeting = document.getElementById('aura-greeting');
+        if (greeting) {
+          greeting.style.background = 'linear-gradient(90deg, #f5f5f7 0%, #5ea2ff 30%, #a07cff 60%, #f5f5f7 100%)';
+          greeting.style.backgroundSize = '300% auto';
+          greeting.style.webkitBackgroundClip = 'text';
+          greeting.style.backgroundClip = 'text';
+          greeting.style.webkitTextFillColor = 'transparent';
+          greeting.style.animation = 'hero-shimmer 5s linear infinite';
+        }
+      }
+
+      // Drawer spring easing is handled via CSS
+      // History item stagger is handled via CSS
+    });
+  })();
+  </script>
+
+</body>
+</html>
