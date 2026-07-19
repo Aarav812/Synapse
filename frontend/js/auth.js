@@ -42,6 +42,8 @@ window.addEventListener('DOMContentLoaded', () => {
       const isHidden = passwordEl.type === 'password';
       passwordEl.type = isHidden ? 'text' : 'password';
       toggleIcon.textContent = isHidden ? 'visibility_off' : 'visibility';
+      toggleBtn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+      toggleBtn.title = isHidden ? 'Hide password' : 'Show password';
     });
   }
 
