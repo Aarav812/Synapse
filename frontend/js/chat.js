@@ -1377,40 +1377,52 @@ function setOrbState(state) {
 
 // ── Scroll-to-Bottom Button ──
 const scrollToBottomBtn = document.getElementById("scroll-to-bottom-btn");
+let isScrollBtnVisible = false;
 
 function updateScrollBtn() {
   if (!scrollToBottomBtn) return;
   const distFromBottom = document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
   // Compare distFromBottom; we use 200px threshold
-  if (distFromBottom > 200) {
+  const shouldBeVisible = distFromBottom > 200;
+
+  if (shouldBeVisible && !isScrollBtnVisible) {
     scrollToBottomBtn.style.opacity = "1";
     scrollToBottomBtn.style.pointerEvents = "auto";
     scrollToBottomBtn.style.transform = "scale(1)";
-  } else {
+    isScrollBtnVisible = true;
+  } else if (!shouldBeVisible && isScrollBtnVisible) {
     scrollToBottomBtn.style.opacity = "0";
     scrollToBottomBtn.style.pointerEvents = "none";
     scrollToBottomBtn.style.transform = "scale(0.9)";
+    isScrollBtnVisible = false;
   }
 }
 
 // ── Scroll To Bottom ──
 let userHasScrolledUp = false;
 let lastScrollY = window.scrollY || 0;
+let isScrolling = false;
 
 window.addEventListener("scroll", () => {
-  const currentScrollY = window.scrollY;
-  const distFromBottom = document.documentElement.scrollHeight - currentScrollY - window.innerHeight;
-  
-  if (currentScrollY < lastScrollY) {
-    if (distFromBottom > 200) {
-      userHasScrolledUp = true;
-    }
-  } else if (distFromBottom <= 200) {
-    userHasScrolledUp = false;
+  if (!isScrolling) {
+    window.requestAnimationFrame(() => {
+      const currentScrollY = window.scrollY;
+      const distFromBottom = document.documentElement.scrollHeight - currentScrollY - window.innerHeight;
+
+      if (currentScrollY < lastScrollY) {
+        if (distFromBottom > 200) {
+          userHasScrolledUp = true;
+        }
+      } else if (distFromBottom <= 200) {
+        userHasScrolledUp = false;
+      }
+
+      lastScrollY = currentScrollY;
+      updateScrollBtn();
+      isScrolling = false;
+    });
+    isScrolling = true;
   }
-  
-  lastScrollY = currentScrollY;
-  updateScrollBtn();
 }, { passive: true });
 
 if (scrollToBottomBtn) {
