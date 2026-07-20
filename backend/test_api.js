@@ -1,7 +1,16 @@
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 const OpenAI = require("openai");
 
+const apiKey = process.env.NVIDIA_API_KEY || process.env.DEFAULT_API_KEY;
+
+if (!apiKey) {
+    console.error("ERROR: Missing NVIDIA API Key. Set NVIDIA_API_KEY or DEFAULT_API_KEY in backend/.env");
+    process.exit(1);
+}
+
 const client = new OpenAI({
-    apiKey: "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",
+    apiKey: apiKey,
     baseURL: "https://integrate.api.nvidia.com/v1"
 });
 
