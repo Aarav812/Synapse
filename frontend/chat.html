@@ -159,14 +159,14 @@
     </div>
 
     <nav class="flex flex-col space-y-2">
-      <a id="nav-new-chat-btn" class="active-nav flex items-center gap-4 bg-[#5ea2ff]/10 text-[#5ea2ff] font-bold rounded-lg px-4 py-3 transition-all cursor-pointer">
+      <button id="nav-new-chat-btn" class="active-nav flex items-center gap-4 bg-[#5ea2ff]/10 text-[#5ea2ff] font-bold rounded-lg px-4 py-3 transition-all cursor-pointer w-full text-left">
         <span class="material-symbols-outlined">add_comment</span>
         <span class="font-headline text-lg">New Chat</span>
-      </a>
-      <a id="nav-history-btn" class="flex items-center gap-4 text-[#f5f5f7]/60 px-4 py-3 hover:bg-[#1a1b21]/40 hover:text-[#f5f5f7] rounded-lg transition-all cursor-pointer">
+      </button>
+      <button id="nav-history-btn" class="flex items-center gap-4 text-[#f5f5f7]/60 px-4 py-3 hover:bg-[#1a1b21]/40 hover:text-[#f5f5f7] rounded-lg transition-all cursor-pointer w-full text-left">
         <span class="material-symbols-outlined">history</span>
         <span class="font-headline text-lg">History</span>
-      </a>
+      </button>
       <div class="h-px bg-outline-variant/20 my-4"></div>
       <button id="settings-btn" class="flex items-center gap-4 text-[#f5f5f7]/60 px-4 py-3 hover:bg-[#1a1b21]/40 hover:text-[#f5f5f7] rounded-lg transition-all w-full text-left">
         <span class="material-symbols-outlined">psychology_alt</span>
@@ -324,6 +324,7 @@
         <textarea
           id="chat-input"
           class="chat-input-field bg-transparent border-none focus:ring-0 flex-1 text-on-surface placeholder:text-outline/50 font-body py-2.5 px-1 resize-none overflow-hidden text-[15px] leading-[1.4]"
+          aria-label="Message Aura"
           placeholder="Message Aura..."
           rows="1"
           inputmode="text"

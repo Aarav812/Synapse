@@ -1,0 +1,3 @@
+## 2026-07-20 - Auth Accessibility & Navigation Drawer Keyboard Support
+**Learning:** Interactive components should never be hidden from keyboard navigation (e.g., `tabindex="-1"` on password toggle). Additionally, using dummy `<a>` tags without an `href` attribute causes screen readers and keyboard users to miss these elements. Semantic tags like `<button>` must be used for interactive actions without navigation.
+**Action:** Remove `tabindex="-1"` on password visibility toggles. Always replace dummy `<a>` tags with `<button>` for better accessibility and focus handling. Always ensure explicitly labeled aria elements for form inputs when visually hidden or relying solely on placeholders.
