@@ -1077,9 +1077,16 @@ if (closeHistoryBtn) closeHistoryBtn.addEventListener("click", closeHistoryModal
 // (#1) History Search
 const historySearchInput = document.getElementById('history-search-input');
 if (historySearchInput) {
+  // ⚡ Bolt: Debounce the history search input to reduce synchronous localStorage reads
+  // in getHistoryIndex() and DOM rebuilding in loadHistoryIndex() on every keystroke.
+  // This reduces main thread blocking by only triggering after the user stops typing.
+  let debounceTimer;
   historySearchInput.addEventListener('input', () => {
-    const query = historySearchInput.value.trim().toLowerCase();
-    loadHistoryIndex(query);
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      const query = historySearchInput.value.trim().toLowerCase();
+      loadHistoryIndex(query);
+    }, 300);
   });
 }
 
