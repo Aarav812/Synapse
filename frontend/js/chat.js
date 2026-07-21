@@ -1519,6 +1519,7 @@ async function getAuraResponse(multimodalState = {}) {
   let fullContent = "";
   let fullReasoning = "";
   let reasoningEl = null;
+  let lastRenderTime = 0;
 
   try {
     const user = auth.currentUser;
@@ -1597,8 +1598,12 @@ async function getAuraResponse(multimodalState = {}) {
                 if (timerEl) timerEl.textContent = `${elapsed}s`;
               }, 1000);
             }
-            reasoningEl.querySelector(".thinking-content").innerHTML = renderMarkdown(fullReasoning);
-            scrollToBottom();
+            const now = Date.now();
+            if (now - lastRenderTime > 32) {
+              reasoningEl.querySelector(".thinking-content").innerHTML = renderMarkdown(fullReasoning);
+              scrollToBottom();
+              lastRenderTime = now;
+            }
           }
 
           if (data.content) {
@@ -1639,16 +1644,20 @@ async function getAuraResponse(multimodalState = {}) {
                 summary.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;margin-right:4px;">psychology</span>Thought for ${elapsed}s`;
               }
             }
-            // Render content after the reasoning block
-            let contentContainer = bubbleEl.querySelector(".answer-content");
-            if (!contentContainer) {
-              contentContainer = document.createElement("div");
-              contentContainer.className = "answer-content";
-              bubbleEl.appendChild(contentContainer);
+            const now = Date.now();
+            if (now - lastRenderTime > 32) {
+              // Render content after the reasoning block
+              let contentContainer = bubbleEl.querySelector(".answer-content");
+              if (!contentContainer) {
+                contentContainer = document.createElement("div");
+                contentContainer.className = "answer-content";
+                bubbleEl.appendChild(contentContainer);
+              }
+              contentContainer.innerHTML = renderMarkdown(fullContent, true) + '<span class="typing-cursor"></span>';
+              setOrbState('responding');
+              scrollToBottom();
+              lastRenderTime = now;
             }
-            contentContainer.innerHTML = renderMarkdown(fullContent, true) + '<span class="typing-cursor"></span>';
-            setOrbState('responding');
-            scrollToBottom();
           }
         } catch (parseErr) {
           // Skip malformed chunks
@@ -1658,6 +1667,7 @@ async function getAuraResponse(multimodalState = {}) {
 
     // Finalize: remove typing cursor, wire lightbox, append action bar
     // Keep reasoning block open after stream is fully complete
+    // Ensure final content is rendered (in case the last chunk was throttled)
     if (reasoningEl) {
       if (reasoningEl._timer) { clearInterval(reasoningEl._timer); reasoningEl._timer = null; }
       reasoningEl.open = true;
@@ -1666,16 +1676,29 @@ async function getAuraResponse(multimodalState = {}) {
         const elapsed = Math.round((Date.now() - (reasoningEl._startTime || Date.now())) / 1000);
         summary.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;margin-right:4px;">psychology</span>Reasoning (${elapsed}s)`;
       }
+
+      const thinkingContent = reasoningEl.querySelector(".thinking-content");
+      if (thinkingContent && fullReasoning) {
+        thinkingContent.innerHTML = renderMarkdown(fullReasoning);
+      }
     }
-    const answerEl = bubbleEl.querySelector(".answer-content");
-    if (answerEl) {
-      answerEl.innerHTML = renderMarkdown(fullContent);
-      answerEl.querySelectorAll("img").forEach(img => {
+
+    // Ensure content container is present even if stream ended abruptly
+    let contentContainer = bubbleEl.querySelector(".answer-content");
+    if (!contentContainer && fullContent) {
+      contentContainer = document.createElement("div");
+      contentContainer.className = "answer-content";
+      bubbleEl.appendChild(contentContainer);
+    }
+
+    if (contentContainer) {
+      contentContainer.innerHTML = renderMarkdown(fullContent);
+      contentContainer.querySelectorAll("img").forEach(img => {
         img.style.cursor = "zoom-in";
         img.onclick = () => openLightbox(img.src);
       });
     }
-    if (bubbleEl) appendActionBar(bubbleEl, fullContent);
+    if (bubbleEl && fullContent.trim()) appendActionBar(bubbleEl, fullContent);
 
     // ── Finalize Canvas if we were streaming code ──
     if (canvasIsStreaming) {
