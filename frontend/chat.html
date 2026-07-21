@@ -360,8 +360,8 @@
       </div>
       <div class="flex items-center justify-between px-4 sm:px-5 pt-2 sm:pt-5 pb-3 sm:pb-4 border-b border-outline-variant/20">
         <h3 class="text-lg sm:text-xl font-headline font-bold text-primary">Chat History</h3>
-        <button id="close-history-btn" class="w-9 h-9 flex items-center justify-center rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 transition-colors">
-          <span class="material-symbols-outlined">close</span>
+        <button id="close-history-btn" aria-label="Close chat history" class="w-9 h-9 flex items-center justify-center rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 transition-colors">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
         </button>
       </div>
       <!-- Search -->
@@ -417,8 +417,8 @@
           </h2>
           <p class="text-xs text-on-surface-variant mt-1">Choose how Aura communicates with you</p>
         </div>
-        <button id="close-settings-btn" class="text-on-surface-variant hover:text-on-surface transition-colors w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/5">
-          <span class="material-symbols-outlined">close</span>
+        <button id="close-settings-btn" aria-label="Close settings" class="text-on-surface-variant hover:text-on-surface transition-colors w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/5">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
         </button>
       </div>
 
@@ -520,10 +520,10 @@
       <!-- Action buttons -->
       <div class="absolute top-4 right-4 flex items-center gap-3 z-10" onclick="event.stopPropagation()">
         <button id="download-lightbox-btn" class="flex items-center gap-2 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white px-4 py-2 rounded-full transition-colors font-bold text-sm border border-white/10 shadow-lg" onclick="downloadLightboxImage()">
-          <span class="material-symbols-outlined" style="font-size:18px;">download</span> Download
+          <span class="material-symbols-outlined" style="font-size:18px;" aria-hidden="true">download</span> Download
         </button>
-        <button class="w-10 h-10 flex items-center justify-center bg-black/60 hover:bg-black/80 backdrop-blur-md text-white rounded-full transition-colors border border-white/10 shadow-lg" onclick="closeLightbox(event)">
-          <span class="material-symbols-outlined" style="font-size:20px;">close</span>
+        <button aria-label="Close full size image" class="w-10 h-10 flex items-center justify-center bg-black/60 hover:bg-black/80 backdrop-blur-md text-white rounded-full transition-colors border border-white/10 shadow-lg" onclick="closeLightbox(event)">
+          <span class="material-symbols-outlined" style="font-size:20px;" aria-hidden="true">close</span>
         </button>
       </div>
     </div>
