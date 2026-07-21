@@ -1,8 +1,10 @@
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 const OpenAI = require("openai");
 
 const client = new OpenAI({
-    apiKey: "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",
-    baseURL: "https://integrate.api.nvidia.com/v1"
+    apiKey: process.env.NVIDIA_API_KEY || process.env.DEFAULT_API_KEY,
+    baseURL: process.env.NVIDIA_BASE_URL || process.env.AI_BASE_URL || "https://integrate.api.nvidia.com/v1"
 });
 
 async function test() {
