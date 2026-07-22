@@ -1077,9 +1077,15 @@ if (closeHistoryBtn) closeHistoryBtn.addEventListener("click", closeHistoryModal
 // (#1) History Search
 const historySearchInput = document.getElementById('history-search-input');
 if (historySearchInput) {
+  // ⚡ Bolt: Debounce the search input to reduce DOM rebuilds and layout thrashing
+  // This prevents `loadHistoryIndex` from firing on every keystroke, improving typing performance.
+  let debounceTimeout;
   historySearchInput.addEventListener('input', () => {
-    const query = historySearchInput.value.trim().toLowerCase();
-    loadHistoryIndex(query);
+    clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(() => {
+      const query = historySearchInput.value.trim().toLowerCase();
+      loadHistoryIndex(query);
+    }, 300); // 300ms delay to wait for user to pause typing
   });
 }
 
