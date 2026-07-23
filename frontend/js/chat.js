@@ -1077,9 +1077,13 @@ if (closeHistoryBtn) closeHistoryBtn.addEventListener("click", closeHistoryModal
 // (#1) History Search
 const historySearchInput = document.getElementById('history-search-input');
 if (historySearchInput) {
+  let searchTimeout;
   historySearchInput.addEventListener('input', () => {
-    const query = historySearchInput.value.trim().toLowerCase();
-    loadHistoryIndex(query);
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      const query = historySearchInput.value.trim().toLowerCase();
+      loadHistoryIndex(query);
+    }, 250); // 250ms debounce
   });
 }
 
@@ -1117,13 +1121,15 @@ function loadHistoryIndex(searchQuery = '') {
     else groups['Older'].push(chat);
   });
 
+  const fragment = document.createDocumentFragment();
+
   Object.entries(groups).forEach(([label, chats]) => {
     if (chats.length === 0) return;
 
     const groupLabel = document.createElement('p');
     groupLabel.className = 'text-xs text-on-surface-variant/50 font-bold uppercase tracking-wider mt-3 mb-1.5 px-1';
     groupLabel.textContent = label;
-    historyListContainer.appendChild(groupLabel);
+    fragment.appendChild(groupLabel);
 
     chats.forEach(chat => {
       const item = document.createElement("div");
@@ -1138,9 +1144,11 @@ function loadHistoryIndex(searchQuery = '') {
           <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
         </button>
       `;
-      historyListContainer.appendChild(item);
+      fragment.appendChild(item);
     });
   });
+
+  historyListContainer.appendChild(fragment);
 }
 
 // ── Send Message ──
