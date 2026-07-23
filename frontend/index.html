@@ -58,11 +58,11 @@
 
           <div class="nav-actions">
             <button type="button" aria-label="Toggle theme" class="nav-icon-btn" id="theme-toggle-btn">
-              <span class="material-symbols-outlined" style="font-size:18px;">dark_mode</span>
+              <span class="material-symbols-outlined" style="font-size:18px;" aria-hidden="true">dark_mode</span>
             </button>
             <a href="#" class="btn btn-primary nav-launch" id="nav-launch-btn">Launch Aura</a>
             <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">
-              <span class="material-symbols-outlined" style="font-size:24px;">menu</span>
+              <span class="material-symbols-outlined" style="font-size:24px;" aria-hidden="true">menu</span>
             </button>
           </div>
         </nav>
@@ -70,7 +70,7 @@
         <!-- Mobile Navigation Overlay -->
         <div class="mobile-nav-overlay" id="mobile-nav-overlay">
           <button class="mobile-nav-close" id="mobile-nav-close" aria-label="Close menu">
-            <span class="material-symbols-outlined">close</span>
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
           </button>
           <a href="#features" class="mobile-nav-link">Features</a>
           <a href="#models" class="mobile-nav-link">Models</a>
@@ -296,7 +296,7 @@
         transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
       ">
         <!-- Close Button -->
-        <button id="close-auth-modal" style="
+        <button id="close-auth-modal" aria-label="Close auth modal" style="
           position: absolute; top: 1.25rem; right: 1.25rem;
           background: rgba(255,255,255,0.06);
           border: none; cursor: pointer;
@@ -306,7 +306,7 @@
           transition: background 0.2s, color 0.2s;
           z-index: 2;
         " onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.06)';this.style.color='rgba(226,226,233,0.5)'">
-          <span class="material-symbols-outlined" style="font-size: 20px; line-height:1;">close</span>
+          <span class="material-symbols-outlined" style="font-size: 20px; line-height:1;" aria-hidden="true">close</span>
         </button>
 
         <!-- Logo & Header -->
@@ -336,8 +336,8 @@
 
           <div style="position: relative;">
             <input id="password" type="password" class="auth-input" placeholder="Password" required minlength="6" autocomplete="current-password" style="padding-right: 3rem;" />
-            <button type="button" id="toggle-password" tabindex="-1" style="position:absolute;right:1rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(226,226,233,0.5);padding:0;display:flex;align-items:center;">
-              <span class="material-symbols-outlined" id="toggle-password-icon" style="font-size:20px;">visibility</span>
+            <button type="button" id="toggle-password" aria-label="Toggle password visibility" tabindex="-1" style="position:absolute;right:1rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(226,226,233,0.5);padding:0;display:flex;align-items:center;">
+              <span class="material-symbols-outlined" id="toggle-password-icon" style="font-size:20px;" aria-hidden="true">visibility</span>
             </button>
           </div>
 
