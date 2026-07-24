@@ -1077,9 +1077,13 @@ if (closeHistoryBtn) closeHistoryBtn.addEventListener("click", closeHistoryModal
 // (#1) History Search
 const historySearchInput = document.getElementById('history-search-input');
 if (historySearchInput) {
+  let searchTimeout;
   historySearchInput.addEventListener('input', () => {
-    const query = historySearchInput.value.trim().toLowerCase();
-    loadHistoryIndex(query);
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      const query = historySearchInput.value.trim().toLowerCase();
+      loadHistoryIndex(query);
+    }, 300);
   });
 }
 
