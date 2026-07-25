@@ -1,0 +1,3 @@
+## 2024-07-25 - Throttle scroll events in UI
+**Learning:** Frequent scroll events in chat interfaces triggering layout recalculations (DOM reads like `scrollHeight`, `innerHeight`) can cause significant jank and layout thrashing, blocking the main thread.
+**Action:** Always throttle scroll handlers using `requestAnimationFrame` when they involve DOM measurements or heavy calculations to ensure they only run once per frame.
