@@ -1,0 +1,3 @@
+## 2024-05-24 - Material Symbols Icon-only Button Accessibility
+**Learning:** This application uses Material Symbols ligatures for icons (e.g., `<span class="material-symbols-outlined">close</span>`). When used inside icon-only `<button>` elements, screen readers will often read out the raw text (like "close") or read it poorly depending on context. For proper accessibility, the parent `<button>` needs an explicit `aria-label`, and the inner `<span>` must be marked with `aria-hidden="true"`.
+**Action:** Always verify that icon-only buttons using Material Symbols ligatures in this design system have `aria-label` on the parent and `aria-hidden="true"` on the icon itself.
