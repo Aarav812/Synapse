@@ -11,11 +11,48 @@
   --iris: #7c5cff;
   --azure: #5ea2ff;
   --glass-bg: rgba(255, 255, 255, 0.04);
-  --glass-blur: 24px;
-  --liquid-fill: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015));
-  --liquid-fill-hover: linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
-  --liquid-edge: linear-gradient(135deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.0) 38%, rgba(255,255,255,0.0) 62%, rgba(150,100,255,0.25) 100%);
-  --liquid-blur: 24px;
+
+  /* ── Apple Liquid Glass System ── */
+  --lg-blur: 40px;
+  --lg-blur-heavy: 64px;
+  --lg-fill: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.08) 0%,
+    rgba(255,255,255,0.02) 40%,
+    rgba(200,180,255,0.04) 70%,
+    rgba(255,255,255,0.01) 100%
+  );
+  --lg-fill-hover: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.14) 0%,
+    rgba(255,255,255,0.04) 40%,
+    rgba(200,180,255,0.07) 70%,
+    rgba(255,255,255,0.02) 100%
+  );
+  --lg-edge-light: linear-gradient(
+    165deg,
+    rgba(255,255,255,0.50) 0%,
+    rgba(255,255,255,0.15) 20%,
+    rgba(255,255,255,0.0) 45%,
+    rgba(255,255,255,0.0) 55%,
+    rgba(180,140,255,0.18) 80%,
+    rgba(255,255,255,0.25) 100%
+  );
+  --lg-shadow: 0 8px 32px rgba(0,0,0,0.35),
+               0 2px 8px rgba(0,0,0,0.20),
+               inset 1px 1px 0 rgba(255,255,255,0.15),
+               inset -1px -1px 0 rgba(255,255,255,0.03);
+  --lg-shadow-hover: 0 16px 48px rgba(0,0,0,0.42),
+                     0 4px 12px rgba(0,0,0,0.25),
+                     inset 1px 1px 0 rgba(255,255,255,0.22),
+                     inset -1px -1px 0 rgba(255,255,255,0.05);
+
+  /* Legacy aliases for compatibility */
+  --glass-blur: var(--lg-blur);
+  --liquid-fill: var(--lg-fill);
+  --liquid-fill-hover: var(--lg-fill-hover);
+  --liquid-edge: var(--lg-edge-light);
+  --liquid-blur: var(--lg-blur);
 
   /* ── Dynamic Mesh Colors (defaults to Aura 1) ── */
   --blob-1-color: #7c5cff;
@@ -46,16 +83,16 @@
   }
 }
 
-/* ── Toast Notification ── */
+/* ── Toast Notification — Apple Liquid Glass ── */
 .synapse-toast {
   position: fixed;
   bottom: 6rem;
   left: 50%;
   transform: translateX(-50%) translateY(16px);
-  background: rgba(18, 19, 26, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(124, 92, 255, 0.2);
+  background: var(--lg-fill);
+  backdrop-filter: blur(var(--lg-blur-heavy)) saturate(200%) brightness(1.08);
+  -webkit-backdrop-filter: blur(var(--lg-blur-heavy)) saturate(200%) brightness(1.08);
+  border: 1px solid rgba(255,255,255,0.06);
   border-radius: 14px;
   padding: 0.65rem 1.3rem;
   font-size: 0.82rem;
@@ -66,10 +103,24 @@
   pointer-events: none;
   transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(124, 92, 255, 0.06);
+  box-shadow: var(--lg-shadow);
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  overflow: hidden;
+}
+.synapse-toast::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--lg-edge-light);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.5;
 }
 .synapse-toast.show {
   opacity: 1;
@@ -136,56 +187,83 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   direction: ltr;
 }
 
-/* ── Glass Card ── */
-.glass-card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.06), 0 8px 32px rgba(0, 0, 0, 0.3);
-}
-
-/* Liquid-glass upgrade: refractive fill, specular edge, iridescent sheen */
+/* ── Glass Card — Apple Liquid Glass ── */
 .glass-card {
   position: relative;
-  background: var(--liquid-fill);
-  backdrop-filter: blur(var(--liquid-blur)) saturate(160%);
-  -webkit-backdrop-filter: blur(var(--liquid-blur)) saturate(160%);
-  border: 1px solid transparent;
-  box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.18),
-              inset -1px -1px 1px rgba(124, 92, 255, 0.10),
-              0 8px 32px rgba(0, 0, 0, 0.35);
-  transition: background 0.4s ease, box-shadow 0.4s ease, transform 0.4s ease, border-color 0.4s ease;
+  background: var(--lg-fill);
+  backdrop-filter: blur(var(--lg-blur)) saturate(180%) brightness(1.05);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(180%) brightness(1.05);
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: var(--lg-shadow);
+  transition: background 0.5s cubic-bezier(0.4,0,0.2,1),
+              box-shadow 0.5s cubic-bezier(0.4,0,0.2,1),
+              transform 0.5s cubic-bezier(0.4,0,0.2,1),
+              border-color 0.5s cubic-bezier(0.4,0,0.2,1);
+  overflow: hidden;
+  isolation: isolate;
 }
+/* Specular wet-glass edge — top-left highlight */
 .glass-card::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: var(--liquid-edge);
+  background: var(--lg-edge-light);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
           mask-composite: exclude;
   pointer-events: none;
-  z-index: 1;
+  z-index: 2;
+  opacity: 0.7;
 }
+/* Iridescent shimmer */
 .glass-card::after {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(160,124,255,0.04) 50%, transparent 70%);
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.08) 0%,
+    rgba(160,124,255,0.04) 25%,
+    rgba(94,162,255,0.03) 50%,
+    rgba(255,200,255,0.02) 75%,
+    transparent 100%
+  );
   opacity: 0.5;
   pointer-events: none;
   z-index: 1;
+  mix-blend-mode: screen;
 }
 .glass-card:hover {
-  background: var(--liquid-fill-hover);
+  background: var(--lg-fill-hover);
   transform: translateY(-2px);
-  box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.28),
-              inset -1px -1px 1px rgba(124, 92, 255, 0.18),
-              0 14px 40px rgba(0, 0, 0, 0.42);
+  box-shadow: var(--lg-shadow-hover);
+  border-color: rgba(255,255,255,0.10);
+}
+/* Interactive light reflection — follows cursor via JS */
+.glass-card .glass-light,
+.personality-card .glass-light,
+.history-item .glass-light {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(255,255,255,0.06) 0%,
+    rgba(255,255,255,0.015) 30%,
+    transparent 60%
+  );
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.glass-card:hover .glass-light,
+.personality-card:hover .glass-light,
+.history-item:hover .glass-light {
+  opacity: 1;
 }
 
 /* ── Landing-style Ambient Background (static, no animation) ── */
@@ -274,7 +352,7 @@ body, .bg-background {
   50% { transform: scale(1.15); opacity: 1; }
 }
 
-/* ── Drawer ── */
+/* ── Drawer — Apple Liquid Glass ── */
 #drawer-overlay {
   transition: opacity 0.3s ease-in-out;
   pointer-events: none;
@@ -283,7 +361,13 @@ body, .bg-background {
 
 #drawer {
   transform: translateX(-100%);
-  transition: transform 0.3s ease-in-out;
+  transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  background: var(--lg-fill) !important;
+  backdrop-filter: blur(var(--lg-blur-heavy)) saturate(200%) brightness(1.08) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur-heavy)) saturate(200%) brightness(1.08) !important;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 8px 0 40px rgba(0,0,0,0.4),
+              inset 1px 1px 0 rgba(255,255,255,0.12);
 }
 
 #drawer-toggle:checked ~ #drawer {
@@ -403,10 +487,10 @@ body, .bg-background {
   object-fit: cover;
 }
 
-/* ── Chat Bubbles ── */
+/* ── Chat Bubbles — Apple Liquid Glass ── */
 .user-bubble {
-  background: linear-gradient(135deg, rgba(94, 162, 255, 0.18), rgba(0, 105, 112, 0.28));
-  border: 1px solid rgba(94, 162, 255, 0.18);
+  background: linear-gradient(135deg, rgba(94,162,255,0.16) 0%, rgba(0,105,112,0.22) 60%, rgba(124,92,255,0.12) 100%);
+  border: 1px solid rgba(94,162,255,0.15);
   border-radius: 22px 22px 6px 22px;
   padding: 0.9rem 1.2rem;
   color: #f5f5f7;
@@ -415,34 +499,70 @@ body, .bg-background {
   overflow-wrap: break-word;
   word-break: break-word;
   min-width: 0;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
-  box-shadow: 0 2px 12px rgba(94, 162, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.35s ease, box-shadow 0.35s ease;
+  box-shadow: 0 2px 12px rgba(94,162,255,0.06),
+              inset 1px 1px 0 rgba(255,255,255,0.08);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+}
+/* Specular highlight on user bubble */
+.user-bubble::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 40%);
+  pointer-events: none;
 }
 
 .user-bubble:hover {
   border-color: rgba(94, 162, 255, 0.32);
-  box-shadow: 0 4px 20px rgba(94, 162, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(94, 162, 255, 0.1),
+              inset 1px 1px 0 rgba(255,255,255,0.12);
 }
 
 .ai-bubble {
-  background: rgba(40, 42, 47, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: var(--lg-fill);
+  border: 1px solid rgba(255,255,255,0.06);
   border-radius: 4px 22px 22px 22px;
   padding: 1rem 1.25rem;
   color: #e2e2e9;
   font-size: 0.925rem;
   line-height: 1.7;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(var(--lg-blur)) saturate(180%) brightness(1.05);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(180%) brightness(1.05);
   overflow-wrap: break-word;
   word-break: break-word;
   min-width: 0;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.35s ease, box-shadow 0.35s ease;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.20),
+              inset 1px 1px 0 rgba(255,255,255,0.10),
+              inset -1px -1px 0 rgba(255,255,255,0.02);
+}
+/* Specular highlight on AI bubble */
+.ai-bubble::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--lg-edge-light);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.4;
 }
 
 .ai-bubble:hover {
-  border-color: rgba(255, 255, 255, 0.11);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+  border-color: rgba(255, 255, 255, 0.10);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.25),
+              inset 1px 1px 0 rgba(255,255,255,0.14);
 }
 
 .ai-bubble p { margin: 0.4em 0; }
@@ -555,17 +675,35 @@ body, .bg-background {
   scrollbar-width: thin;
 }
 
-/* ── Typing Indicator ── */
+/* ── Typing Indicator — Apple Liquid Glass ── */
 .typing-indicator {
   display: flex;
   align-items: center;
   gap: 0.6rem;
   padding: 1rem 1.25rem;
-  background: rgba(51, 53, 58, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--lg-fill);
+  border: 1px solid rgba(255,255,255,0.06);
   border-radius: 24px 24px 24px 6px;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(var(--lg-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(180%);
   animation: typing-pulse 2s ease-in-out infinite;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.20),
+              inset 1px 1px 0 rgba(255,255,255,0.10);
+  position: relative;
+  overflow: hidden;
+}
+.typing-indicator::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--lg-edge-light);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.35;
 }
 
 @keyframes typing-pulse {
@@ -623,19 +761,22 @@ body, .bg-background {
 }
 
 .auth-card {
-  background: var(--liquid-fill);
-  backdrop-filter: blur(30px) saturate(160%);
-  -webkit-backdrop-filter: blur(30px) saturate(160%);
-  border: 1px solid transparent;
+  background: var(--lg-fill);
+  backdrop-filter: blur(var(--lg-blur-heavy)) saturate(200%) brightness(1.08);
+  -webkit-backdrop-filter: blur(var(--lg-blur-heavy)) saturate(200%) brightness(1.08);
+  border: 1px solid rgba(255,255,255,0.06);
   border-radius: 24px;
   padding: 2.5rem;
   width: 100%;
   max-width: 420px;
   position: relative;
   z-index: 10;
-  box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.18),
-              inset -1px -1px 1px rgba(124, 92, 255, 0.10),
-              0 24px 80px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4),
+              0 8px 32px rgba(0, 0, 0, 0.35),
+              inset 1px 1px 0 rgba(255,255,255,0.18),
+              inset -1px -1px 0 rgba(255,255,255,0.04);
+  overflow: hidden;
+  isolation: isolate;
 }
 .auth-card::before {
   content: '';
@@ -643,10 +784,20 @@ body, .bg-background {
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: var(--liquid-edge);
+  background: var(--lg-edge-light);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
           mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.6;
+}
+.auth-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 50%);
   pointer-events: none;
   z-index: 1;
 }
@@ -981,27 +1132,44 @@ body {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* ── History Items ── */
+/* ── History Items — Apple Liquid Glass ── */
 .history-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0.85rem 1rem;
   border-radius: 0.75rem;
-  background: var(--liquid-fill);
-  backdrop-filter: blur(var(--liquid-blur)) saturate(160%);
-  -webkit-backdrop-filter: blur(var(--liquid-blur)) saturate(160%);
-  border: 1px solid transparent;
-  box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.16),
-              inset -1px -1px 1px rgba(124, 92, 255, 0.08),
-              0 6px 20px rgba(0, 0, 0, 0.25);
+  background: var(--lg-fill);
+  backdrop-filter: blur(var(--lg-blur)) saturate(180%) brightness(1.05);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(180%) brightness(1.05);
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.20),
+              inset 1px 1px 0 rgba(255,255,255,0.10),
+              inset -1px -1px 0 rgba(255,255,255,0.02);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+  position: relative;
+  overflow: hidden;
+}
+.history-item::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--lg-edge-light);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.3;
 }
 
 .history-item:hover {
   background: rgba(94, 162, 255, 0.08);
   border-color: rgba(94, 162, 255, 0.2);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.25),
+              inset 1px 1px 0 rgba(255,255,255,0.14);
 }
 
 
@@ -1012,15 +1180,20 @@ body {
   object-fit: cover;
 }
 
-/* ── DeepThink Reasoning Block ── */
+/* ── DeepThink Reasoning Block — Apple Liquid Glass ── */
 .thinking-block {
   margin-bottom: 0.75rem;
-  border: 1px solid rgba(119, 1, 208, 0.2);
+  border: 1px solid rgba(119, 1, 208, 0.15);
   border-left: 3px solid #7701d0;
   border-radius: 0.5rem;
-  background: rgba(119, 1, 208, 0.06);
+  background: var(--lg-fill);
+  backdrop-filter: blur(var(--lg-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(180%);
   overflow: hidden;
   animation: thinking-in 0.3s ease;
+  position: relative;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15),
+              inset 1px 1px 0 rgba(255,255,255,0.06);
 }
 
 .thinking-block .thinking-content {
@@ -1137,7 +1310,9 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0.4rem 0.85rem;
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--lg-fill);
+  backdrop-filter: blur(var(--lg-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-bottom: none;
   border-radius: 0.5rem 0.5rem 0 0;
@@ -1323,7 +1498,7 @@ html:not(.dark) .ai-bubble a:hover {
   border-radius: 999px;
 }
 
-/* Card Base */
+/* Card Base — Apple Liquid Glass */
 .personality-card {
   position: relative;
   display: flex;
@@ -1333,17 +1508,19 @@ html:not(.dark) .ai-bubble a:hover {
   gap: 0.35rem;
   padding: 1.1rem 0.75rem;
   border-radius: 1rem;
-  border: 1.5px solid transparent;
-  background: var(--liquid-fill);
-  backdrop-filter: blur(var(--liquid-blur)) saturate(160%);
-  -webkit-backdrop-filter: blur(var(--liquid-blur)) saturate(160%);
-  box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.18),
-              inset -1px -1px 1px rgba(124, 92, 255, 0.10),
-              0 8px 24px rgba(0, 0, 0, 0.3);
+  border: 1.5px solid rgba(255,255,255,0.06);
+  background: var(--lg-fill);
+  backdrop-filter: blur(var(--lg-blur)) saturate(180%) brightness(1.05);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(180%) brightness(1.05);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.20),
+              inset 1px 1px 0 rgba(255,255,255,0.12),
+              inset -1px -1px 0 rgba(255,255,255,0.03);
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
   text-align: center;
   outline: none;
+  overflow: hidden;
+  isolation: isolate;
 }
 
 .personality-card::after {
@@ -1352,20 +1529,19 @@ html:not(.dark) .ai-bubble a:hover {
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: var(--liquid-edge);
+  background: var(--lg-edge-light);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
           mask-composite: exclude;
   pointer-events: none;
-  z-index: 2;
+  z-index: 3;
+  opacity: 0.5;
 }
 .personality-card:hover {
-  background: var(--liquid-fill-hover);
+  background: var(--lg-fill-hover);
   border-color: rgba(220, 184, 255, 0.2);
   transform: translateY(-2px);
-  box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.26),
-              inset -1px -1px 1px rgba(124, 92, 255, 0.16),
-              0 12px 28px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--lg-shadow-hover);
 }
 
 .personality-card:active {
@@ -1748,7 +1924,7 @@ html:not(.dark) .action-btn:hover {
   font-size: 17px;
 }
 
-/* Model Badge */
+/* Model Badge — Apple Liquid Glass */
 .model-badge {
   display: inline-flex;
   align-items: center;
@@ -1756,13 +1932,16 @@ html:not(.dark) .action-btn:hover {
   font-size: 0.68rem;
   padding: 2px 7px;
   border-radius: 6px;
-  background: rgba(94, 162, 255, 0.07);
-  border: 1px solid rgba(94, 162, 255, 0.15);
+  background: var(--lg-fill);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(94, 162, 255, 0.12);
   color: rgba(94, 162, 255, 0.7);
   margin-bottom: 7px;
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.08);
 }
 html:not(.dark) .model-badge {
   background: rgba(0, 105, 112, 0.06);
@@ -1790,7 +1969,7 @@ html:not(.dark) .model-badge {
   transition: background 0.25s ease, box-shadow 0.25s ease, transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
 }
 
-/* ── Input Bar Focus Glow with Animated Gradient Border ── */
+/* ── Input Bar Focus Glow — Apple Liquid Glass Animated Border ── */
 #text-input-bar {
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
   position: relative;
@@ -1798,13 +1977,18 @@ html:not(.dark) .model-badge {
 
 #text-input-bar:focus-within {
   border-color: transparent;
-  background-image: linear-gradient(rgba(30,31,37,0.95), rgba(30,31,37,0.95)),
+  background-image: linear-gradient(var(--lg-fill)),
                     linear-gradient(90deg, #5ea2ff, #dcb8ff, #7701d0, #5ea2ff);
   background-origin: border-box;
   background-clip: padding-box, border-box;
   background-size: 100% 100%, 300% 100%;
   animation: gradient-border-flow 4s linear infinite;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 24px rgba(94, 162, 255, 0.12), inset 0 0 0 1px rgba(94, 162, 255, 0.05);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5),
+              0 0 24px rgba(94,162,255,0.12),
+              inset 0 0 0 1px rgba(94,162,255,0.05),
+              inset 1px 1px 0 rgba(255,255,255,0.10);
+  backdrop-filter: blur(var(--lg-blur)) saturate(180%) brightness(1.05);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(180%) brightness(1.05);
 }
 
 @keyframes gradient-border-flow {
@@ -1812,14 +1996,15 @@ html:not(.dark) .model-badge {
   100% { background-position: 0% center, 300% center; }
 }
 
-/* ── Header Scroll Shadow ── */
+/* ── Header Scroll Shadow — Apple Liquid Glass ── */
 header.scrolled {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3),
-              inset 1px 1px 1px rgba(255, 255, 255, 0.18),
-              inset -1px -1px 1px rgba(124, 92, 255, 0.12);
-  background: var(--liquid-fill);
-  backdrop-filter: blur(30px) saturate(160%);
-  -webkit-backdrop-filter: blur(30px) saturate(160%);
+              inset 1px 1px 0 rgba(255, 255, 255,0.18),
+              inset -1px -1px 0 rgba(255, 255, 255,0.04);
+  background: var(--lg-fill);
+  backdrop-filter: blur(var(--lg-blur-heavy)) saturate(200%) brightness(1.08);
+  -webkit-backdrop-filter: blur(var(--lg-blur-heavy)) saturate(200%) brightness(1.08);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
 /* ── Active Model Indicator in Dropdown ── */
@@ -2123,7 +2308,7 @@ header {
   }
 }
 
-/* ── History Search Bar ── */
+/* ── History Search Bar — Apple Liquid Glass ── */
 .history-search-wrap {
   position: relative;
   display: flex;
@@ -2139,8 +2324,10 @@ header {
 .history-search-input {
   width: 100%;
   padding: 0.6rem 0.85rem 0.6rem 2.5rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--lg-fill);
+  backdrop-filter: blur(var(--lg-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 12px;
   color: #e2e2e9;
   font-family: 'Inter', sans-serif;
@@ -2149,11 +2336,13 @@ header {
   transition: border-color 0.2s, box-shadow 0.2s;
   -webkit-appearance: none;
   appearance: none;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.06);
 }
 .history-search-input::placeholder { color: rgba(185, 202, 203, 0.4); }
 .history-search-input:focus {
   border-color: rgba(94, 162, 255, 0.35);
-  box-shadow: 0 0 0 3px rgba(94, 162, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(94, 162, 255, 0.08),
+              inset 1px 1px 0 rgba(255,255,255,0.08);
 }
 
 /* ── Skeleton Typing Indicator (streamed response loading) ── */
@@ -2265,11 +2454,16 @@ header {
   font-family: 'Outfit', sans-serif;
   font-weight: 500;
   letter-spacing: 0.01em;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(var(--lg-blur)) saturate(180%) brightness(1.05);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(180%) brightness(1.05);
+  background: var(--lg-fill);
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15),
+              inset 1px 1px 0 rgba(255,255,255,0.08);
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  position: relative;
+  overflow: hidden;
 }
 
 .category-chip:hover {
@@ -2387,17 +2581,17 @@ html:not(.dark) .category-chip {
 /* History Search styles are in the pill-wrap section below */
 
 /* ============================================
-   Undo Snackbar (#3)
+   Undo Snackbar — Apple Liquid Glass
    ============================================ */
 .undo-snackbar {
   position: fixed;
   bottom: 7rem;
   left: 50%;
   transform: translateX(-50%) translateY(20px);
-  background: rgba(30, 31, 37, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(94, 162, 255, 0.25);
+  background: var(--lg-fill);
+  backdrop-filter: blur(var(--lg-blur-heavy)) saturate(200%) brightness(1.08);
+  -webkit-backdrop-filter: blur(var(--lg-blur-heavy)) saturate(200%) brightness(1.08);
+  border: 1px solid rgba(255,255,255,0.06);
   border-radius: 14px;
   padding: 0.65rem 0.5rem 0.65rem 1.2rem;
   font-size: 0.82rem;
@@ -2410,7 +2604,8 @@ html:not(.dark) .category-chip {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--lg-shadow);
+  overflow: hidden;
 }
 
 .undo-snackbar.show {
@@ -2512,12 +2707,18 @@ html:not(.dark) .category-chip {
   align-items: center;
   gap: 0.75rem;
   padding: 0.85rem 1rem;
-  background: linear-gradient(135deg, rgba(94, 162, 255, 0.08), rgba(119, 1, 208, 0.06));
-  border: 1px solid rgba(94, 162, 255, 0.2);
+  background: var(--lg-fill);
+  backdrop-filter: blur(var(--lg-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(180%);
+  border: 1px solid rgba(94, 162, 255, 0.15);
   border-radius: 14px;
   margin: 0.5rem 0;
   transition: all 0.3s ease;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15),
+              inset 1px 1px 0 rgba(255,255,255,0.08);
 }
 
 .pwa-install-banner:hover {

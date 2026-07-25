@@ -598,6 +598,39 @@
 
   <!-- Chat UI Upgrade Pack -->
   <script>
+  // ── Apple Liquid Glass: Interactive Light Reflections ──
+  (function initLiquidGlass() {
+    const isMobile = window.matchMedia('(max-width: 767px)').matches;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (isMobile || reducedMotion) return;
+
+    document.addEventListener('mousemove', (e) => {
+      const x = e.clientX;
+      const y = e.clientY;
+      document.querySelectorAll('.glass-card, .ai-bubble, .user-bubble, .personality-card, .history-item').forEach(el => {
+        const rect = el.getBoundingClientRect();
+        const relX = ((x - rect.left) / rect.width) * 100;
+        const relY = ((y - rect.top) / rect.height) * 100;
+        el.style.setProperty('--mouse-x', relX + '%');
+        el.style.setProperty('--mouse-y', relY + '%');
+      });
+    }, { passive: true });
+
+    function addLightDivs() {
+      document.querySelectorAll('.glass-card, .personality-card, .history-item').forEach(el => {
+        if (!el.querySelector('.glass-light')) {
+          const light = document.createElement('div');
+          light.className = 'glass-light';
+          light.setAttribute('aria-hidden', 'true');
+          el.appendChild(light);
+        }
+      });
+    }
+    addLightDivs();
+    const obs = new MutationObserver(addLightDivs);
+    obs.observe(document.body, { childList: true, subtree: true });
+  })();
+
   (function() {
     // Cursor glow tracker
     const isMobile = window.matchMedia('(max-width: 767px)').matches;

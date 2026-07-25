@@ -2,6 +2,41 @@
 // Synapse AI — Landing Page Logic (ported design)
 // ============================================
 
+// ── Apple Liquid Glass: Interactive Light Reflections ──
+(function initLiquidGlass() {
+  const isMobile = window.matchMedia('(max-width: 767px)').matches;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (isMobile || reducedMotion) return;
+
+  // Track mouse globally for glass surfaces
+  document.addEventListener('mousemove', (e) => {
+    const x = e.clientX;
+    const y = e.clientY;
+    document.querySelectorAll('.glass, .glass-card, .feature-card, .model-card, .navbar').forEach(el => {
+      const rect = el.getBoundingClientRect();
+      const relX = ((x - rect.left) / rect.width) * 100;
+      const relY = ((y - rect.top) / rect.height) * 100;
+      el.style.setProperty('--mouse-x', relX + '%');
+      el.style.setProperty('--mouse-y', relY + '%');
+    });
+  }, { passive: true });
+
+  // Add .glass-light divs to all glass surfaces for dynamic reflections
+  function addLightDivs() {
+    document.querySelectorAll('.glass, .glass-card, .feature-card, .model-card').forEach(el => {
+      if (!el.querySelector('.glass-light')) {
+        const light = document.createElement('div');
+        light.className = 'glass-light';
+        light.setAttribute('aria-hidden', 'true');
+        el.appendChild(light);
+      }
+    });
+  }
+  addLightDivs();
+  const observer = new MutationObserver(addLightDivs);
+  observer.observe(document.body, { childList: true, subtree: true });
+})();
+
 // ── Page Transition Helper ──
 function landingNavigateTo(url) {
   const overlay = document.getElementById('page-overlay');
