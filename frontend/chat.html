@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html class="dark" lang="en">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Synapse AI — Chat with Aura</title>
+  <title>Synapse AI — Aura workspace</title>
   <meta name="description" content="Chat with Aura, your personal AI assistant powered by Synapse AI." />
-  <meta name="theme-color" content="#090a12" />
+  <meta name="theme-color" content="#f5f5f7" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -96,7 +96,9 @@
 
   <!-- Styles -->
   <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="/css/landing.css?v=1" />
   <link rel="stylesheet" href="/css/styles.css?v=7" />
+  <link rel="stylesheet" href="/css/chat-landing.css?v=1" />
   <!-- Inline only the orb animation styles needed by the empty state -->
   <style>
     .aura-orb-container { position: relative; }
@@ -131,7 +133,7 @@
     }
   </style>
 </head>
-<body class="text-on-background font-body selection:bg-primary-container selection:text-on-primary-fixed overflow-x-hidden">
+<body class="chat-page text-on-background font-body selection:bg-primary-container selection:text-on-primary-fixed overflow-x-hidden">
   <!-- Page Transition Overlay -->
   <div id="page-overlay" style="position:fixed;inset:0;background:#090a12;z-index:99999;pointer-events:none;opacity:0;transition:opacity 0.3s ease;"></div>
 
@@ -140,6 +142,8 @@
     <div class="bg-base"></div>
     <div class="bg-orb bg-orb-1"></div>
     <div class="bg-orb bg-orb-2"></div>
+    <div class="bg-key-light" id="bg-key-light"></div>
+    <div class="bg-noise"></div>
     <div class="bg-vignette"></div>
   </div>
 
@@ -191,38 +195,54 @@
     </div>
   </aside>
 
-  <!-- Top App Bar -->
-  <header class="fixed top-0 w-full z-50 bg-[#090a12]/60 backdrop-blur-2xl shadow-[0_4px_24px_rgba(124,92,255,0.05)] h-16 flex items-center justify-between px-4 sm:px-6">
-    <div class="flex items-center gap-3">
-      <label class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors active:scale-95 duration-200 cursor-pointer header-icon text-[#f5f5f7]" for="drawer-toggle" aria-label="Open menu">
-        <span class="material-symbols-outlined">menu</span>
-      </label>
-      <h1 id="header-logo" class="text-2xl font-bold text-[#f5f5f7] font-headline tracking-tight cursor-pointer hover:opacity-80 transition-opacity">Synapse AI</h1>
-    </div>
-    <div class="flex items-center gap-2">
-
-      <!-- Delete All History -->
-      <button id="delete-all-history-btn" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors active:scale-95 duration-200 text-[#f5f5f7] hover:text-[#ffb4ab]" title="Delete All History" aria-label="Delete all chat history">
-        <span class="material-symbols-outlined">delete_sweep</span>
-      </button>
-    </div>
+  <!-- Floating liquid-glass workspace navigation -->
+  <header class="chat-navbar-shell">
+    <nav class="chat-navbar glass" aria-label="Workspace navigation">
+      <div class="chat-nav-brand">
+        <label class="chat-nav-icon" for="drawer-toggle" aria-label="Open menu">
+          <span class="material-symbols-outlined">menu</span>
+        </label>
+        <button id="header-logo" class="chat-logo" type="button" aria-label="Start a new chat">
+          <span class="logo-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 5.6v5.1M12 13.3v5.1M6.7 17.5 12 13.3M17.3 17.5 12 13.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <circle cx="12" cy="4.6" r="1.9" fill="currentColor"/>
+              <circle cx="5.4" cy="18.6" r="1.9" fill="currentColor"/>
+              <circle cx="18.6" cy="18.6" r="1.9" fill="currentColor"/>
+              <circle cx="12" cy="12" r="1.6" fill="currentColor"/>
+            </svg>
+          </span>
+          <span class="logo-text">Synapse<span class="logo-ai"> AI</span></span>
+        </button>
+      </div>
+      <div class="chat-nav-actions">
+        <button id="header-new-chat-btn" class="chat-nav-text-btn" type="button">
+          <span class="material-symbols-outlined">edit_square</span><span>New chat</span>
+        </button>
+        <button id="header-history-btn" class="chat-nav-icon chat-history-shortcut" type="button" aria-label="Open chat history" title="Chat history">
+          <span class="material-symbols-outlined">history</span>
+        </button>
+        <button id="delete-all-history-btn" class="chat-nav-icon chat-delete-btn" type="button" title="Delete all chat history" aria-label="Delete all chat history">
+          <span class="material-symbols-outlined">delete_sweep</span>
+        </button>
+      </div>
+    </nav>
   </header>
 
   <!-- Main Canvas -->
-  <main class="min-h-[100dvh] pt-16 pb-28 sm:pb-40 px-3 sm:px-4 md:px-6 flex flex-col items-center max-w-4xl mx-auto relative" style="overflow: visible;">
+  <main class="chat-main min-h-[100dvh] pt-16 pb-28 sm:pb-40 px-3 sm:px-4 md:px-6 flex flex-col items-center max-w-4xl mx-auto relative" style="overflow: visible;">
 
-    <!-- Hero Greeting Section -->
-    <section id="hero-section" class="w-full mt-2 sm:mt-10 mb-2 sm:mb-10 text-center space-y-2 sm:space-y-6">
+    <!-- Workspace greeting -->
+    <section id="hero-section" class="chat-hero w-full mt-2 sm:mt-10 mb-2 sm:mb-10 text-center space-y-2 sm:space-y-6">
+      <span class="chat-eyebrow"><span class="badge-dot"></span>Aura workspace</span>
       <div class="relative inline-block">
-        <div class="absolute -inset-4 bg-secondary/10 blur-2xl rounded-full"></div>
         <h2 class="font-headline text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight hero-title text-primary leading-tight" id="aura-greeting">
-          Mitrooo! <span class="accent text-secondary">I'm Aura</span>
+          What will we <span class="gradient-text">create</span> today?
         </h2>
       </div>
       <p class="hero-subtitle font-headline text-base sm:text-xl md:text-2xl text-on-surface-variant max-w-xl mx-auto font-light leading-relaxed mb-4 sm:mb-6 px-2">
-        Your personal AI assistant. Ask me any question in your mind.
+        A focused space to think, make, and move your best ideas forward.
       </p>
-
     </section>
 
     <!-- Empty State Visual -->
@@ -569,7 +589,7 @@
         <div id="canvas-live-indicator" class="canvas-live-badge hidden">
           <span class="canvas-live-dot"></span> Live
         </div>
-        <iframe id="code-preview-iframe" class="canvas-iframe" sandbox="allow-scripts allow-modals allow-same-origin" srcdoc="<html style='background:#090a12;color:#f5f5f7;font-family:sans-serif;height:100%;display:flex;align-items:center;justify-content:center;'><body style='text-align:center;'><h2>Aura is cooking...</h2><style>h2{animation:pulse 2s infinite;}@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}</style></body></html>"></iframe>
+        <iframe id="code-preview-iframe" class="canvas-iframe" sandbox="allow-scripts allow-modals allow-same-origin" srcdoc="<html style='background:#f5f5f7;color:#111;font-family:Inter,sans-serif;height:100%;display:flex;align-items:center;justify-content:center;'><body style='text-align:center;'><h2>Aura is creating...</h2><style>h2{animation:pulse 2s infinite;}@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.5;}}</style></body></html>"></iframe>
       </div>
       <!-- Code Tab -->
       <div id="canvas-code-tab" class="canvas-tab-content hidden">

@@ -1074,6 +1074,12 @@ function closeHistoryModal() {
 if (navHistoryBtn) navHistoryBtn.addEventListener("click", openHistoryModal);
 if (closeHistoryBtn) closeHistoryBtn.addEventListener("click", closeHistoryModal);
 
+// The landing-style workspace navigation exposes the same actions as the drawer.
+const headerNewChatBtn = document.getElementById("header-new-chat-btn");
+const headerHistoryBtn = document.getElementById("header-history-btn");
+if (headerNewChatBtn) headerNewChatBtn.addEventListener("click", () => createNewChat());
+if (headerHistoryBtn) headerHistoryBtn.addEventListener("click", openHistoryModal);
+
 // (#1) History Search
 const historySearchInput = document.getElementById('history-search-input');
 if (historySearchInput) {
@@ -3179,3 +3185,27 @@ if (canvasDownloadBtn) {
     }
   });
 }
+
+// ── Daylight studio key light ──
+// Mirrors the landing page's restrained, pointer-responsive illumination.
+(() => {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      window.matchMedia('(pointer: coarse)').matches) return;
+
+  const root = document.documentElement;
+  let framePending = false;
+  let x = 50;
+  let y = 28;
+
+  window.addEventListener('pointermove', (event) => {
+    x = (event.clientX / window.innerWidth) * 100;
+    y = (event.clientY / window.innerHeight) * 100;
+    if (framePending) return;
+    framePending = true;
+    requestAnimationFrame(() => {
+      root.style.setProperty('--px', `${x.toFixed(2)}%`);
+      root.style.setProperty('--py', `${y.toFixed(2)}%`);
+      framePending = false;
+    });
+  }, { passive: true });
+})();

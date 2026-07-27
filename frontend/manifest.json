@@ -4,8 +4,8 @@
   "description": "Chat with Aura, your personal AI assistant powered by Synapse AI.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#050508",
-  "theme_color": "#050508",
+  "background_color": "#f5f5f7",
+  "theme_color": "#f5f5f7",
   "orientation": "portrait-primary",
   "icons": [
     {
