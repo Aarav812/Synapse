@@ -157,6 +157,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
 
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // ── Liquid pointer state for solid (non-glass) buttons ──
+  // Filled buttons aren't `.lg` surfaces — they're opaque acrylic — but they
+  // still need --lg-mx/--lg-hover/--lg-press to drive their highlight and
+  // depression, so hand them to the same engine.
+  if (window.LiquidGlass) {
+    document.querySelectorAll('.btn-primary.lg-interactive, .auth-btn.lg-interactive')
+      .forEach(el => window.LiquidGlass.register(el));
+  }
 });
 
 // ── Mobile Hamburger Menu ──
@@ -237,16 +246,9 @@ document.addEventListener('DOMContentLoaded', () => {
   statItems.forEach(el => observer.observe(el));
 })();
 
-// ── CTA Button Ripple (subtle press feedback) ──
-(function() {
-  document.querySelectorAll('.btn-primary').forEach(btn => {
-    btn.addEventListener('click', function() {
-      this.animate(
-        [{ transform: 'scale(1)' }, { transform: 'scale(0.97)' }, { transform: 'scale(1.03)' }],
-        { duration: 220, easing: 'ease-out' }
-      );
-    });
-  });
-})();
+// ── Button press feedback ──
+// Handled entirely by the liquid-glass engine (--lg-press), so the depression
+// stays in sync with the material instead of fighting it with a second
+// transform animation.
 
 console.log('Synapse AI Landing — ported design loaded.');

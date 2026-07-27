@@ -16,6 +16,7 @@
     <link rel="manifest" href="/manifest.json" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/css/landing.css" />
+    <link rel="stylesheet" href="/css/liquid-glass.css" />
   </head>
   <body>
 
@@ -27,14 +28,19 @@
       <div class="bg-base"></div>
       <div class="bg-orb bg-orb-1"></div>
       <div class="bg-orb bg-orb-2"></div>
+      <div class="bg-orb bg-orb-3"></div>
       <div class="bg-noise"></div>
       <div class="bg-vignette"></div>
     </div>
 
+    <!-- Document-height light field: scrolls with the page so panels lower
+         down still have a light source behind them to refract. -->
+    <div class="bg-flow" aria-hidden="true"></div>
+
     <div id="app">
       <!-- Navigation -->
       <header class="navbar-shell">
-        <nav class="navbar glass reveal-nav" id="navbar">
+        <nav class="navbar lg lg-interactive reveal-nav" id="navbar" data-lg-tilt="off" data-lg-refract="deep">
           <a href="#top" class="logo">
             <span class="logo-mark" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -57,27 +63,40 @@
           </ul>
 
           <div class="nav-actions">
-            <button type="button" aria-label="Toggle theme" class="nav-icon-btn" id="theme-toggle-btn">
-              <span class="material-symbols-outlined" style="font-size:18px;">dark_mode</span>
+            <button type="button" role="switch" aria-checked="true" aria-label="Toggle appearance" class="theme-toggle lg lg-interactive" id="theme-toggle-btn" data-lg-refract="off" data-lg-tilt="off">
+              <span class="theme-toggle__icons" aria-hidden="true">
+                <svg class="ti-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+                  <circle cx="12" cy="12" r="4"/>
+                  <path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/>
+                </svg>
+                <svg class="ti-moon" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20.1 14.9A8.4 8.4 0 0 1 9.1 3.9a8.4 8.4 0 1 0 11 11Z"/>
+                </svg>
+              </span>
+              <span class="theme-toggle__knob" aria-hidden="true"></span>
             </button>
-            <a href="#" class="btn btn-primary nav-launch" id="nav-launch-btn">Launch Aura</a>
-            <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">
-              <span class="material-symbols-outlined" style="font-size:24px;">menu</span>
+            <a href="#" class="btn btn-primary nav-launch lg-interactive" id="nav-launch-btn">Launch Aura</a>
+            <button class="mobile-menu-btn lg lg-interactive" data-lg-refract="off" data-lg-tilt="off" id="mobile-menu-btn" aria-label="Open menu">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16"/>
+            </svg>
             </button>
           </div>
         </nav>
 
         <!-- Mobile Navigation Overlay -->
-        <div class="mobile-nav-overlay" id="mobile-nav-overlay">
+        <div class="mobile-nav-overlay lg" data-lg-refract="off" id="mobile-nav-overlay">
           <button class="mobile-nav-close" id="mobile-nav-close" aria-label="Close menu">
-            <span class="material-symbols-outlined">close</span>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18"/>
+          </svg>
           </button>
           <a href="#features" class="mobile-nav-link">Features</a>
           <a href="#models" class="mobile-nav-link">Models</a>
           <a href="#docs" class="mobile-nav-link">Docs</a>
           <a href="#pricing" class="mobile-nav-link">Pricing</a>
           <a href="#company" class="mobile-nav-link">Company</a>
-          <a href="#" class="btn btn-primary" style="margin-top:1rem;" id="mobile-launch-btn">Launch Aura</a>
+          <a href="#" class="btn btn-primary lg-interactive" style="margin-top:1rem;" id="mobile-launch-btn">Launch Aura</a>
         </div>
       </header>
 
@@ -90,7 +109,7 @@
           </div>
 
           <div class="hero-content">
-            <span class="badge reveal" id="hero-badge">
+            <span class="badge lg reveal" data-lg-refract="off" id="hero-badge">
               <span class="badge-dot"></span>
               Introducing Synapse Aura Allrounder
             </span>
@@ -103,8 +122,8 @@
             <p class="hero-subtitle reveal">Meet Aura — your adaptive, multi-LLM assistant. Experience the perfect harmony of form, function, and intelligence, beautifully crafted for clarity, speed, and precision.</p>
 
             <div class="hero-actions reveal">
-              <a href="#" class="btn btn-lg btn-primary" id="hero-start-btn">Join Waitlist</a>
-              <a href="#models" class="btn btn-lg btn-secondary" id="hero-explore-btn">Explore Models</a>
+              <a href="#" class="btn btn-lg btn-primary lg-interactive" id="hero-start-btn">Join Waitlist</a>
+              <a href="#models" class="btn btn-lg btn-secondary lg lg-interactive" data-lg-refract="off" id="hero-explore-btn">Explore Models</a>
             </div>
           </div>
         </section>
@@ -112,48 +131,48 @@
         <!-- Features Section -->
         <section id="features" class="section">
           <div class="section-header reveal">
-            <span class="eyebrow">Capabilities</span>
+            <span class="eyebrow lg" data-lg-refract="off">Capabilities</span>
             <h2 class="section-title">Everything you need. <span class="gradient-text">Nothing</span> you don't.</h2>
             <p class="section-subtitle">A complete assistant engineered around focus and speed — every feature earns its place.</p>
           </div>
 
           <div class="features-grid">
-            <div class="feature-card glass reveal">
+            <div class="feature-card lg lg-interactive reveal" data-lg-refract="deep">
               <div class="feature-icon" style="background:linear-gradient(135deg,#7c5cff,#5ea2ff);">
                 <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">bolt</span>
               </div>
               <h3>Lightning Fast</h3>
               <p>Streaming responses in milliseconds, powered by an optimized inference engine built for speed.</p>
             </div>
-            <div class="feature-card glass reveal">
+            <div class="feature-card lg lg-interactive reveal" data-lg-refract="deep">
               <div class="feature-icon" style="background:linear-gradient(135deg,#34d399,#14b8a6);">
                 <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">image</span>
               </div>
               <h3>Vision Capabilities</h3>
               <p>Upload images, documents, and screenshots for Aura to analyze, explain, and extract data seamlessly.</p>
             </div>
-            <div class="feature-card glass reveal">
+            <div class="feature-card lg lg-interactive reveal" data-lg-refract="deep">
               <div class="feature-icon" style="background:linear-gradient(135deg,#fbbf24,#fb923c);">
                 <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">tune</span>
               </div>
               <h3>Custom Instructions</h3>
               <p>Tailor Aura's behavior, tone, and formatting preferences to perfectly match your unique workflow.</p>
             </div>
-            <div class="feature-card glass reveal">
+            <div class="feature-card lg lg-interactive reveal" data-lg-refract="deep">
               <div class="feature-icon" style="background:linear-gradient(135deg,#e879f9,#ec4899);">
                 <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">psychology</span>
               </div>
               <h3>Advanced Reasoning</h3>
               <p>Multi-step logic, planning, and analysis that tackle genuinely complex problems with Aura Allrounder.</p>
             </div>
-            <div class="feature-card glass reveal">
+            <div class="feature-card lg lg-interactive reveal" data-lg-refract="deep">
               <div class="feature-icon" style="background:linear-gradient(135deg,#22d3ee,#3b82f6);">
                 <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">hub</span>
               </div>
               <h3>Multi-LLM Engine</h3>
               <p>Dynamically orchestrate across providers, switching models to find the perfect balance of speed and intelligence.</p>
             </div>
-            <div class="feature-card glass reveal">
+            <div class="feature-card lg lg-interactive reveal" data-lg-refract="deep">
               <div class="feature-icon" style="background:linear-gradient(135deg,#a78bfa,#f472b6);">
                 <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">memory</span>
               </div>
@@ -166,18 +185,18 @@
         <!-- Models Section -->
         <section id="models" class="section">
           <div class="section-header reveal">
-            <span class="eyebrow">The Aura Family</span>
+            <span class="eyebrow lg" data-lg-refract="off">The Aura Family</span>
             <h2 class="section-title">Intelligence <span class="gradient-text">tailored</span> for every task.</h2>
             <p class="section-subtitle">A focused family of specialized models — pick the perfect one for each job, or let Aura route automatically.</p>
           </div>
 
           <div class="models-grid">
-            <div class="model-card glass reveal" data-model="minimax/minimax-m2.7" data-name="Aura Allrounder" role="button" tabindex="0">
+            <div class="model-card lg lg-interactive reveal" data-lg-refract="deep" data-model="minimax/minimax-m2.7" data-name="Aura Allrounder" role="button" tabindex="0">
               <div class="model-card-top">
                 <span class="model-icon" style="background:linear-gradient(135deg,#7c5cff,#4f46e5);">
                   <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">auto_awesome</span>
                 </span>
-                <span class="model-badge">Default</span>
+                <span class="model-badge lg" data-lg-refract="off">Default</span>
               </div>
               <h3>Aura Allrounder</h3>
               <p>Our flagship reasoning model. Tackles multi-step logic, long documents, and complex analysis with a 256k context window. Built for research, planning, and deep problem-solving — the model you reach for when the task actually matters.</p>
@@ -187,12 +206,12 @@
               </div>
             </div>
 
-            <div class="model-card glass reveal" data-model="openai/gpt-oss-120b" data-name="Aura Summary" role="button" tabindex="0">
+            <div class="model-card lg lg-interactive reveal" data-lg-refract="deep" data-model="openai/gpt-oss-120b" data-name="Aura Summary" role="button" tabindex="0">
               <div class="model-card-top">
                 <span class="model-icon" style="background:linear-gradient(135deg,#34d399,#10b981);">
                   <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">translate</span>
                 </span>
-                <span class="model-badge">Bilingual</span>
+                <span class="model-badge lg" data-lg-refract="off">Bilingual</span>
               </div>
               <h3>Aura Summary</h3>
               <p>Explains any concept clearly in both English and Hinglish, making knowledge accessible to everyone. Perfect for learners, summaries, and plain-language breakdowns of tough topics — fast, fluent, and easy to follow.</p>
@@ -202,12 +221,12 @@
               </div>
             </div>
 
-            <div class="model-card glass reveal" data-model="stepfun-ai/step-3.5-flash" data-name="Aura Bhai" role="button" tabindex="0">
+            <div class="model-card lg lg-interactive reveal" data-lg-refract="deep" data-model="stepfun-ai/step-3.5-flash" data-name="Aura Bhai" role="button" tabindex="0">
               <div class="model-card-top">
                 <span class="model-icon" style="background:linear-gradient(135deg,#dcb8ff,#7701d0);">
                   <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">smart_toy</span>
                 </span>
-                <span class="model-badge">General</span>
+                <span class="model-badge lg" data-lg-refract="off">General</span>
               </div>
               <h3>Aura Bhai</h3>
               <p>Your friendly, casual companion for everyday questions, brainstorming, and quick help. Chat naturally, get things done fast, and vibe with an assistant that keeps it light while still being genuinely useful.</p>
@@ -220,7 +239,8 @@
         </section>
 
         <!-- Stats Ribbon -->
-        <section class="stats-ribbon reveal">
+        <section class="stats-ribbon-wrap reveal">
+          <div class="stats-ribbon lg lg-interactive" data-lg-tilt="off">
           <div class="stat-item">
             <span class="stat-number">3</span>
             <span class="stat-label">AI Models</span>
@@ -235,17 +255,18 @@
             <span class="stat-number">&lt;1s</span>
             <span class="stat-label">Response Time</span>
           </div>
+          </div>
         </section>
 
         <!-- Footer / CTA -->
         <footer id="company" class="landing-footer reveal">
-          <section id="chat" class="cta-band">
+          <section id="chat" class="cta-band lg lg-interactive" data-lg-tilt="off" data-lg-refract="deep">
             <div class="cta-glow" aria-hidden="true"></div>
             <h2 class="cta-title">Ready to think clearer?</h2>
             <p class="cta-subtitle">Start building with Synapse AI today. Meet Aura — no credit card required, just clarity, speed, and precision.</p>
             <div class="cta-actions">
-              <a href="#" class="btn btn-lg btn-primary" id="footer-start-btn">Join Waitlist</a>
-              <a href="#models" class="btn btn-lg btn-secondary">Explore Models</a>
+              <a href="#" class="btn btn-lg btn-primary lg-interactive" id="footer-start-btn">Join Waitlist</a>
+              <a href="#models" class="btn btn-lg btn-secondary lg lg-interactive" data-lg-refract="off">Explore Models</a>
             </div>
           </section>
 
@@ -288,7 +309,7 @@
       opacity: 0;
       transition: opacity 0.3s ease;
     ">
-      <div class="auth-card" id="auth-modal-content" style="
+      <div class="auth-card lg" data-lg-refract="deep" id="auth-modal-content" style="
         width: 100%;
         max-width: 440px;
         position: relative;
@@ -354,7 +375,7 @@
             <a href="#" id="forgot-password-link" style="font-size: 0.78rem; color: rgba(142,147,168,0.7); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#7c5cff'" onmouseout="this.style.color='rgba(142,147,168,0.7)'">Forgot password?</a>
           </div>
 
-          <button id="auth-btn" type="submit" class="auth-btn" style="margin-top: 0.35rem;">
+          <button id="auth-btn" type="submit" class="auth-btn lg-interactive" style="margin-top: 0.35rem;">
             <span id="auth-btn-text">Sign In</span>
           </button>
         </form>
@@ -363,7 +384,7 @@
           <span>or</span>
         </div>
 
-        <button id="google-btn" class="google-btn">
+        <button id="google-btn" class="google-btn lg lg-interactive" data-lg-refract="off">
           <svg class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -390,6 +411,8 @@
     <!-- App Scripts -->
     <script src="/js/firebase-config.js"></script>
     <script src="/js/auth.js"></script>
+    <script src="/js/theme.js"></script>
+    <script src="/js/liquid-glass.js"></script>
     <script src="/js/landing.js"></script>
   </body>
 </html>

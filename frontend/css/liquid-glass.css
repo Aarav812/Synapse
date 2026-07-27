@@ -1,0 +1,909 @@
+/* ============================================================================
+   SYNAPSE — LIQUID GLASS
+   A physically-composited optical glass material system.
+   ----------------------------------------------------------------------------
+   Layer order (bottom → top) for every `.lg` surface:
+     0. host backdrop     · blur + saturate + brightness (the "thickness")
+     1. .lg-refract       · SVG displacement of the backdrop, masked to the rim
+     2. host background   · tinted body + ambient lighting (cool L / warm R)
+     3. .lg-sheen         · mouse-reactive radial highlights (top-left, crown, floor)
+     4. .lg-glint         · slow conic specular sweep, masked like polished acrylic
+     5. ::before          · microscopic film grain (1–2%)
+     6. ::after           · Fresnel edge — polished crystal bevel, never a flat border
+   ----------------------------------------------------------------------------
+   Everything reacts to four lagged custom properties written by liquid-glass.js:
+     --lg-mx / --lg-my   pointer position inside the element   (0 → 1)
+     --lg-hover          hover energy                          (0 → 1)
+     --lg-press          press depression                      (0 → 1)
+   ========================================================================== */
+
+/* ── Animatable custom properties (typed = interpolatable + fast) ─────────── */
+@property --lg-mx    { syntax: "<number>"; inherits: true; initial-value: 0.5; }
+@property --lg-my    { syntax: "<number>"; inherits: true; initial-value: 0.5; }
+@property --lg-hover { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --lg-press { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --lg-tilt-x { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --lg-tilt-y { syntax: "<number>"; inherits: true; initial-value: 0; }
+
+:root {
+  /* ── Optical constants ─────────────────────────────────────────────────── */
+  --lg-blur:            34px;   /* base thickness            */
+  --lg-blur-lift:       14px;   /* added on hover            */
+  --lg-saturate:        148%;   /* the ambient is already blue; more turns glass navy */
+  --lg-brightness:      1.16;
+  --lg-contrast:        1.0;    /* raising contrast crushes an already-dark scene */
+
+  /* ── Body tint ─────────────────────────────────────────────────────────── */
+  --lg-tint:            255 255 255;
+  --lg-tint-a:          0.13;   /* inside the 8–15% window, at the useful end */
+  --lg-tint-a-hover:    0.175;
+
+  /* Scatter: light caught *inside* the pane. Multiplying a near-black
+     backdrop can never brighten it, so the lift has to be additive — this is
+     what separates a lit material from a tinted rectangle on dark scenes. */
+  --lg-scatter:         0.07;
+  --lg-scatter-hover:   0.10;
+
+  /* ── Ambient lighting rig (very subtle, directional) ───────────────────── */
+  --lg-key:             255 255 255;      /* top key light        */
+  --lg-cool:            150 190 255;      /* left, cool fill      */
+  --lg-warm:            255 214 178;      /* right, warm bounce   */
+  --lg-floor:           150 178 255;      /* bottom blue bounce   */
+  --lg-iris:            124 92 255;
+  --lg-azure:           94 162 255;
+
+  /* ── Geometry ──────────────────────────────────────────────────────────── */
+  --lg-radius:          28px;
+  --lg-edge:            1px;
+
+  /* ── Motion ────────────────────────────────────────────────────────────── */
+  --lg-ease:            cubic-bezier(.22, .61, .36, 1);
+  --lg-ease-soft:       cubic-bezier(.32, .72, 0, 1);
+  --lg-dur:             420ms;
+  --lg-dur-slow:        620ms;
+
+  /* ── Depth ─────────────────────────────────────────────────────────────── */
+  --lg-lift:            0px;    /* rest elevation, overridden per component */
+  --lg-shadow-key:      0 10px 30px rgba(0, 0, 0, .18);
+  --lg-shadow-amb:      0 30px 80px -20px rgba(0, 0, 0, .45);
+
+  /* ── Film grain (inlined so it never blocks paint) ─────────────────────── */
+  --lg-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.86' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+
+/* ── Daylight theme: the same optics, lit from a white room ──────────────── */
+html:not(.dark) {
+  --lg-tint:            255 255 255;
+  --lg-tint-a:          0.50;
+  --lg-tint-a-hover:    0.64;
+  --lg-saturate:        168%;
+  --lg-brightness:      1.04;
+  --lg-contrast:        1.0;
+  --lg-scatter:         0.0;    /* a bright room needs no help */
+  --lg-scatter-hover:   0.0;
+  --lg-cool:            120 165 255;
+  --lg-warm:            255 205 160;
+  --lg-floor:           110 140 235;
+  --lg-shadow-key:      0 10px 30px rgba(24, 30, 62, .12);
+  --lg-shadow-amb:      0 30px 80px -24px rgba(24, 30, 62, .22);
+}
+
+/* ── SVG filter host: present, measurable, invisible ─────────────────────── */
+.lg-defs {
+  position: fixed;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* ============================================================================
+   1 · THE MATERIAL
+   ========================================================================== */
+
+.lg {
+  position: relative;
+  isolation: isolate;
+  border-radius: var(--lg-radius);
+  border: 0;                       /* the bevel is optical, never a 1px line */
+  transform: translateZ(0);
+
+  /* Buttons and inputs carry an opaque UA `buttonface` background that would
+     sit *under* our tint and block the backdrop entirely. Clear it so glass
+     works on every element type, not just divs. */
+  background-color: transparent;
+
+  /* Thickness — the backdrop is blurred, enriched and lifted */
+  backdrop-filter:
+    blur(calc(var(--lg-blur) + var(--lg-blur-lift) * var(--lg-hover)))
+    saturate(var(--lg-saturate))
+    brightness(var(--lg-brightness))
+    contrast(var(--lg-contrast));
+  -webkit-backdrop-filter:
+    blur(calc(var(--lg-blur) + var(--lg-blur-lift) * var(--lg-hover)))
+    saturate(var(--lg-saturate))
+    brightness(var(--lg-brightness))
+    contrast(var(--lg-contrast));
+
+  /* Body tint + ambient rig: brighter crown, cool left cheek, warm right cheek */
+  background-image:
+    /* corner flare — the four corners of a curved pane gather light */
+    radial-gradient(60% 60% at 0% 0%,
+      rgba(var(--lg-key), .11), transparent 62%),
+    radial-gradient(60% 60% at 100% 0%,
+      rgba(var(--lg-key), .085), transparent 62%),
+    /* vertical key: bright crown, shaded sill */
+    linear-gradient(180deg,
+      rgba(var(--lg-key), .14) 0%,
+      rgba(var(--lg-key), .035) 30%,
+      rgba(var(--lg-key), 0)   62%,
+      rgba(0, 0, 0, .035)     100%),
+    /* horizontal rig: cool left cheek, warm right cheek */
+    linear-gradient(90deg,
+      rgba(var(--lg-cool), .085) 0%,
+      rgba(var(--lg-cool), 0)    30%,
+      rgba(var(--lg-warm), 0)    70%,
+      rgba(var(--lg-warm), .075) 100%),
+    /* body tint */
+    linear-gradient(180deg,
+      rgba(var(--lg-tint), calc(var(--lg-tint-a) + (var(--lg-tint-a-hover) - var(--lg-tint-a)) * var(--lg-hover))),
+      rgba(var(--lg-tint), calc((var(--lg-tint-a) + (var(--lg-tint-a-hover) - var(--lg-tint-a)) * var(--lg-hover)) * .58))),
+    /* flat additive scatter, so the pane is legible over pure black */
+    linear-gradient(0deg,
+      rgba(255, 255, 255, calc(var(--lg-scatter) + (var(--lg-scatter-hover) - var(--lg-scatter)) * var(--lg-hover))) 0%,
+      rgba(255, 255, 255, calc(var(--lg-scatter) + (var(--lg-scatter-hover) - var(--lg-scatter)) * var(--lg-hover))) 100%);
+
+  box-shadow:
+    /* cast shadow, nudged away from the pointer */
+    calc((var(--lg-mx) - .5) * -14px)
+    calc(10px + var(--lg-lift) + var(--lg-hover) * 8px)
+    calc(30px + var(--lg-hover) * 16px)
+    rgba(0, 0, 0, calc(.18 + var(--lg-hover) * .10)),
+    var(--lg-shadow-amb),
+    /* interior bounce */
+    inset 0 2px 8px rgba(255, 255, 255, .08),
+    /* light returning through the bottom rim */
+    inset 0 -1px 1px rgba(255, 255, 255, calc(.25 + var(--lg-hover) * .12));
+
+  transition:
+    background-image var(--lg-dur) var(--lg-ease),
+    box-shadow       var(--lg-dur) var(--lg-ease),
+    backdrop-filter  var(--lg-dur) var(--lg-ease),
+    transform        var(--lg-dur) var(--lg-ease);
+}
+
+/* Layer 5 — microscopic grain. Kills the "perfect digital blur" tell. */
+.lg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background-image: var(--lg-grain);
+  background-size: 180px 180px;
+  opacity: .018;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+
+/* Layer 6 — Fresnel bevel. A conic ramp so corners flare and flats fall away,
+   drawn as a hairline ring via a mask so it reads as a polished edge, not a border. */
+.lg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  border-radius: inherit;
+  padding: var(--lg-edge);
+  background:
+    /* directional floor: crown always lit, sill always returns a little light,
+       so the pane never dissolves into the backdrop at its bottom edge */
+    linear-gradient(180deg,
+      rgba(255, 255, 255, calc(.55 + var(--lg-hover) * .25)) 0%,
+      rgba(255, 255, 255, .10) 42%,
+      rgba(255, 255, 255, .07) 62%,
+      rgba(255, 255, 255, calc(.30 + var(--lg-hover) * .16)) 100%),
+    conic-gradient(from calc(var(--lg-mx) * 90deg - 45deg) at
+        calc(var(--lg-mx) * 100%) calc(var(--lg-my) * 100%),
+      rgba(255, 255, 255, calc(.50 + var(--lg-hover) * .26)) 0deg,
+      rgba(255, 255, 255, 0) 58deg,
+      rgba(var(--lg-cool),  calc(.34 + var(--lg-hover) * .22)) 122deg,
+      rgba(255, 255, 255, 0) 186deg,
+      rgba(var(--lg-warm),  calc(.30 + var(--lg-hover) * .20)) 250deg,
+      rgba(255, 255, 255, calc(.12 + var(--lg-hover) * .12)) 310deg,
+      rgba(255, 255, 255, calc(.50 + var(--lg-hover) * .26)) 360deg);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  opacity: calc(.86 + var(--lg-hover) * .14);
+  pointer-events: none;
+  transition: opacity var(--lg-dur) var(--lg-ease);
+}
+
+/* ── Injected sub-layers (liquid-glass.js adds these automatically) ───────── */
+/* Negative z keeps the optical stack above the tinted body but beneath the
+   content, so text never has to fight a blend mode. `.lg` isolates, so this
+   can never punch through to whatever sits behind the panel. */
+.lg-layers {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  contain: layout paint style;
+}
+
+/* Layer 1 — liquid refraction. The backdrop bends where the glass curves,
+   so the displacement is masked to the rim and fades to nothing in the middle. */
+.lg-refract {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  backdrop-filter: url(#lg-refract);
+  -webkit-backdrop-filter: url(#lg-refract);
+  -webkit-mask:
+    radial-gradient(140% 140% at 50% 50%,
+      transparent 38%, rgba(0, 0, 0, .55) 72%, #000 100%);
+          mask:
+    radial-gradient(140% 140% at 50% 50%,
+      transparent 38%, rgba(0, 0, 0, .55) 72%, #000 100%);
+  opacity: 0;
+  transition: opacity var(--lg-dur-slow) var(--lg-ease);
+}
+html.lg-has-refraction .lg-refract { opacity: .9; }
+
+/* Layer 3 — inner highlights. Three reflections that track the pointer with lag. */
+.lg-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    /* top-left key highlight */
+    radial-gradient(58% 78% at
+        calc(6% + var(--lg-mx) * 26%) calc(-8% + var(--lg-my) * 22%),
+      rgba(255, 255, 255, calc(.30 + var(--lg-hover) * .16)) 0%,
+      rgba(255, 255, 255, .07) 44%,
+      transparent 74%),
+    /* soft crown reflection riding the top edge */
+    radial-gradient(120% 46% at calc(20% + var(--lg-mx) * 60%) -16%,
+      rgba(255, 255, 255, calc(.24 + var(--lg-hover) * .12)) 0%,
+      transparent 70%),
+    /* blue bounce off the floor */
+    radial-gradient(90% 58% at calc(30% + var(--lg-mx) * 40%) 116%,
+      rgba(var(--lg-floor), calc(.13 + var(--lg-hover) * .08)) 0%,
+      transparent 64%),
+    /* faint shimmer chasing the cursor */
+    radial-gradient(36% 46% at calc(var(--lg-mx) * 100%) calc(var(--lg-my) * 100%),
+      rgba(255, 255, 255, calc(var(--lg-hover) * .11)) 0%,
+      transparent 70%);
+  mix-blend-mode: screen;
+  opacity: .92;
+  transition: opacity var(--lg-dur) var(--lg-ease);
+}
+
+/* Layer 4 — the polished-acrylic sweep. A conic band, masked into a soft
+   diagonal ribbon, that drifts as the pointer moves and glows a touch on hover. */
+.lg-glint {
+  position: absolute;
+  inset: -30%;
+  border-radius: inherit;
+  background:
+    conic-gradient(from calc(160deg + var(--lg-mx) * 70deg - var(--lg-my) * 30deg) at 50% 50%,
+      transparent 0deg,
+      rgba(255, 255, 255, .00) 38deg,
+      rgba(255, 255, 255, .11) 62deg,
+      rgba(210, 228, 255, .16) 74deg,
+      rgba(255, 255, 255, .05) 92deg,
+      transparent 130deg,
+      transparent 250deg,
+      rgba(255, 255, 255, .07) 286deg,
+      transparent 320deg,
+      transparent 360deg);
+  -webkit-mask: radial-gradient(70% 70% at
+      calc(var(--lg-mx) * 100%) calc(var(--lg-my) * 100%), #000 0%, transparent 78%);
+          mask: radial-gradient(70% 70% at
+      calc(var(--lg-mx) * 100%) calc(var(--lg-my) * 100%), #000 0%, transparent 78%);
+  opacity: calc(.34 + var(--lg-hover) * .46);
+  transition: opacity var(--lg-dur-slow) var(--lg-ease);
+}
+
+/* ── Hover: thicker blur, clearer body, deeper shadow, 1.02 scale ─────────── */
+.lg-interactive {
+  will-change: transform;
+  transform:
+    translate3d(0, calc(var(--lg-hover) * -3px), 0)
+    scale(calc(1 + var(--lg-hover) * .02 - var(--lg-press) * .028))
+    rotateX(calc(var(--lg-tilt-y) * -1deg))
+    rotateY(calc(var(--lg-tilt-x) * 1deg));
+  transform-style: preserve-3d;
+}
+
+/* ── Element-scoped tuning knobs ──────────────────────────────────────────── */
+.lg[data-lg-radius] { border-radius: var(--lg-radius); }
+
+/* ============================================================================
+   2 · NAVIGATION — the floating pill
+   ========================================================================== */
+
+.navbar-shell {
+  position: fixed;
+  inset: 0 0 auto 0;
+  top: 18px;
+  z-index: 100;
+  padding: 0 clamp(16px, 4vw, 48px);
+  pointer-events: none;
+}
+.navbar-shell > * { pointer-events: auto; }
+
+.navbar {
+  --lg-radius: 999px;
+  --lg-blur: 40px;
+  --lg-blur-lift: 10px;
+  --lg-lift: 2px;
+
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 72px;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 12px 0 20px;
+  transform: translate3d(0, 0, 0) scale(var(--nav-condense, 1));
+  transform-origin: 50% 0;
+  transition:
+    background-image var(--lg-dur) var(--lg-ease),
+    box-shadow       var(--lg-dur) var(--lg-ease),
+    backdrop-filter  var(--lg-dur) var(--lg-ease),
+    transform        var(--lg-dur-slow) var(--lg-ease),
+    max-width        var(--lg-dur-slow) var(--lg-ease);
+}
+
+/* Scroll edge effect: the pill condenses and the glass thickens */
+.navbar.scrolled {
+  --lg-blur: 52px;
+  --lg-tint-a: 0.115;
+  --lg-lift: 6px;
+  max-width: 1180px;
+}
+
+/* The lens: a magnifying pill that glides under the hovered nav item */
+.nav-lens {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 38px;
+  width: 1px;
+  margin-top: -19px;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, .05));
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, .34),
+    inset 0 -1px 1px rgba(255, 255, 255, .10),
+    0 6px 18px rgba(0, 0, 0, .22);
+  backdrop-filter: blur(6px) saturate(150%) brightness(1.12);
+  -webkit-backdrop-filter: blur(6px) saturate(150%) brightness(1.12);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(var(--lens-x, 0), 0, 0) scaleX(var(--lens-w, 1));
+  transform-origin: 0 50%;
+  transition: opacity 260ms var(--lg-ease);
+  will-change: transform, opacity;
+  /* must clear the pill's own optical stack, which paints at z-index -1 */
+  z-index: 1;
+}
+.nav-lens.is-active { opacity: 1; }
+
+.nav-links-desktop {
+  position: relative;
+  display: none;
+  align-items: center;
+  gap: 2px;
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+}
+.nav-links-desktop .nav-link {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -.005em;
+  color: var(--fog);
+  transition: color 300ms var(--lg-ease), text-shadow 300ms var(--lg-ease);
+}
+.nav-links-desktop .nav-link:hover,
+.nav-links-desktop .nav-link:focus-visible {
+  color: var(--white-soft);
+  text-shadow: 0 0 18px rgba(255, 255, 255, .28);
+}
+.nav-links-desktop .nav-link::after { content: none; }
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Theme toggle: a small glass capsule with a travelling knob ───────────── */
+.theme-toggle {
+  --lg-radius: 999px;
+  --lg-blur: 18px;
+  --lg-tint-a: .06;
+  position: relative;
+  display: none;
+  align-items: center;
+  width: 62px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+.theme-toggle__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, .95), rgba(214, 224, 255, .72));
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, .28),
+    inset 0 1px 1px rgba(255, 255, 255, .9),
+    inset 0 -2px 3px rgba(120, 140, 200, .35);
+  transform: translate3d(0, 0, 0);
+  transition: transform 520ms var(--lg-ease), background 520ms var(--lg-ease);
+  z-index: 2;
+}
+html:not(.dark) .theme-toggle__knob { transform: translate3d(28px, 0, 0); }
+.theme-toggle__icons {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  z-index: 1;
+}
+/* Inline SVG, not an icon font — the switch must never render as raw text
+   if a webfont is slow, blocked or unavailable. */
+.theme-toggle__icons svg {
+  width: 14px;
+  height: 14px;
+  color: rgba(255, 255, 255, .58);
+  transition: color 420ms var(--lg-ease);
+}
+html.dark  .theme-toggle__icons .ti-moon { color: rgba(255, 255, 255, .20); }
+html:not(.dark) .theme-toggle__icons .ti-sun  { color: rgba(30, 38, 70, .20); }
+html:not(.dark) .theme-toggle__icons .ti-moon { color: rgba(30, 38, 70, .58); }
+
+.nav-icon-btn {
+  --lg-radius: 999px;
+  --lg-blur: 18px;
+  --lg-tint-a: .06;
+  display: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  color: var(--fog);
+  cursor: pointer;
+  transition: color 300ms var(--lg-ease);
+}
+.nav-icon-btn:hover { color: var(--white-soft); }
+
+/* Qualified with .btn: the generic `.btn { display:inline-flex }` rule is
+   declared later at equal specificity and would otherwise win, leaking the
+   desktop CTA into the mobile pill. */
+.btn.nav-launch {
+  height: 46px;
+  padding: 0 24px;
+  font-size: 14.5px;
+  font-weight: 600;
+  display: none;
+}
+
+.mobile-menu-btn {
+  --lg-radius: 999px;
+  --lg-blur: 18px;
+  --lg-tint-a: .06;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  color: var(--white-soft);
+  cursor: pointer;
+}
+
+@media (min-width: 1024px) {
+  .nav-links-desktop { display: flex; }
+  .theme-toggle      { display: inline-flex; }
+  .nav-icon-btn      { display: grid; }
+  .btn.nav-launch    { display: inline-flex; }
+  .mobile-menu-btn   { display: none; }
+}
+
+/* ── Mobile sheet ─────────────────────────────────────────────────────────── */
+.mobile-nav-overlay {
+  --lg-radius: 28px;
+  --lg-blur: 44px;
+  --lg-tint-a: .10;
+  display: none;
+  position: relative;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 1320px;
+  margin: 10px auto 0;
+  padding: 52px 12px 12px;
+  border: 0;
+  opacity: 0;
+  transform: translate3d(0, -12px, 0) scale(.985);
+  transition:
+    opacity 320ms var(--lg-ease),
+    transform 420ms var(--lg-ease);
+}
+.mobile-nav-overlay.open {
+  display: flex;
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+.mobile-nav-overlay .mobile-nav-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .06);
+  border: none;
+  color: var(--white-soft);
+  cursor: pointer;
+  transition: background 260ms var(--lg-ease);
+}
+.mobile-nav-overlay .mobile-nav-close:hover { background: rgba(255, 255, 255, .12); }
+.mobile-nav-link {
+  position: relative;
+  z-index: 6;
+  display: block;
+  padding: 13px 16px;
+  border-radius: 16px;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--fog);
+  transition: color 260ms var(--lg-ease), background 260ms var(--lg-ease);
+}
+.mobile-nav-link:hover {
+  color: var(--white-soft);
+  background: rgba(255, 255, 255, .06);
+}
+.mobile-nav-overlay .btn { position: relative; z-index: 6; }
+
+/* ============================================================================
+   3 · BUTTONS — liquid acrylic
+   ========================================================================== */
+
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  border-radius: 999px;
+  border: 0;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: -.01em;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  isolation: isolate;
+  -webkit-tap-highlight-color: transparent;
+  transform:
+    translate3d(0, calc(var(--lg-hover) * -2px), 0)
+    scale(calc(1 + var(--lg-hover) * .02 - var(--lg-press) * .035));
+  transition:
+    transform 380ms var(--lg-ease),
+    box-shadow 380ms var(--lg-ease),
+    background-image 380ms var(--lg-ease),
+    color 380ms var(--lg-ease);
+  will-change: transform;
+}
+.btn:hover { transform: translate3d(0, -2px, 0) scale(1.02); }
+
+/* Filled — a bead of coloured acrylic with a wet meniscus on top */
+.btn-primary {
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(28, 12, 90, .34);
+  background-image:
+    radial-gradient(120% 140% at calc(var(--lg-mx) * 100%) calc(var(--lg-my) * 100%),
+      rgba(255, 255, 255, calc(.05 + var(--lg-hover) * .20)) 0%,
+      rgba(255, 255, 255, 0) 56%),
+    linear-gradient(180deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, 0) 46%),
+    linear-gradient(135deg, #6a44e2 0%, #5b34d6 44%, #2f66c8 100%);
+  box-shadow:
+    0 10px 30px rgba(124, 92, 255, calc(.34 + var(--lg-hover) * .16)),
+    0 2px 8px rgba(0, 0, 0, .18),
+    inset 0 1px 1px rgba(255, 255, 255, .55),
+    inset 0 -2px 6px rgba(48, 22, 140, .38),
+    inset 0 0 0 1px rgba(255, 255, 255, calc(.16 + var(--lg-hover) * .16));
+}
+/* Glowing rim on hover — masked to a ring, then blurred, so the halo blooms
+   outward from the edge instead of washing over the face of the button. */
+.btn-primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(135deg,
+    rgba(202, 186, 255, .95), rgba(150, 198, 255, .7) 52%, rgba(202, 186, 255, .9));
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  filter: blur(calc(.6px + var(--lg-hover) * 2px));
+  opacity: calc(.28 + var(--lg-hover) * .55);
+  transition: opacity 420ms var(--lg-ease), filter 420ms var(--lg-ease);
+  pointer-events: none;
+}
+.btn-primary:active { box-shadow:
+    0 4px 14px rgba(124, 92, 255, .28),
+    inset 0 2px 6px rgba(38, 16, 110, .45),
+    inset 0 1px 1px rgba(255, 255, 255, .35); }
+
+/* Outline — a chip of the same glass */
+.btn-secondary {
+  --lg-radius: 999px;
+  --lg-blur: 26px;
+  --lg-tint-a: .07;
+  --lg-tint-a-hover: .12;
+  color: var(--white-soft);
+}
+
+.btn-sm { height: 36px; padding: 0 18px; font-size: 13px; }
+.btn-md { height: 44px; padding: 0 22px; font-size: 14px; }
+.btn-lg { height: 54px; padding: 0 30px; font-size: 15px; }
+
+/* ============================================================================
+   4 · CARDS — carved from a single block
+   ========================================================================== */
+
+.feature-card,
+.model-card {
+  --lg-radius: 30px;
+  --lg-blur: 38px;
+  --lg-lift: 2px;
+  position: relative;
+  border: 0;
+  overflow: visible;
+}
+.model-card { --lg-radius: 34px; }
+
+.feature-card { padding: 30px; }
+.model-card {
+  display: flex;
+  flex-direction: column;
+  padding: 26px;
+  min-height: 360px;
+  cursor: pointer;
+}
+.feature-card::marker, .model-card::marker { content: none; }
+
+.feature-icon,
+.model-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, .28),
+    inset 0 1px 1px rgba(255, 255, 255, .45),
+    inset 0 -2px 6px rgba(0, 0, 0, .18);
+  transform: translate3d(0, calc(var(--lg-hover) * -2px), 0);
+  transition: transform 460ms var(--lg-ease), box-shadow 460ms var(--lg-ease);
+}
+.feature-icon { width: 48px; height: 48px; margin-bottom: 20px; }
+.model-icon   { width: 44px; height: 44px; border-radius: 14px; }
+
+.model-badge {
+  --lg-radius: 999px;
+  --lg-blur: 14px;
+  --lg-tint-a: .07;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fog);
+  border: 0;
+}
+
+/* ============================================================================
+   5 · MISC GLASS PARTS
+   ========================================================================== */
+
+.badge,
+.eyebrow {
+  --lg-radius: 999px;
+  --lg-blur: 20px;
+  --lg-tint-a: .06;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  border: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  color: var(--white-mute);
+}
+
+.cta-band {
+  --lg-radius: 36px;
+  --lg-blur: 44px;
+  --lg-lift: 4px;
+  position: relative;
+  overflow: hidden;
+  border: 0;
+  padding: 68px 24px;
+  text-align: center;
+}
+@media (min-width: 640px) { .cta-band { padding: 88px 48px; } }
+
+.stats-ribbon {
+  --lg-radius: 30px;
+  --lg-blur: 30px;
+  --lg-tint-a: .05;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(24px, 6vw, 72px);
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 40px 24px;
+  border: 0;
+}
+
+.auth-card {
+  --lg-radius: 32px;
+  --lg-blur: 48px;
+  --lg-tint-a: .10;
+  --lg-lift: 10px;
+  position: relative;
+  padding: 2.15rem 1.85rem;
+  border: 0;
+}
+
+.auth-input {
+  --lg-radius: 14px;
+  --lg-blur: 16px;
+  --lg-tint-a: .05;
+  width: 100%;
+  padding: .9rem 1rem;
+  border: 0;
+  border-radius: 14px;
+  color: var(--white-soft);
+  font-size: 15px;
+  font-family: var(--font-sans);
+  background: rgba(255, 255, 255, .05);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, .16),
+    inset 0 -1px 1px rgba(0, 0, 0, .18),
+    inset 0 0 0 1px rgba(255, 255, 255, .09);
+  transition: box-shadow 320ms var(--lg-ease), background 320ms var(--lg-ease);
+}
+.auth-input::placeholder { color: rgba(142, 147, 168, .75); }
+.auth-input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, .075);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, .22),
+    inset 0 0 0 1px rgba(var(--lg-iris), .55),
+    0 0 0 4px rgba(var(--lg-iris), .16);
+}
+
+.auth-btn,
+.google-btn {
+  position: relative;
+  width: 100%;
+  height: 52px;
+  border-radius: 16px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  border: 0;
+  transition: transform 360ms var(--lg-ease), box-shadow 360ms var(--lg-ease);
+}
+.auth-btn {
+  color: #fff;
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, 0) 46%),
+    linear-gradient(135deg, #6a44e2, #2f66c8);
+  box-shadow:
+    0 10px 28px rgba(124, 92, 255, .34),
+    inset 0 1px 1px rgba(255, 255, 255, .5),
+    inset 0 -2px 6px rgba(48, 22, 140, .35);
+}
+.auth-btn:hover  { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(124, 92, 255, .46), inset 0 1px 1px rgba(255, 255, 255, .6); }
+.auth-btn:active { transform: scale(.985); }
+.google-btn {
+  --lg-radius: 16px;
+  --lg-blur: 22px;
+  --lg-tint-a: .06;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .6rem;
+  font-weight: 500;
+  color: var(--white-soft);
+}
+
+/* ============================================================================
+   6 · CAPABILITY FALLBACKS & PERFORMANCE
+   ========================================================================== */
+
+/* No backdrop-filter (rare) → fall back to an opaque smoked panel.
+   Two nested conditions rather than `not (A or B)`, which older parsers
+   and build tools mishandle. */
+@supports not (-webkit-backdrop-filter: blur(1px)) {
+  @supports not (backdrop-filter: blur(1px)) {
+    .lg { background-color: rgba(18, 20, 34, .82) !important; }
+    html:not(.dark) .lg { background-color: rgba(248, 250, 255, .9) !important; }
+  }
+}
+
+/* Touch / small screens: lighten the optical stack, keep the look */
+@media (max-width: 767px), (pointer: coarse) {
+  :root { --lg-blur: 26px; --lg-blur-lift: 6px; }
+  .lg-refract { display: none; }
+  .lg-glint   { opacity: .28; }
+}
+
+/* Honour the OS */
+@media (prefers-reduced-motion: reduce) {
+  .lg,
+  .lg-interactive,
+  .btn,
+  .nav-lens,
+  .theme-toggle__knob { transition-duration: .01ms !important; }
+  .lg-glint { animation: none; }
+}
+
+/* Precise, quiet focus rings that match the material */
+.lg:focus-visible,
+.btn:focus-visible,
+.nav-link:focus-visible,
+.theme-toggle:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, .5),
+    0 0 0 4px rgba(var(--lg-iris), .35),
+    0 10px 30px rgba(0, 0, 0, .28);
+}
