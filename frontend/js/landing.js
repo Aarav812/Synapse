@@ -249,4 +249,94 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 })();
 
-console.log('Synapse AI Landing — ported design loaded.');
+// ── Liquid Glass · Mouse-driven reflections & studio lighting ──
+// Smoothly (spring-delayed) moves the studio key light and the specular
+// highlight across every glass surface, so the material reacts to the
+// background and pointer like real optical crystal. GPU-friendly, 60fps.
+(function () {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (window.matchMedia('(pointer: coarse)').matches) return;
+
+  const root = document.documentElement;
+
+  // Global smoothed pointer (0..1) for the studio key light
+  let tx = 0.5, ty = 0.32;   // target
+  let cx = 0.5, cy = 0.32;   // current (eased)
+
+  // Glass surfaces that get an individual moving specular highlight
+  const glassEls = Array.from(
+    document.querySelectorAll('.glass, .feature-card, .model-card, .navbar, .stats-ribbon, .cta-band')
+  );
+
+  window.addEventListener('pointermove', (e) => {
+    tx = e.clientX / window.innerWidth;
+    ty = e.clientY / window.innerHeight;
+  }, { passive: true });
+
+  let raf = null;
+  function tick() {
+    // Ease toward target — the "slightly delayed" spring feel
+    cx += (tx - cx) * 0.08;
+    cy += (ty - cy) * 0.08;
+
+    root.style.setProperty('--px', (cx * 100).toFixed(2) + '%');
+    root.style.setProperty('--py', (cy * 100).toFixed(2) + '%');
+
+    // Per-element specular highlight — light appears to come from the pointer
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const lightX = cx * vw;
+    const lightY = cy * vh;
+    for (let i = 0; i < glassEls.length; i++) {
+      const el = glassEls[i];
+      const r = el.__rect || (el.__rect = el.getBoundingClientRect());
+      const lx = ((lightX - r.left) / r.width) * 100;
+      const ly = ((lightY - r.top) / r.height) * 100;
+      el.style.setProperty('--lx', Math.max(-20, Math.min(120, lx)).toFixed(1) + '%');
+      el.style.setProperty('--ly', Math.max(-40, Math.min(120, ly)).toFixed(1) + '%');
+    }
+
+    raf = requestAnimationFrame(tick);
+  }
+
+  // Recompute cached rects on scroll / resize (throttled)
+  let geoTick = false;
+  function invalidateGeo() {
+    if (geoTick) return;
+    geoTick = true;
+    requestAnimationFrame(() => {
+      glassEls.forEach((el) => { el.__rect = el.getBoundingClientRect(); });
+      geoTick = false;
+    });
+  }
+  window.addEventListener('scroll', invalidateGeo, { passive: true });
+  window.addEventListener('resize', invalidateGeo, { passive: true });
+
+  raf = requestAnimationFrame(tick);
+})();
+
+// ── Subtle parallax lift on cards (pointer-follow tilt, very restrained) ──
+(function () {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (window.matchMedia('(pointer: coarse)').matches) return;
+
+  document.querySelectorAll('.feature-card, .model-card').forEach((card) => {
+    let rafId = null;
+    card.addEventListener('pointermove', (e) => {
+      const r = card.getBoundingClientRect();
+      const dx = (e.clientX - (r.left + r.width / 2)) / r.width;   // -0.5..0.5
+      const dy = (e.clientY - (r.top + r.height / 2)) / r.height;
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        card.style.transform =
+          `translateY(-8px) rotateX(${(-dy * 3).toFixed(2)}deg) rotateY(${(dx * 3).toFixed(2)}deg)`;
+        rafId = null;
+      });
+    });
+    card.addEventListener('pointerleave', () => {
+      card.style.transform = '';
+    });
+  });
+})();
+
+console.log('Synapse AI Landing — Liquid Glass loaded.');
