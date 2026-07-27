@@ -1,0 +1,3 @@
+## 2024-07-27 - Icon-only Button Accessibility
+**Learning:** Material Symbols ligatures (e.g., `<span class="material-symbols-outlined">icon_name</span>`) are used extensively for icon-only buttons in this app. Screen readers may attempt to read the ligature text ("close", "visibility") if not hidden, while the buttons themselves lack proper labeling. Also, setting `tabindex="-1"` on interactive elements like password visibility toggles breaks keyboard accessibility.
+**Action:** When implementing icon-only buttons, always ensure the parent `<button>` has a descriptive `aria-label` and the inner icon `<span>` has `aria-hidden="true"`. Never use `tabindex="-1"` on interactive buttons meant for general user toggling.
