@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html class="dark" lang="en">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Synapse AI — Chat with Aura</title>
   <meta name="description" content="Chat with Aura, your personal AI assistant powered by Synapse AI." />
-  <meta name="theme-color" content="#090a12" />
+  <meta name="theme-color" content="#f5f5f7" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -96,6 +96,7 @@
 
   <!-- Styles -->
   <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="/css/landing.css" />
   <link rel="stylesheet" href="/css/styles.css?v=7" />
   <!-- Inline only the orb animation styles needed by the empty state -->
   <style>
@@ -133,13 +134,15 @@
 </head>
 <body class="text-on-background font-body selection:bg-primary-container selection:text-on-primary-fixed overflow-x-hidden">
   <!-- Page Transition Overlay -->
-  <div id="page-overlay" style="position:fixed;inset:0;background:#090a12;z-index:99999;pointer-events:none;opacity:0;transition:opacity 0.3s ease;"></div>
+  <div id="page-overlay" style="position:fixed;inset:0;background:#f5f5f7;z-index:99999;pointer-events:none;opacity:0;transition:opacity 0.3s ease;"></div>
 
-  <!-- Landing-style Ambient Background (static, no animation) -->
-  <div class="bg-ambient">
+  <!-- Studio background — polished white paper lit by soft daylight -->
+  <div class="bg-ambient" aria-hidden="true">
     <div class="bg-base"></div>
     <div class="bg-orb bg-orb-1"></div>
     <div class="bg-orb bg-orb-2"></div>
+    <div class="bg-key-light" id="bg-key-light"></div>
+    <div class="bg-noise"></div>
     <div class="bg-vignette"></div>
   </div>
 
@@ -197,7 +200,18 @@
       <label class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors active:scale-95 duration-200 cursor-pointer header-icon text-[#f5f5f7]" for="drawer-toggle" aria-label="Open menu">
         <span class="material-symbols-outlined">menu</span>
       </label>
-      <h1 id="header-logo" class="text-2xl font-bold text-[#f5f5f7] font-headline tracking-tight cursor-pointer hover:opacity-80 transition-opacity">Synapse AI</h1>
+      <div id="header-logo" class="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+        <span class="logo-mark" aria-hidden="true" style="width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; color: #fff; background: linear-gradient(150deg, var(--accent-azure), var(--accent) 55%, var(--accent-violet)); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 6px 14px -4px rgba(110, 107, 255, 0.5);">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style="width: 18px; height: 18px;">
+            <path d="M12 5.6v5.1M12 13.3v5.1M6.7 17.5 12 13.3M17.3 17.5 12 13.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <circle cx="12" cy="4.6" r="1.9" fill="currentColor"/>
+            <circle cx="5.4" cy="18.6" r="1.9" fill="currentColor"/>
+            <circle cx="18.6" cy="18.6" r="1.9" fill="currentColor"/>
+            <circle cx="12" cy="12" r="1.6" fill="currentColor"/>
+          </svg>
+        </span>
+        <span class="logo-text" style="font-weight: 700; font-size: 1.25rem; letter-spacing: -0.02em; font-family: 'Inter', sans-serif;">Synapse<span class="logo-ai" style="color: var(--ink-3); font-weight: 500;"> AI</span></span>
+      </div>
     </div>
     <div class="flex items-center gap-2">
 
@@ -640,6 +654,70 @@
       // Drawer spring easing is handled via CSS
       // History item stagger is handled via CSS
     });
+  })();
+  </script>
+
+  <!-- Key Light Tracker for Light Theme (Landing style) -->
+  <script>
+  (function() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (window.matchMedia('(pointer: coarse)').matches) return;
+
+    const root = document.documentElement;
+    let tx = 0.5, ty = 0.32;
+    let cx = 0.5, cy = 0.32;
+
+    window.addEventListener('pointermove', (e) => {
+      tx = e.clientX / window.innerWidth;
+      ty = e.clientY / window.innerHeight;
+    }, { passive: true });
+
+    function tick() {
+      if (document.documentElement.classList.contains('dark')) {
+        requestAnimationFrame(tick);
+        return;
+      }
+      cx += (tx - cx) * 0.08;
+      cy += (ty - cy) * 0.08;
+
+      root.style.setProperty('--px', (cx * 100).toFixed(2) + '%');
+      root.style.setProperty('--py', (cy * 100).toFixed(2) + '%');
+
+      const glassEls = document.querySelectorAll(
+        '.glass, .glass-card, .ai-bubble, #text-input-bar, .personality-card, .history-item, #model-selector-btn, .category-chip'
+      );
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const lightX = cx * vw;
+      const lightY = cy * vh;
+
+      glassEls.forEach(el => {
+        const r = el.__rect || (el.__rect = el.getBoundingClientRect());
+        const lx = ((lightX - r.left) / r.width) * 100;
+        const ly = ((lightY - r.top) / r.height) * 100;
+        el.style.setProperty('--lx', Math.max(-20, Math.min(120, lx)).toFixed(1) + '%');
+        el.style.setProperty('--ly', Math.max(-40, Math.min(120, ly)).toFixed(1) + '%');
+      });
+
+      requestAnimationFrame(tick);
+    }
+
+    let geoTick = false;
+    function invalidateGeo() {
+      if (geoTick) return;
+      geoTick = true;
+      requestAnimationFrame(() => {
+        const glassEls = document.querySelectorAll(
+          '.glass, .glass-card, .ai-bubble, #text-input-bar, .personality-card, .history-item, #model-selector-btn, .category-chip'
+        );
+        glassEls.forEach((el) => { el.__rect = el.getBoundingClientRect(); });
+        geoTick = false;
+      });
+    }
+    window.addEventListener('scroll', invalidateGeo, { passive: true });
+    window.addEventListener('resize', invalidateGeo, { passive: true });
+
+    requestAnimationFrame(tick);
   })();
   </script>
 

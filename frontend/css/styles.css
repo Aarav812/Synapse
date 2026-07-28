@@ -3885,3 +3885,579 @@ html:not(.dark) .auth-card {
   box-shadow: 0 10px 40px rgba(94, 162, 255, 0.2), inset 0 0 20px rgba(94, 162, 255, 0.1);
   background: rgba(94, 162, 255, 0.05);
 }
+
+/* =====================================================================
+   Synapse AI — Premium Liquid Glass Chat UI (Landing Page Theme Integration)
+   Skins the entire Chat UI into the same VisionOS / WWDC light glass aesthetic.
+   ===================================================================== */
+
+html:not(.dark) {
+  --ink: #111111;
+  --ink-2: #666666;
+  --ink-3: #8b8b93;
+  --hairline: rgba(17, 17, 17, 0.06);
+
+  --accent: #6e6bff;
+  --accent-soft: #8f8dff;
+  --accent-deep: #5451e8;
+  --accent-violet: #7c6bff;
+  --accent-azure: #5e8bff;
+
+  /* ── Liquid glass material ── */
+  --glass-tint: rgba(255, 255, 255, 0.55);
+  --glass-tint-strong: rgba(255, 255, 255, 0.72);
+  --glass-blur: 48px;
+  --glass-sat: 200%;
+  --glass-bright: 1.08;
+
+  --edge: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.25) 26%,
+    rgba(255, 255, 255, 0) 48%,
+    rgba(255, 255, 255, 0) 60%,
+    rgba(150, 160, 255, 0.18) 84%,
+    rgba(255, 255, 255, 0.6) 100%
+  );
+
+  --shadow-glass:
+    0 1px 0 0 rgba(255, 255, 255, 0.9) inset,
+    0 -1px 2px 0 rgba(17, 17, 30, 0.04) inset,
+    0 2px 6px -2px rgba(17, 17, 40, 0.06),
+    0 18px 40px -12px rgba(30, 34, 60, 0.14),
+    0 40px 90px -30px rgba(30, 34, 70, 0.18);
+  --shadow-glass-hover:
+    0 1px 0 0 rgba(255, 255, 255, 1) inset,
+    0 -1px 2px 0 rgba(17, 17, 30, 0.05) inset,
+    0 4px 10px -2px rgba(17, 17, 40, 0.08),
+    0 30px 60px -14px rgba(30, 34, 60, 0.2),
+    0 60px 120px -40px rgba(30, 34, 70, 0.24);
+
+  --font-sans: "SF Pro Display", "Inter", "Geist", ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Cormorant Garamond", ui-serif, Georgia, "Times New Roman", serif;
+}
+
+/* ── Global Light Mode Settings ── */
+html:not(.dark) body,
+html:not(.dark) .bg-background {
+  background-color: var(--paper-3) !important;
+  color: var(--ink) !important;
+  font-family: var(--font-sans) !important;
+}
+
+/* ── Scrollbars ── */
+html:not(.dark) ::-webkit-scrollbar-thumb {
+  background: rgba(17, 17, 30, 0.14) !important;
+  border: 3px solid var(--paper-3) !important;
+}
+html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background: rgba(17, 17, 30, 0.24) !important;
+}
+
+/* ── Top App Bar (Header) ── */
+html:not(.dark) header {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0.42)) !important;
+  -webkit-backdrop-filter: blur(48px) saturate(200%) brightness(1.08) !important;
+  backdrop-filter: blur(48px) saturate(200%) brightness(1.08) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5) !important;
+  box-shadow: var(--shadow-glass) !important;
+}
+html:not(.dark) header h1,
+html:not(.dark) header span,
+html:not(.dark) header button {
+  color: var(--ink) !important;
+}
+html:not(.dark) header button:hover,
+html:not(.dark) header label:hover {
+  background: rgba(17, 17, 30, 0.05) !important;
+}
+
+/* ── Navigation Drawer (Sidebar) ── */
+html:not(.dark) #drawer {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.65)) !important;
+  -webkit-backdrop-filter: blur(48px) saturate(200%) brightness(1.08) !important;
+  backdrop-filter: blur(48px) saturate(200%) brightness(1.08) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.6) !important;
+  box-shadow: var(--shadow-glass-hover) !important;
+}
+html:not(.dark) #drawer h2 {
+  color: var(--ink) !important;
+}
+html:not(.dark) #drawer a,
+html:not(.dark) #drawer button {
+  color: var(--ink-2) !important;
+}
+html:not(.dark) #drawer a:hover,
+html:not(.dark) #drawer button:hover {
+  background: rgba(17, 17, 30, 0.05) !important;
+  color: var(--ink) !important;
+}
+html:not(.dark) #drawer label {
+  color: var(--ink-2) !important;
+}
+html:not(.dark) #drawer label:hover {
+  color: var(--ink) !important;
+}
+html:not(.dark) #nav-new-chat-btn {
+  background: rgba(110, 107, 255, 0.1) !important;
+  color: var(--accent) !important;
+}
+html:not(.dark) #nav-new-chat-btn:hover {
+  background: rgba(110, 107, 255, 0.18) !important;
+}
+html:not(.dark) #user-display-name {
+  color: var(--ink) !important;
+}
+html:not(.dark) #user-avatar {
+  background: rgba(17, 17, 30, 0.05) !important;
+  border: 1px solid var(--hairline) !important;
+}
+html:not(.dark) #user-avatar span {
+  color: var(--accent) !important;
+}
+
+/* ── Chat Messages & Row Layout ── */
+html:not(.dark) .chat-messages {
+  background: transparent !important;
+}
+
+/* ── User Chat Bubble (Deep Dark Acrylic action card look) ── */
+html:not(.dark) .user-bubble {
+  background: linear-gradient(150deg, #2a2a34 0%, #16161d 60%, #0d0d13 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 
+              0 -6px 14px -6px rgba(0, 0, 0, 0.5) inset,
+              0 10px 24px -10px rgba(17, 17, 30, 0.5) !important;
+}
+html:not(.dark) .user-bubble:hover {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.28) inset, 
+              0 -6px 16px -6px rgba(0, 0, 0, 0.55) inset,
+              0 14px 32px -8px rgba(17, 17, 30, 0.6) !important;
+  transform: translateY(-1px);
+}
+
+/* ── AI Chat Bubble (Premium Liquid Glass crystal card look) ── */
+html:not(.dark) .ai-bubble {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.55)) !important;
+  color: var(--ink) !important;
+  border: 1px solid rgba(255, 255, 255, 0.85) !important;
+  box-shadow: var(--shadow-glass) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(180%) brightness(1.04) !important;
+  backdrop-filter: blur(32px) saturate(180%) brightness(1.04) !important;
+}
+html:not(.dark) .ai-bubble::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--edge);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0.85;
+}
+html:not(.dark) .ai-bubble:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.62)) !important;
+  box-shadow: var(--shadow-glass-hover) !important;
+  transform: translateY(-1px);
+}
+
+/* ── Chat Input Footer & Bar ── */
+html:not(.dark) #text-input-bar {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.56)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.85) !important;
+  box-shadow: var(--shadow-glass) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(180%) brightness(1.04) !important;
+  backdrop-filter: blur(32px) saturate(180%) brightness(1.04) !important;
+}
+html:not(.dark) #text-input-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--edge);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0.85;
+}
+html:not(.dark) #chat-input {
+  color: var(--ink) !important;
+}
+html:not(.dark) #chat-input::placeholder {
+  color: var(--ink-3) !important;
+}
+html:not(.dark) #text-input-bar button {
+  color: var(--ink-2) !important;
+}
+html:not(.dark) #text-input-bar button:hover {
+  color: var(--ink) !important;
+  background: rgba(17, 17, 30, 0.05) !important;
+}
+html:not(.dark) #send-btn {
+  background: linear-gradient(150deg, #2a2a34 0%, #16161d 60%, #0d0d13 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 
+              0 -6px 12px -6px rgba(0, 0, 0, 0.5) inset,
+              0 4px 10px -4px rgba(17, 17, 30, 0.4) !important;
+}
+html:not(.dark) #send-btn:hover {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.28) inset, 
+              0 -6px 14px -6px rgba(0, 0, 0, 0.55) inset,
+              0 6px 14px -3px rgba(17, 17, 30, 0.5) !important;
+  transform: translateY(-1px) scale(1.04) !important;
+}
+
+/* Input Bar Focus Border Highlight */
+html:not(.dark) #text-input-bar:focus-within {
+  border-color: transparent !important;
+  background-image: linear-gradient(rgba(255,255,255,0.92), rgba(255,255,255,0.92)),
+                    linear-gradient(90deg, var(--accent-azure), var(--accent), var(--accent-violet), var(--accent-azure)) !important;
+  background-origin: border-box !important;
+  background-clip: padding-box, border-box !important;
+  background-size: 100% 100%, 300% 100% !important;
+  animation: gradient-border-flow 4s linear infinite !important;
+}
+
+/* ── Model Selector & Dropdown ── */
+html:not(.dark) #model-selector-btn {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.46)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.85) !important;
+  box-shadow: var(--shadow-glass) !important;
+  color: var(--ink) !important;
+}
+html:not(.dark) #model-selector-btn:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.55)) !important;
+}
+html:not(.dark) #aura1-mode-toggle {
+  background: rgba(17, 17, 30, 0.04) !important;
+  border: 1px solid rgba(17, 17, 30, 0.08) !important;
+}
+html:not(.dark) #aura1-mode-toggle button {
+  color: var(--ink-2) !important;
+}
+html:not(.dark) #aura1-mode-toggle button.bg-white\/10 {
+  background: #ffffff !important;
+  color: var(--ink) !important;
+  box-shadow: 0 1px 3px rgba(17, 17, 30, 0.08) !important;
+}
+
+/* Dropdown menu */
+html:not(.dark) #model-dropdown {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.82)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  box-shadow: var(--shadow-glass-hover) !important;
+  -webkit-backdrop-filter: blur(48px) saturate(200%) brightness(1.06) !important;
+  backdrop-filter: blur(48px) saturate(200%) brightness(1.06) !important;
+}
+html:not(.dark) .model-option {
+  border-bottom-color: rgba(17, 17, 30, 0.04) !important;
+}
+html:not(.dark) .model-option p {
+  color: var(--ink) !important;
+}
+html:not(.dark) .model-option p.text-on-surface-variant {
+  color: var(--ink-2) !important;
+}
+html:not(.dark) .model-option.active {
+  background: rgba(110, 107, 255, 0.08) !important;
+}
+html:not(.dark) .model-option.active .model-active-check {
+  color: var(--accent) !important;
+}
+
+/* ── Modals & Popup Panels ── */
+html:not(.dark) #settings-modal-content,
+html:not(.dark) #history-modal-content,
+html:not(.dark) #delete-history-modal-content {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.82)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  box-shadow: var(--shadow-glass-hover) !important;
+  -webkit-backdrop-filter: blur(48px) saturate(200%) brightness(1.06) !important;
+  backdrop-filter: blur(48px) saturate(200%) brightness(1.06) !important;
+  color: var(--ink) !important;
+}
+
+html:not(.dark) #settings-modal-content h2,
+html:not(.dark) #settings-modal-content h3,
+html:not(.dark) #history-modal-content h3,
+html:not(.dark) #delete-history-modal-content h3 {
+  color: var(--ink) !important;
+}
+
+html:not(.dark) #settings-modal-content p,
+html:not(.dark) #history-modal-content p,
+html:not(.dark) #delete-history-modal-content p {
+  color: var(--ink-2) !important;
+}
+
+/* ── Greeting / Onboarding Hero Section ── */
+html:not(.dark) #aura-greeting {
+  color: var(--ink) !important;
+}
+html:not(.dark) #aura-greeting .accent {
+  font-family: var(--font-serif) !important;
+  font-style: italic !important;
+  font-weight: 600 !important;
+  background: linear-gradient(105deg, var(--accent-azure) 0%, var(--accent) 46%, var(--accent-violet) 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+html:not(.dark) .hero-subtitle {
+  color: var(--ink-2) !important;
+}
+html:not(.dark) #empty-state p {
+  color: var(--ink-2) !important;
+}
+html:not(.dark) #empty-state-cta {
+  color: var(--accent) !important;
+}
+
+/* Category Chips */
+html:not(.dark) .category-chip {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.55)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  box-shadow: var(--shadow-glass) !important;
+  color: var(--ink-2) !important;
+}
+html:not(.dark) .category-chip:hover {
+  background: #ffffff !important;
+  color: var(--ink) !important;
+  box-shadow: var(--shadow-glass-hover) !important;
+  transform: translateY(-2px);
+}
+
+/* Scroll-to-bottom button */
+html:not(.dark) #scroll-to-bottom-btn {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.6)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.85) !important;
+  box-shadow: var(--shadow-glass) !important;
+  color: var(--ink) !important;
+}
+html:not(.dark) #scroll-to-bottom-btn:hover {
+  background: #ffffff !important;
+  box-shadow: var(--shadow-glass-hover) !important;
+}
+
+/* ── History Items ── */
+html:not(.dark) .history-item {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.55)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  box-shadow: var(--shadow-glass) !important;
+  color: var(--ink) !important;
+}
+html:not(.dark) .history-item:hover {
+  background: #ffffff !important;
+  box-shadow: var(--shadow-glass-hover) !important;
+}
+html:not(.dark) .history-item p {
+  color: var(--ink) !important;
+}
+html:not(.dark) .history-item span {
+  color: var(--ink-2) !important;
+}
+html:not(.dark) .history-search-input {
+  background: rgba(17, 17, 30, 0.04) !important;
+  border-color: rgba(17, 17, 30, 0.08) !important;
+  color: var(--ink) !important;
+}
+html:not(.dark) .history-search-input::placeholder {
+  color: var(--ink-3) !important;
+}
+
+/* ── Markdown & Typography formatting inside AI Bubble ── */
+html:not(.dark) .ai-bubble p {
+  color: var(--ink) !important;
+}
+html:not(.dark) .ai-bubble strong {
+  color: var(--ink) !important;
+  font-weight: 700 !important;
+}
+html:not(.dark) .ai-bubble ul,
+html:not(.dark) .ai-bubble ol {
+  color: var(--ink-2) !important;
+}
+html:not(.dark) .ai-bubble li {
+  color: var(--ink-2) !important;
+}
+html:not(.dark) .ai-bubble code {
+  background: rgba(110, 107, 255, 0.08) !important;
+  color: var(--accent-violet) !important;
+  border: 1px solid rgba(110, 107, 255, 0.12) !important;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+}
+html:not(.dark) .code-block-wrapper {
+  border: 1px solid rgba(17, 17, 30, 0.08) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 16px rgba(17, 17, 30, 0.03) !important;
+}
+html:not(.dark) .code-block-header {
+  background: rgba(17, 17, 30, 0.03) !important;
+  border-bottom: 1px solid rgba(17, 17, 30, 0.06) !important;
+}
+html:not(.dark) .code-lang-label {
+  color: var(--accent-violet) !important;
+}
+html:not(.dark) .copy-code-btn {
+  background: rgba(17, 17, 30, 0.04) !important;
+  color: var(--ink-2) !important;
+}
+html:not(.dark) .copy-code-btn:hover {
+  background: rgba(110, 107, 255, 0.08) !important;
+  color: var(--accent) !important;
+}
+html:not(.dark) .code-block-wrapper pre {
+  background: rgba(17, 17, 30, 0.015) !important;
+}
+html:not(.dark) .hljs {
+  color: #24292e !important;
+}
+html:not(.dark) .hljs-keyword,
+html:not(.dark) .hljs-selector-tag {
+  color: #d73a49 !important;
+}
+html:not(.dark) .hljs-string,
+html:not(.dark) .hljs-attr {
+  color: #032f62 !important;
+}
+html:not(.dark) .hljs-number,
+html:not(.dark) .hljs-literal {
+  color: #005cc5 !important;
+}
+html:not(.dark) .hljs-built_in,
+html:not(.dark) .hljs-type {
+  color: #6f42c1 !important;
+}
+html:not(.dark) .hljs-comment {
+  color: #6a737d !important;
+  font-style: italic !important;
+}
+
+/* ── Thinking Blocks ── */
+html:not(.dark) .thinking-block {
+  background: rgba(110, 107, 255, 0.04) !important;
+  border: 1px solid rgba(110, 107, 255, 0.12) !important;
+  border-left: 3px solid var(--accent) !important;
+}
+html:not(.dark) .thinking-block summary {
+  color: var(--accent) !important;
+}
+html:not(.dark) .thinking-content {
+  color: var(--ink-2) !important;
+  border-top-color: rgba(110, 107, 255, 0.08) !important;
+}
+
+/* ── Personality Cards ── */
+html:not(.dark) .personality-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.55)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  box-shadow: var(--shadow-glass) !important;
+  color: var(--ink) !important;
+}
+html:not(.dark) .personality-card:hover {
+  background: #ffffff !important;
+  box-shadow: var(--shadow-glass-hover) !important;
+}
+html:not(.dark) .personality-card.active {
+  background: linear-gradient(135deg, rgba(110, 107, 255, 0.08), rgba(94, 162, 255, 0.06)) !important;
+  border-color: rgba(110, 107, 255, 0.3) !important;
+}
+html:not(.dark) .personality-name {
+  color: var(--ink) !important;
+}
+html:not(.dark) .personality-card.active .personality-name {
+  color: var(--accent) !important;
+}
+html:not(.dark) .personality-desc {
+  color: var(--ink-2) !important;
+}
+html:not(.dark) .personality-card.active .personality-desc {
+  color: rgba(110, 107, 255, 0.7) !important;
+}
+html:not(.dark) .personality-check {
+  color: var(--accent) !important;
+}
+
+/* ── Text Areas, Custom Inputs ── */
+html:not(.dark) #custom-persona-section textarea {
+  background: rgba(17, 17, 30, 0.03) !important;
+  border: 1px solid rgba(17, 17, 30, 0.08) !important;
+  color: var(--ink) !important;
+}
+html:not(.dark) #custom-persona-section textarea:focus {
+  border-color: rgba(110, 107, 255, 0.5) !important;
+  background: #ffffff !important;
+}
+
+/* ── Footer Gradient Fade ── */
+html:not(.dark) .footer-gradient {
+  background: linear-gradient(to top, var(--paper-3) 95%, rgba(245, 245, 247, 0.6), transparent) !important;
+}
+
+/* ── Canvas Panel (Gemini style) ── */
+html:not(.dark) .canvas-panel {
+  background: #ffffff !important;
+  border-left: 1px solid rgba(17, 17, 30, 0.08) !important;
+  box-shadow: -8px 0 40px rgba(17, 17, 30, 0.06) !important;
+}
+html:not(.dark) .canvas-header {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-bottom: 1px solid rgba(17, 17, 30, 0.08) !important;
+}
+html:not(.dark) .canvas-title {
+  color: var(--ink) !important;
+}
+html:not(.dark) .canvas-subtitle {
+  color: var(--ink-2) !important;
+}
+html:not(.dark) .canvas-icon-wrap {
+  background: rgba(110, 107, 255, 0.08) !important;
+  border: 1px solid rgba(110, 107, 255, 0.15) !important;
+}
+html:not(.dark) .canvas-tab-bar {
+  background: rgba(17, 17, 30, 0.03) !important;
+  border: 1px solid rgba(17, 17, 30, 0.06) !important;
+}
+html:not(.dark) .canvas-tab {
+  color: var(--ink-2) !important;
+}
+html:not(.dark) .canvas-tab.active {
+  background: rgba(110, 107, 255, 0.12) !important;
+  color: var(--accent) !important;
+}
+html:not(.dark) .canvas-action-btn {
+  color: var(--ink-2) !important;
+}
+html:not(.dark) .canvas-action-btn:hover {
+  background: rgba(17, 17, 30, 0.05) !important;
+  color: var(--ink) !important;
+}
+html:not(.dark) .canvas-code-pre {
+  background: #fcfcfd !important;
+  border-top: 1px solid rgba(17, 17, 30, 0.08) !important;
+}
+html:not(.dark) .canvas-code-pre code {
+  color: var(--ink) !important;
+}
+html:not(.dark) .canvas-iframe {
+  background: #fdfdfd !important;
+}
+html:not(.dark) .canvas-live-badge {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(110, 107, 255, 0.25) !important;
+  color: var(--accent) !important;
+}
+html:not(.dark) .canvas-live-dot {
+  background: var(--accent) !important;
+}
