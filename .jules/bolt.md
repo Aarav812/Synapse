@@ -1,0 +1,3 @@
+## 2024-05-18 - [Throttling Scroll Listeners for Performance]
+**Learning:** Adding passive scroll event listeners (`{ passive: true }`) is great for performance, but the callback still executes very frequently during scrolling. If the callback performs DOM measurements (e.g., `window.scrollY` or `element.scrollHeight`), it can cause layout thrashing and block the main thread.
+**Action:** Always throttle high-frequency UI events (like `scroll` and `resize`) using `window.requestAnimationFrame()` to ensure the callback logic runs at most once per frame, avoiding performance bottlenecks in the UI.
