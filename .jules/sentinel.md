@@ -1,0 +1,4 @@
+## 2023-10-27 - [Fix XSS Vulnerabilities in Chat and Iframe]
+**Vulnerability:** Double and single quotes were not escaped in the `escapeHtml` function, allowing DOM XSS in attributes. Iframe for AI code execution was using `allow-same-origin` in its sandbox, which could allow malicious code to escape the sandbox via parent DOM access.
+**Learning:** `div.innerHTML` does not escape `"` and `'` characters. When putting user-controlled escaped strings into HTML attributes, these quotes must be explicitly escaped. A combined `allow-scripts allow-same-origin` sandbox on an iframe allows a child script to access parent DOM.
+**Prevention:** Explicitly use `.replace(/"/g, "&quot;").replace(/'/g, "&#039;")` after `div.innerHTML`. Always use `allow-scripts` without `allow-same-origin` in iframes containing untrusted code.

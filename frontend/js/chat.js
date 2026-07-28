@@ -2203,7 +2203,7 @@ function escapeHtml(text) {
   if (typeof text !== "string") return String(text ?? "");
   const div = document.createElement("div");
   div.textContent = text;
-  return div.innerHTML;
+  return div.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
 // ── Copy Code to Clipboard ──
