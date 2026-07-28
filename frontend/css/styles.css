@@ -4461,3 +4461,23 @@ html:not(.dark) .canvas-live-badge {
 html:not(.dark) .canvas-live-dot {
   background: var(--accent) !important;
 }
+
+/* ── Overrides for background elements to prevent styles.css overriding landing.css ── */
+html:not(.dark) .bg-base {
+  background: radial-gradient(120% 90% at 50% -10%, #ffffff 0%, var(--paper-1) 34%, var(--paper-3) 72%, var(--paper-4) 100%) !important;
+}
+html:not(.dark) .bg-orb-1 {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 70%) !important;
+  opacity: 0.9 !important;
+  animation: none !important;
+}
+html:not(.dark) .bg-orb-2 {
+  background: radial-gradient(circle, rgba(110, 107, 255, 0.05), rgba(110, 107, 255, 0) 70%) !important;
+  opacity: 0.8 !important;
+  animation: none !important;
+}
+html:not(.dark) .bg-vignette {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 12%),
+    radial-gradient(140% 120% at 50% 50%, rgba(255, 255, 255, 0) 60%, rgba(210, 214, 228, 0.28) 100%) !important;
+}
