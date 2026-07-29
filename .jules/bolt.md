@@ -1,0 +1,3 @@
+## 2025-02-09 - [Frontend Performance: Scroll Event Throttling]
+**Learning:** Frequent UI events like `scroll` or `resize` that perform synchronous DOM layout reads (e.g., `document.documentElement.scrollHeight`, `window.innerHeight`, `window.scrollY`) can severely block the main thread and cause layout thrashing if not throttled properly. In `frontend/js/chat.js`, there were unthrottled `scroll` event listeners calculating these metrics continually.
+**Action:** Always throttle high-frequency UI events involving DOM measurements using `window.requestAnimationFrame()` to sync read/write operations with the browser's render cycle and ensure smooth performance without jank.
