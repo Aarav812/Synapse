@@ -1,0 +1,3 @@
+## 2024-05-24 - Interactive toggle elements keyboard focus
+**Learning:** Do not set `tabindex="-1"` on interactive frontend UI elements like password toggles. It removes them from the document tab order, breaking keyboard navigation and making them inaccessible to screen readers. Always ensure icon-only toggle buttons have an explicit `aria-label` for screen reader description, and that the internal icon (e.g., Material Symbols ligature) has `aria-hidden="true"`.
+**Action:** When inspecting forms, verify tab navigation works for all interactive buttons. Remove `tabindex="-1"` from custom form controls unless intentionally managing focus via JavaScript (like roving tabindex). Always provide an `aria-label` on buttons and `aria-hidden="true"` on inner icons.
