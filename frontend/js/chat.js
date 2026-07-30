@@ -145,14 +145,9 @@ if (modeFastBtn) {
   });
 }
 
-// Initial UI sync
+// ── Initial UI sync
 updateAura1ToggleUI();
 
-
-// ── Helpers ──
-function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
-}
 
 // ── IndexedDB Helper (for persistent images & artifacts) ──
 const dbName = "SynapseDB";
@@ -860,7 +855,33 @@ async function loadSession(id) {
   }
 }
 
-function deleteSession(id) {
+async function deleteSession(id) {
+  // (#4) Clean up IndexedDB storage for this session
+  try {
+    const db = await initDB();
+    
+    // Cleanup attachments
+    const attachmentTx = db.transaction("attachments", "readwrite");
+    const attachmentStore = attachmentTx.objectStore("attachments");
+    const attachmentRequest = attachmentStore.openCursor();
+    attachmentRequest.onsuccess = (e) => {
+      const cursor = e.target.result;
+      if (cursor) {
+        if (cursor.key.startsWith(`img_${id}_`)) {
+          cursor.delete();
+        }
+        cursor.continue();
+      }
+    };
+
+    // Cleanup artifacts (if we have a way to link them to the chat ID)
+    // Currently artifact IDs are artifact_0, artifact_1... which don't include chat ID.
+    // However, we should at least clean up the ones we know are linked.
+    // For now, focusing on attachments as they are clearly prefixed.
+  } catch (err) {
+    console.error("Failed to clean up IndexedDB for session:", id, err);
+  }
+
   localStorage.removeItem(`chat_${id}`);
   let index = getHistoryIndex();
   index = index.filter(c => c.id !== id);
@@ -1144,6 +1165,12 @@ function loadHistoryIndex(searchQuery = '') {
 }
 
 // ── Send Message ──
+const MODEL_CAPABILITIES = {
+  "Aura Allrounder": { image: true, audio: true, video: true },
+  "Aura Summary": { image: false, audio: false, video: false },
+  "Aura Bhai": { image: true, audio: true, video: true }
+};
+
 function sendMessage() {
   const text = chatInput.value.trim();
   if ((!text && attachedFiles.length === 0) || isStreaming) return;
@@ -1154,24 +1181,26 @@ function sendMessage() {
     return;
   }
 
+  // (#7) Validate media capabilities for selected model
+  const caps = MODEL_CAPABILITIES[currentModelName] || { image: true, audio: true, video: true };
+  const hasImage = attachedFiles.some(f => f.isImage);
+  const hasAudio = attachedFiles.some(f => f.mimeType.startsWith("audio/"));
+  const hasVideo = attachedFiles.some(f => f.mimeType.startsWith("video/"));
+
+  if (hasImage && !caps.image) {
+    showToast(`${currentModelName} does not support image analysis.`, "error");
+    return;
+  }
+  if (hasAudio && !caps.audio) {
+    showToast(`${currentModelName} does not support audio analysis.`, "error");
+    return;
+  }
+  if (hasVideo && !caps.video) {
+    showToast(`${currentModelName} does not support video analysis.`, "error");
+    return;
+  }
+
   if (heroSection) heroSection.style.display = "none";
-  if (emptyState) emptyState.style.display = "none";
-
-  let displayContent = escapeHtml(text);
-  let backendPayload = text;
-
-  // Handle multimodal Payload
-  if (attachedFiles.length > 0) {
-    const hasImage = attachedFiles.some(f => f.isImage);
-    const hasAudio = attachedFiles.some(f => f.mimeType.startsWith("audio/"));
-    const hasVideo = attachedFiles.some(f => f.mimeType.startsWith("video/"));
-    const isMultimodal = hasImage || hasAudio || hasVideo;
-    
-    // Block image uploads for Aura Summary specifically as requested
-    if (hasImage && currentModelName === "Aura Summary") {
-      appendMessage("ai", "⚠️ **This AI is not optimized for image analysis. Use Aura Allrounder or Aura Bhai for vision.**");
-      return;
-    }
 
     // Render attachment previews for the user bubble
     let attachmentPreviews = [];
@@ -1978,233 +2007,10 @@ function scrollToBottom(force = false) {
 }
 
 // ── Artifact Code Store (maps unique IDs to raw HTML strings) ──
-const artifactStore = new Map();
-let artifactCounter = 0;
+// Moved to utils.js
 
 // ── Simple Markdown Renderer ──
-// NOTE: for user messages we might pass HTML strings intentionally if attachment is used, 
-// so only escape if it's pure text. Escape logic is handled before calling this if needed.
-function renderMarkdown(text, isStreaming = false) {
-  if (!text) return "";
-
-  // ── Step 1: Extract CODE BLOCKS before escaping ──
-  const codeBlocks = [];
-  let processed = text;
-  processed = processed.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
-    const idx = codeBlocks.length;
-    codeBlocks.push({ lang: lang || "", code: code.trimEnd() });
-    return `%%CODE_BLOCK_${idx}%%`;
-  });
-
-  // ── Step 1b: Extract LaTeX blocks BEFORE escaping ──
-  // We protect them from HTML escaping by replacing with placeholders
-  const mathBlocks = [];
-
-  // Block math: $$...$$ (can be multiline)
-  processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => {
-    const idx = mathBlocks.length;
-    mathBlocks.push({ math: math.trim(), display: true });
-    return `%%MATH_BLOCK_${idx}%%`;
-  });
-
-  // Block math: \[...\] (can be multiline)
-  processed = processed.replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => {
-    const idx = mathBlocks.length;
-    mathBlocks.push({ math: math.trim(), display: true });
-    return `%%MATH_BLOCK_${idx}%%`;
-  });
-
-  // Inline math: \(...\)
-  processed = processed.replace(/\\\(([\s\S]*?)\\\)/g, (_, math) => {
-    const idx = mathBlocks.length;
-    mathBlocks.push({ math: math.trim(), display: false });
-    return `%%MATH_BLOCK_${idx}%%`;
-  });
-
-  // Inline math: $...$ (single dollar, not greedy, avoid matching $$)
-  // Lookbehind-free: capture a leading non-'$' char (or start of string) and
-  // re-emit it, so a '$' immediately before the opening '$' is not treated as
-  // a math delimiter. Avoids SyntaxError on browsers without lookbehind
-  // support (e.g. Safari < 16.4).
-  processed = processed.replace(/(^|[^$])\$(?!\$)([^\n$]+?)\$(?!\$)/g, (_, lead, math) => {
-    const idx = mathBlocks.length;
-    mathBlocks.push({ math: math.trim(), display: false });
-    return `${lead}%%MATH_BLOCK_${idx}%%`;
-  });
-
-  // ── Step 1c: Handle INCOMPLETE code blocks (still streaming) ──
-  // Only check during streaming — match a trailing ``` that was NOT consumed by the complete regex
-  // Anchored to line start (^) to avoid false positives from inline backticks
-  if (isStreaming) {
-    processed = processed.replace(/^```(\w*)(?:\n[\s\S]*)?$/gm, (match, lang) => {
-      const langLabel = lang || "code";
-      const isHtml = langLabel.toLowerCase() === "html";
-      if (isHtml) {
-        return `%%WRITING_ARTIFACT%%`;
-      }
-      return `%%WRITING_CODE_${langLabel}%%`;
-    });
-  }
-
-  // ── Step 2: Normal markdown rendering ──
-  let html = escapeHtml(processed);
-
-  // Replace writing indicators
-  html = html.replace(/%%WRITING_ARTIFACT%%/g, `
-    <div class="artifact-card" style="background:rgba(94,162,255,0.05); border:1px solid rgba(94,162,255,0.2); border-radius:12px; padding:16px; margin:12px 0; display:flex; align-items:center; gap:12px;">
-      <div style="width:40px; height:40px; background:rgba(94,162,255,0.15); border-radius:8px; display:flex; align-items:center; justify-content:center;">
-        <span class="material-symbols-outlined" style="color:#5ea2ff; font-size:22px; animation: spin 2s linear infinite;">progress_activity</span>
-      </div>
-      <div>
-        <h4 style="margin:0; color:#f5f5f7; font-size:15px; font-weight:600;">Building Web App...</h4>
-        <p style="margin:0; color:rgba(185,202,203,0.7); font-size:12px;">Writing HTML / CSS / JS</p>
-      </div>
-    </div>
-  `);
-  html = html.replace(/%%WRITING_CODE_(\w+)%%/g, (_, lang) => `
-    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px 16px; margin:12px 0; display:flex; align-items:center; gap:12px;">
-      <span class="material-symbols-outlined" style="color:#dcb8ff; font-size:20px; animation: spin 2s linear infinite;">progress_activity</span>
-      <span style="color:rgba(185,202,203,0.7); font-size:13px;">Writing ${lang} code...</span>
-    </div>
-  `);
-
-  // (#5) Markdown Table Rendering
-  html = html.replace(/((?:^\|.+\|\s*(?:<br>|\n))+)/gm, (tableBlock) => {
-    const rows = tableBlock.split(/<br>|\n/).filter(r => r.trim());
-    if (rows.length < 2) return tableBlock;
-    
-    // Separate header, separator, and data rows
-    const headerRow = rows[0];
-    const dataRows = rows.filter((row, i) => i > 0 && !/^\|[\s\-:|]+\|$/.test(row.trim()));
-    
-    const parseRow = (row) => row.split('|').filter((c, idx, arr) => idx > 0 && idx < arr.length - 1).map(c => c.trim());
-    
-    let tableHtml = '<table><thead><tr>';
-    parseRow(headerRow).forEach(cell => { tableHtml += `<th>${cell}</th>`; });
-    tableHtml += '</tr></thead><tbody>';
-    dataRows.forEach(row => {
-      tableHtml += '<tr>';
-      parseRow(row).forEach(cell => { tableHtml += `<td>${cell}</td>`; });
-      tableHtml += '</tr>';
-    });
-    tableHtml += '</tbody></table>';
-    return tableHtml;
-  });
-
-  // Inline code
-  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
-  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
-  html = html.replace(/^[\s]*[-*]\s+(.+)$/gm, "<li class=\"ul-item\">$1</li>");
-  html = html.replace(/^[\s]*\d+\.\s+(.+)$/gm, "<li class=\"ol-item\">$1</li>");
-  // Wrap adjacent ul-items in <ul> and ol-items in <ol>
-  html = html.replace(/((?:<li class="ul-item">.*<\/li>\n?)+)/g, (match) => {
-    return "<ul>" + match.replace(/ class="ul-item"/g, "") + "</ul>";
-  });
-  html = html.replace(/((?:<li class="ol-item">.*<\/li>\n?)+)/g, (match) => {
-    return "<ol>" + match.replace(/ class="ol-item"/g, "") + "</ol>";
-  });
-  html = html.replace(/^### (.+)$/gm, "<h4>$1</h4>");
-  html = html.replace(/^## (.+)$/gm, "<h3>$1</h3>");
-  html = html.replace(/^# (.+)$/gm, "<h2>$1</h2>");
-  // Horizontal rules
-  html = html.replace(/^---$/gm, "<hr>");
-  // Blockquotes
-  html = html.replace(/^&gt;\s?(.+)$/gm, "<blockquote>$1</blockquote>");
-  // Images (must come before links so ![alt](url) isn't consumed by [alt](url))
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="max-w-full rounded-lg my-2 shadow-lg border border-outline-variant/30" />');
-  // Links
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-
-  // Paragraphs and Newlines
-  html = html.replace(/\n\n/g, "</p><p>");
-  html = html.replace(/\n/g, "<br>");
-  html = `<p>${html}</p>`;
-  html = html.replace(/<p>\s*<\/p>/g, "");
-
-  // Restore code blocks from placeholders at the very end to avoid markdown mangling inside them
-  html = html.replace(/%%CODE_BLOCK_(\d+)%%/g, (_, idx) => {
-    const block = codeBlocks[parseInt(idx)];
-    if (!block) return "";
-    const langLabel = block.lang || "code";
-    const isHtml = langLabel.toLowerCase() === "html";
-    const escapedCodeForDisplay = escapeHtml(block.code);
-
-    if (isHtml) {
-      // Only store in artifact map during final render (not streaming)
-      if (!isStreaming) {
-        const artifactId = 'artifact_' + (artifactCounter++);
-        artifactStore.set(artifactId, block.code);
-        // Also save to IndexedDB for cross-session persistence
-        saveToDB("artifacts", artifactId, block.code);
-        return `
-          <div class="artifact-card" data-artifact-id="${artifactId}" style="background:rgba(94,162,255,0.05); border:1px solid rgba(94,162,255,0.2); border-radius:12px; padding:16px; margin:12px 0; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
-          <div style="display:flex; align-items:center; gap:12px;">
-            <div style="width:40px; height:40px; background:rgba(94,162,255,0.15); border-radius:8px; display:flex; align-items:center; justify-content:center;">
-              <span class="material-symbols-outlined" style="color:#5ea2ff; font-size:22px;">web</span>
-            </div>
-            <div>
-              <h4 style="margin:0; color:#f5f5f7; font-size:15px; font-weight:600;">Interactive Web App</h4>
-              <p style="margin:0; color:rgba(185,202,203,0.7); font-size:12px;">HTML / CSS / JS</p>
-            </div>
-          </div>
-          <button onclick="previewCode(this)" class="glass-btn-heavy" style="background:linear-gradient(135deg, #7c5cff, #5ea2ff); color:#fff; border:none; padding:8px 16px; border-radius:20px; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:transform 0.15s, box-shadow 0.25s;" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 15px rgba(124,92,255,0.25)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
-            <span class="material-symbols-outlined" style="font-size:18px;">play_arrow</span> Open Preview
-          </button>
-        </div>
-      `;
-      } else {
-        // During streaming, show a completed-but-non-interactive card
-        return `
-          <div class="artifact-card" style="background:rgba(94,162,255,0.05); border:1px solid rgba(94,162,255,0.2); border-radius:12px; padding:16px; margin:12px 0; display:flex; align-items:center; gap:12px;">
-            <div style="display:flex; align-items:center; gap:12px;">
-              <div style="width:40px; height:40px; background:rgba(94,162,255,0.15); border-radius:8px; display:flex; align-items:center; justify-content:center;">
-                <span class="material-symbols-outlined" style="color:#5ea2ff; font-size:22px;">check_circle</span>
-              </div>
-              <div>
-                <h4 style="margin:0; color:#f5f5f7; font-size:15px; font-weight:600;">Web App Ready</h4>
-                <p style="margin:0; color:rgba(185,202,203,0.7); font-size:12px;">Preview available when generation completes</p>
-              </div>
-            </div>
-          </div>
-        `;
-      }
-    }
-
-    // Standard code block for other languages — (#6) use hljs class
-    return `<div class="code-block-wrapper"><div class="code-block-header"><span class="code-lang-label">${langLabel}</span><div style="display:flex;"><button class="copy-code-btn" onclick="copyCode(this)"><span class="material-symbols-outlined" style="font-size:14px;">content_copy</span> Copy</button></div></div><pre><code class="hljs language-${block.lang}">${escapedCodeForDisplay}</code></pre></div>`;
-  });
-
-  // ── Step 3: Render LaTeX placeholders with KaTeX ──
-  html = html.replace(/%%MATH_BLOCK_(\d+)%%/g, (_, idx) => {
-    const block = mathBlocks[parseInt(idx)];
-    if (!block) return "";
-    try {
-      if (typeof katex !== "undefined") {
-        return katex.renderToString(block.math, {
-          displayMode: block.display,
-          throwOnError: false,
-          output: "html",
-        });
-      }
-      // KaTeX not loaded yet — fallback to styled raw LaTeX
-      return block.display
-        ? `<div class="math-fallback">${block.math}</div>`
-        : `<span class="math-fallback">${block.math}</span>`;
-    } catch (e) {
-      return `<code class="math-error">${block.math}</code>`;
-    }
-  });
-
-  return html;
-}
-
-function escapeHtml(text) {
-  if (typeof text !== "string") return String(text ?? "");
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
-}
+// Moved to utils.js
 
 // ── Copy Code to Clipboard ──
 function copyCode(btn) {
@@ -2238,22 +2044,6 @@ function copyCode(btn) {
   });
 }
 window.copyCode = copyCode;
-
-// ── Relative Time Formatter ──
-function formatRelativeTime(timestamp) {
-  const now = Date.now();
-  const diff = now - timestamp;
-  const mins = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-  
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days}d ago`;
-  return new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
 
 // ── Mobile Virtual Keyboard Handling ──
 if (window.visualViewport) {

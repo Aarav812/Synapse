@@ -64,6 +64,7 @@ app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(express.static(path.join(__dirname, "../frontend"), { extensions: ["html"] }));
 
 // ── Simple Rate Limiter (in-memory) ──
+// NOTE: For production, consider using Redis to maintain state across restarts and instances.
 const rateLimitMap = new Map();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX = 20; // 20 requests per minute per user
@@ -105,6 +106,10 @@ setInterval(() => {
 // TESTING ONLY. Never enable this in production — it lets anyone call /api/chat.
 async function verifyFirebaseToken(req, res, next) {
   if (process.env.DISABLE_AUTH === "true") {
+    if (process.env.NODE_ENV === "production") {
+      console.error("[SECURITY] DISABLE_AUTH is set to true in production! Blocking request.");
+      return res.status(500).json({ error: "Security configuration error." });
+    }
     req.user = { uid: "local-test-user", email: "local@test" };
     return next();
   }
@@ -158,6 +163,16 @@ You NEVER just agree blindly or give robotic, neutral replies. Instead, you:
 
 Now, start the conversation like a real human would: with a casual, curious greeting. No "How can I assist you?" ever again. Emojis allowed from the very first line 😎.`;
 
+// ── Model Configuration ──
+const MODEL_REDIRECTS = {
+  "moonshotai/kimi-k2.6": "minimax/minimax-m2.7",
+  "mistralai/mistral-small-4-119b-2603": "minimax/minimax-m2.7"
+};
+
+const PERSONA_PROMPTS = {
+  "Aura Summary": "You are Aura Summary. Explain any topic in exactly TWO paragraphs (2-3 lines each). You MUST format your response exactly like this:\\n\\n**English:**\\n[Your English paragraph here with an example]\\n\\n**Hinglish:**\\n[Your Hinglish paragraph here with an example]\\n\\nDo NOT use bullet points or numbered lists, write only in continuous paragraph format."
+};
+
 // ── Chat Endpoint (SSE Streaming) ──
 app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
   const { messages, model, persona } = req.body;
@@ -182,10 +197,9 @@ app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
 
   let targetModel = model || "minimax/minimax-m2.7";
 
-  // Safety Redirect: If old Kimi or Mistral model is requested, force it to the
-  // new NVIDIA-backed Allrounder mapping below.
-  if (targetModel === "moonshotai/kimi-k2.6" || targetModel === "mistralai/mistral-small-4-119b-2603") {
-    targetModel = "minimax/minimax-m2.7";
+  // Safety Redirect: Redirect deprecated models
+  if (MODEL_REDIRECTS[targetModel]) {
+    targetModel = MODEL_REDIRECTS[targetModel];
   }
 
   // Check if user is requesting to generate an image
