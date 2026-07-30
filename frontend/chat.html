@@ -1,567 +1,307 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Synapse AI — Chat</title>
-  <meta name="description" content="Chat with Aura, your personal AI assistant." />
-  <meta name="theme-color" content="#0a0a0a" />
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#080808" />
+    <meta name="description" content="A focused conversation workspace for Synapse Aura." />
+    <title>Synapse AI — Aura</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/atom-one-dark.min.css" />
-  <link rel="stylesheet" href="/css/landing.css" />
-  <link rel="stylesheet" href="/css/styles.css?v=13" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/atom-one-dark.min.css" />
+    <link rel="stylesheet" href="/css/styles.css?v=13" />
+    <link rel="stylesheet" href="/css/chat.css?v=1" />
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  </head>
 
-  <style>
-    body { font-family: 'Inter', sans-serif; background-color: transparent; }
-    
-    /* Transparent or glass resets */
-    .bg-\\[\\#212121\\] { background-color: transparent !important; }
-    .bg-\\[\\#171717\\] { background-color: transparent !important; }
-    
-    /* Layout styling */
-    .message-row { max-width: 100% !important; width: 100%; margin-bottom: 2rem; }
-    .message-row.user { align-self: flex-end; flex-direction: row-reverse; }
-    .message-row.ai { align-self: flex-start; flex-direction: row; }
-    
-    /* Apply a similar glass effect to user bubble */
-    .user-bubble { position: relative; background: rgba(20,20,20,0.6) !important; border: 1px solid rgba(255,255,255,0.08) !important; border-radius: 1.5rem !important; padding: 0.85rem 1.25rem !important; color: #ececec !important; max-width: 75% !important; font-size: 1rem !important; backdrop-filter: blur(24px); box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important; z-index: 1; }
-    .user-bubble::after {
-      content: "";
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      z-index: -1;
-      border-radius: 1.5rem;
-      filter: url('#liquid-glass-filter');
-      backdrop-filter: blur(8px);
-      overflow: hidden;
-      opacity: 0.5;
-    }
+  <body class="chat-page">
+    <div class="page-transition-overlay" id="page-overlay" aria-hidden="true"></div>
+    <div class="chat-background" aria-hidden="true"></div>
 
-    .ai-bubble { background: transparent !important; border: none !important; padding: 0 !important; color: #ececec !important; box-shadow: none !important; border-radius: 0 !important; width: 100%; font-size: 1rem !important; }
-    
-    .message-avatar { border: none !important; box-shadow: none !important; border-radius: 50% !important; width: 32px !important; height: 32px !important; flex-shrink: 0; }
-    .message-avatar.ai-avatar { background: rgba(30,30,30,0.8) !important; color: white !important; border: 1px solid rgba(255,255,255,0.1) !important; font-size: 16px !important; backdrop-filter: blur(12px); }
-    .message-avatar.user-avatar { display: none !important; }
-    
-    .ai-action-bar { padding: 0.5rem 0 !important; background: transparent !important; border: none !important; box-shadow: none !important; justify-content: flex-start !important; }
-    
-    .category-chip { cursor: pointer; display: flex; align-items: center; gap: 0.5rem; border: 1px solid rgba(255,255,255,0.05) !important; }
-    
-    #chat-footer { border: 1px solid rgba(255,255,255,0.1); background: rgba(20,20,20,0.6); backdrop-filter: blur(32px); }
-    #chat-input::placeholder { color: rgba(255,255,255,0.4); }
-    
-    /* Mobile Drawer */
-    #drawer-toggle:checked ~ #app-drawer { transform: translateX(0) !important; }
-    #drawer-toggle:checked ~ #drawer-overlay { display: block !important; }
-    
-    /* Override tailwind gradient so background shows */
-    .chat-footer-gradient {
-       background: linear-gradient(to top, rgba(10,10,10,1) 10%, rgba(10,10,10,0.5) 60%, transparent);
-    }
-    
-    /* Sidebar glass effect */
-    #app-drawer {
-      background: rgba(15, 15, 15, 0.4) !important;
-      backdrop-filter: blur(32px);
-      -webkit-backdrop-filter: blur(32px);
-      border-right: 1px solid rgba(255,255,255,0.05);
-    }
-    
-    /* Header glass effect */
-    header {
-      background: rgba(10, 10, 10, 0.6);
-      backdrop-filter: blur(24px);
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-    
-    /* Hide the liquid button's padding specifically for the send button */
-    #send-btn.liquid-btn {
-      padding: 0 !important;
-      width: 44px !important;
-      height: 44px !important;
-      border: none !important;
-    }
-    
-    #send-btn.liquid-btn::before, #send-btn.liquid-btn::after {
-       border-radius: 50% !important;
-    }
-  </style>
-</head>
-<body class="text-[#ececec] flex h-screen overflow-hidden selection:bg-white/20">
+    <input id="drawer-toggle" type="checkbox" aria-label="Toggle sidebar" />
+    <label id="drawer-overlay" for="drawer-toggle" aria-label="Close sidebar"></label>
 
-  <!-- Liquid Glass SVG Filter -->
-  <svg style="display:none;" aria-hidden="true">
-    <defs>
-      <filter id="liquid-glass-filter" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
-        <feTurbulence type="fractalNoise" baseFrequency="0.05 0.05" numOctaves="1" seed="1" result="turbulence" />
-        <feGaussianBlur in="turbulence" stdDeviation="2" result="blurredNoise" />
-        <feDisplacementMap in="SourceGraphic" in2="blurredNoise" scale="70" xChannelSelector="R" yChannelSelector="B" result="displaced" />
-        <feGaussianBlur in="displaced" stdDeviation="4" result="finalBlur" />
-        <feComposite in="finalBlur" in2="finalBlur" operator="over" />
-      </filter>
-    </defs>
-  </svg>
-
-  <!-- Studio background -->
-  <div class="bg-ambient" aria-hidden="true">
-    <!-- WebGL Background -->
-    <canvas id="webgl-bg" style="position:absolute;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none;"></canvas>
-    <div class="bg-base" style="opacity: 0.3; z-index: 1; position: relative;"></div>
-    <div class="bg-orb bg-orb-1" style="z-index: 2;"></div>
-    <div class="bg-orb bg-orb-2" style="z-index: 2;"></div>
-    <div class="bg-key-light" id="bg-key-light" style="z-index: 3;"></div>
-    <div class="bg-noise" style="z-index: 4;"></div>
-    <div class="bg-vignette" style="z-index: 5;"></div>
-  </div>
-
-  <input class="hidden" id="drawer-toggle" type="checkbox" />
-  <label for="drawer-toggle" id="drawer-overlay" class="fixed inset-0 bg-black/60 z-[50] hidden cursor-pointer md:hidden"></label>
-
-  <!-- Sidebar -->
-  <aside id="app-drawer" class="w-[260px] flex flex-col transition-transform duration-300 md:relative fixed inset-y-0 left-0 z-[60] transform -translate-x-full md:translate-x-0">
-    
-    <!-- New Chat -->
-    <div class="p-3">
-      <a id="nav-new-chat-btn" class="liquid-btn flex items-center justify-center gap-2 p-3 w-full cursor-pointer transition-colors text-sm text-white mb-2">
-        <img src="/favicon.svg" alt="Aura" class="w-5 h-5 invert opacity-80" />
-        <span style="z-index: 10;">New Chat</span>
+    <aside id="drawer" aria-label="Chat navigation">
+      <a class="sidebar-brand" href="/index.html" aria-label="Synapse AI home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M12 5.6v5.1M12 13.3v5.1M6.7 17.5 12 13.3M17.3 17.5 12 13.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            <circle cx="12" cy="4.6" r="1.9" fill="currentColor" /><circle cx="5.4" cy="18.6" r="1.9" fill="currentColor" /><circle cx="18.6" cy="18.6" r="1.9" fill="currentColor" /><circle cx="12" cy="12" r="1.6" fill="currentColor" />
+          </svg>
+        </span>
+        <span class="brand-name">Synapse <em>AI</em></span>
       </a>
-    </div>
 
-    <!-- History -->
-    <div class="flex-1 overflow-y-auto px-3 pb-3">
-      <div class="text-xs font-semibold text-white/40 mb-2 px-2 mt-2">Recent</div>
-      <!-- Ensure id matches exactly so chat.js binds it -->
-      <a id="nav-history-btn" class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 cursor-pointer transition-colors text-sm font-medium text-white mb-2 hidden">
-        <span class="material-symbols-outlined text-[18px]">history</span>
-        View all history
-      </a>
-      <!-- chat.js populats this list -->
-      <ul id="history-list" class="space-y-1 mt-2"></ul>
-    </div>
+      <nav class="sidebar-primary" aria-label="Primary navigation">
+        <button id="nav-new-chat-btn" class="sidebar-action sidebar-action--new" type="button">
+          <span class="material-symbols-outlined">edit_square</span>
+          <span>New chat</span>
+        </button>
+        <button id="nav-history-btn" class="sidebar-action" type="button">
+          <span class="material-symbols-outlined">history</span>
+          <span>Chat history</span>
+        </button>
+      </nav>
 
-    <!-- Bottom Actions -->
-    <div class="p-3 border-t border-white/5">
-      <button id="settings-btn" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 cursor-pointer transition-colors text-sm font-medium text-white">
-        <span class="material-symbols-outlined text-[18px]">settings</span>
-        Settings
-      </button>
-      <button id="logout-btn" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 cursor-pointer transition-colors text-sm font-medium text-[#ff7b72] mt-1">
-        <span class="material-symbols-outlined text-[18px]">logout</span>
-        Log out
-      </button>
-    </div>
-  </aside>
+      <section class="sidebar-history" aria-label="Recent conversations">
+        <span class="sidebar-section-label">Recent</span>
+        <ul id="history-list" aria-live="polite"></ul>
+        <p class="sidebar-empty">Your recent conversations are available in chat history.</p>
+      </section>
 
-  <!-- Main Content -->
-  <main class="flex-1 flex flex-col min-w-0 h-screen relative z-10">
-    
-    <!-- Header -->
-    <header class="h-14 flex items-center justify-between px-4 sticky top-0 z-20">
-      <div class="flex items-center gap-2">
-         <label for="drawer-toggle" class="md:hidden p-2 -ml-2 rounded-lg hover:bg-white/10 cursor-pointer text-white/70 flex items-center justify-center">
-           <span class="material-symbols-outlined text-[24px]">menu</span>
-         </label>
-         <!-- Model Selector -->
-         <div class="relative group" id="model-selector-container">
-            <button id="model-selector-btn" class="glass flex items-center gap-2 px-4 py-1.5 rounded-full hover:bg-white/10 transition-colors text-[14px] font-semibold text-white/90 hover:text-white border border-white/10 shadow-sm" style="background: rgba(20,20,20,0.5);">
+      <div class="sidebar-bottom">
+        <div class="sidebar-divider"></div>
+        <button id="settings-btn" class="sidebar-action" type="button">
+          <span class="material-symbols-outlined">tune</span>
+          <span>Personalize Aura</span>
+        </button>
+        <button id="logout-btn" class="sidebar-action sidebar-action--logout" type="button">
+          <span class="material-symbols-outlined">logout</span>
+          <span>Log out</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="chat-workspace">
+      <header class="chat-header">
+        <div class="header-side">
+          <label class="mobile-menu-btn" for="drawer-toggle" aria-label="Open sidebar">
+            <span class="material-symbols-outlined">menu</span>
+          </label>
+          <button id="header-logo" type="button" aria-label="Start a new chat">
+            <span class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 5.6v5.1M12 13.3v5.1M6.7 17.5 12 13.3M17.3 17.5 12 13.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                <circle cx="12" cy="4.6" r="1.9" fill="currentColor" /><circle cx="5.4" cy="18.6" r="1.9" fill="currentColor" /><circle cx="18.6" cy="18.6" r="1.9" fill="currentColor" /><circle cx="12" cy="12" r="1.6" fill="currentColor" />
+              </svg>
+            </span>
+            <span class="brand-name">Synapse</span>
+          </button>
+
+          <div class="model-selector-wrap" id="model-selector-container">
+            <button id="model-selector-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
               <span id="current-model-name">Aura Allrounder</span>
-              <span class="material-symbols-outlined text-[18px] text-white/50">expand_more</span>
+              <span class="material-symbols-outlined">expand_more</span>
             </button>
-            <!-- Dropdown -->
-            <div id="model-dropdown" class="absolute top-full left-0 mt-2 w-64 glass border border-white/10 rounded-2xl shadow-2xl flex flex-col hidden opacity-0 transition-opacity z-50 overflow-hidden py-2" style="background: rgba(20,20,20,0.85); backdrop-filter: blur(24px);">
-              <button class="model-option flex items-center gap-3 px-4 py-3 hover:bg-white/10 text-left transition-colors" data-model="minimax/minimax-m2.7" data-name="Aura Allrounder" role="option">
-                <span class="material-symbols-outlined text-white/70">auto_awesome</span>
-                <div>
-                  <p class="text-[14px] font-medium text-white">Aura Allrounder</p>
-                  <p class="text-[12px] text-white/50">Default, highly intelligent</p>
-                </div>
+            <div id="model-dropdown" class="hidden opacity-0 translate-y-2 pointer-events-none" role="listbox" aria-label="Choose an AI model">
+              <button class="model-option" type="button" data-model="minimax/minimax-m2.7" data-name="Aura Allrounder" role="option">
+                <span class="material-symbols-outlined">auto_awesome</span>
+                <span><span class="model-option-title">Aura Allrounder</span><span class="model-option-description">Balanced reasoning for everyday work</span></span>
+                <span class="material-symbols-outlined model-active-check">check</span>
               </button>
-              <button class="model-option flex items-center gap-3 px-4 py-3 hover:bg-white/10 text-left transition-colors" data-model="openai/gpt-oss-120b" data-name="Aura Summary">
-                <span class="material-symbols-outlined text-white/70">translate</span>
-                <div>
-                  <p class="text-[14px] font-medium text-white">Aura Summary</p>
-                  <p class="text-[12px] text-white/50">Great for long texts</p>
-                </div>
+              <button class="model-option" type="button" data-model="openai/gpt-oss-120b" data-name="Aura Summary" role="option">
+                <span class="material-symbols-outlined">short_text</span>
+                <span><span class="model-option-title">Aura Summary</span><span class="model-option-description">Clear explanations and concise answers</span></span>
+                <span class="material-symbols-outlined model-active-check">check</span>
               </button>
-              <button class="model-option flex items-center gap-3 px-4 py-3 hover:bg-white/10 text-left transition-colors" data-model="stepfun-ai/step-3.5-flash" data-name="Aura Bhai">
-                <span class="material-symbols-outlined text-white/70">bolt</span>
-                <div>
-                  <p class="text-[14px] font-medium text-white">Aura Bhai</p>
-                  <p class="text-[12px] text-white/50">Fast and precise</p>
-                </div>
+              <button class="model-option" type="button" data-model="stepfun-ai/step-3.5-flash" data-name="Aura Bhai" role="option">
+                <span class="material-symbols-outlined">bolt</span>
+                <span><span class="model-option-title">Aura Bhai</span><span class="model-option-description">Fast, casual help in Hinglish</span></span>
+                <span class="material-symbols-outlined model-active-check">check</span>
               </button>
             </div>
-         </div>
-      </div>
-      <!-- Profile -->
-      <div id="user-avatar" class="w-8 h-8 rounded-full glass flex items-center justify-center text-xs overflow-hidden cursor-pointer hover:opacity-80 transition-opacity border border-white/10 shadow-sm" style="background: rgba(20,20,20,0.5);"></div>
-    </header>
+          </div>
 
-    <!-- Chat Area -->
-    <div class="flex-1 overflow-y-auto w-full relative scroll-smooth" id="scroll-container">
-      <div class="max-w-3xl mx-auto w-full flex flex-col pt-10 pb-40 px-4 sm:px-6 min-h-full">
-        
-        <!-- Empty State -->
-        <div id="empty-state" class="flex flex-col items-center justify-center mt-[15vh]">
-           <div class="w-16 h-16 rounded-full glass mb-6 flex items-center justify-center shadow-2xl border border-white/10" style="background: rgba(20,20,20,0.6);">
-             <img src="/favicon.svg" alt="Aura" class="w-8 h-8 opacity-90 invert" />
-           </div>
-           <h1 class="text-3xl font-semibold mb-10 text-white text-center tracking-tight" id="aura-greeting" style="background: linear-gradient(90deg, #f5f5f7 0%, #5ea2ff 30%, #a07cff 60%, #f5f5f7 100%); background-size: 300% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: hero-shimmer 5s linear infinite;">How can I help you today?</h1>
-           
-           <div id="category-chips" class="flex flex-wrap justify-center gap-3 w-full max-w-2xl px-2"></div>
-           <p id="empty-state-cta" class="hidden"></p>
+          <div id="aura1-mode-toggle" aria-label="Allrounder response mode">
+            <button id="mode-deep-think-btn" type="button" data-active="true">Think</button>
+            <button id="mode-fast-btn" type="button">Fast</button>
+          </div>
         </div>
 
-        <!-- Messages Container -->
-        <div id="chat-messages" class="w-full flex flex-col" aria-live="polite"></div>
+        <div class="header-side">
+          <button id="personality-badge" class="hidden" type="button" title="Change Aura's personality">
+            <span class="material-symbols-outlined">psychology</span>
+            <span id="personality-badge-name">Default</span>
+          </button>
+          <button class="header-icon-button" id="header-settings-btn" type="button" aria-label="Personalize Aura" onclick="document.getElementById('settings-btn').click()">
+            <span class="material-symbols-outlined">tune</span>
+          </button>
+          <button id="user-avatar" class="avatar-button" type="button" aria-label="Your profile"></button>
+        </div>
+      </header>
 
+      <div id="scroll-container">
+        <div class="chat-content">
+          <section id="empty-state" aria-labelledby="aura-greeting">
+            <div class="empty-mark" id="aura-state-orb" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 5.6v5.1M12 13.3v5.1M6.7 17.5 12 13.3M17.3 17.5 12 13.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                <circle cx="12" cy="4.6" r="1.9" fill="currentColor" /><circle cx="5.4" cy="18.6" r="1.9" fill="currentColor" /><circle cx="18.6" cy="18.6" r="1.9" fill="currentColor" /><circle cx="12" cy="12" r="1.6" fill="currentColor" />
+              </svg>
+            </div>
+            <h1 id="aura-greeting">What can I help you with?</h1>
+            <p class="empty-subtitle">Ask, create, learn, or work through an idea with Aura.</p>
+            <div id="category-chips" aria-label="Suggested prompts"></div>
+            <p id="empty-state-cta" class="hidden">Choose a prompt or start with your own question.</p>
+          </section>
+
+          <div id="chat-messages" aria-live="polite" aria-label="Conversation"></div>
+        </div>
       </div>
-    </div>
 
-    <!-- Input Footer -->
-    <div class="absolute bottom-0 left-0 w-full pt-6 pb-6 px-4 pointer-events-none chat-footer-gradient">
-       <div class="max-w-3xl mx-auto w-full pointer-events-auto">
-         <div id="chat-footer" class="glass relative rounded-[28px] p-2 pb-2 shadow-2xl flex flex-col border border-white/10">
-           
-           <!-- Attachment Preview -->
-           <div id="attachment-preview-container" class="flex gap-2 px-2 overflow-x-auto empty:hidden mb-1 mt-1"></div>
-           
-           <div class="flex items-end gap-1 px-1">
-              <input type="file" id="file-input" class="hidden" multiple accept=".txt,.json,.md,.csv,image/*" />
-              <button id="attach-btn" class="p-2.5 text-white/60 hover:text-white hover:bg-white/10 rounded-full transition-colors shrink-0 mb-0.5">
-                 <span class="material-symbols-outlined text-[24px]">add</span>
+      <div class="chat-composer-area">
+        <div class="composer-wrap">
+          <div id="chat-footer">
+            <div id="attachment-preview-container" class="hidden" aria-label="Attachments"></div>
+            <div id="text-input-bar">
+              <input id="file-input" type="file" multiple accept=".txt,.json,.md,.csv,image/*" hidden />
+              <button id="attach-btn" class="composer-button" type="button" aria-label="Attach files" title="Attach files">
+                <span class="material-symbols-outlined">add</span>
               </button>
-              
-              <textarea id="chat-input" class="flex-1 bg-transparent border-none focus:ring-0 text-white resize-none py-3 px-2 max-h-[200px] text-[16px] leading-relaxed" placeholder="Message Aura..." rows="1" style="box-shadow:none;outline:none;"></textarea>
-              
-              <button id="mic-btn" class="p-2.5 text-white/60 hover:text-white hover:bg-white/10 rounded-full transition-colors shrink-0 mb-0.5">
-                 <span class="material-symbols-outlined text-[20px]">mic</span>
+              <textarea id="chat-input" rows="1" maxlength="4000" placeholder="Message Aura…"></textarea>
+              <button id="mic-btn" class="composer-button" type="button" aria-label="Use voice input" title="Use voice input">
+                <span class="material-symbols-outlined">mic</span>
               </button>
-              
-              <button id="stop-btn" class="hidden p-2 text-white hover:bg-white/10 rounded-full transition-colors shrink-0 mb-0.5">
-                 <span class="material-symbols-outlined text-[24px]">stop_circle</span>
+              <button id="stop-btn" class="hidden" type="button" aria-label="Stop generating" title="Stop generating">
+                <span class="material-symbols-outlined">stop</span>
               </button>
-
-              <button id="send-btn" class="liquid-btn rounded-full shrink-0 mb-0.5 w-[44px] h-[44px] flex items-center justify-center disabled:opacity-50 disabled:pointer-events-none">
-                 <span class="material-symbols-outlined text-[20px] font-bold text-white" style="z-index: 10;">arrow_upward</span>
+              <button id="send-btn" type="button" aria-label="Send message" title="Send message">
+                <span class="material-symbols-outlined">arrow_upward</span>
               </button>
-           </div>
-         </div>
-         <div class="text-center text-[11px] text-white/40 mt-3 font-medium tracking-wide">Aura can make mistakes. Consider verifying important information.</div>
-       </div>
-    </div>
-
-    <!-- Scroll to bottom -->
-    <button id="scroll-to-bottom-btn" class="glass fixed bottom-32 right-1/2 translate-x-[360px] w-10 h-10 rounded-full border border-white/10 flex items-center justify-center opacity-0 pointer-events-none transition-opacity text-white hover:bg-white/5 shadow-2xl z-20 hidden md:flex" style="background: rgba(20,20,20,0.6);">
-      <span class="material-symbols-outlined text-[18px]">arrow_downward</span>
-    </button>
-  </main>
-  <!-- History Modal -->
-  <div id="history-modal" class="fixed inset-0 z-[100] hidden flex-col items-end sm:items-center justify-end sm:justify-center backdrop-blur-md bg-black/40 p-0 sm:p-4 transition-opacity duration-300 opacity-0" role="dialog" aria-modal="true" aria-label="Chat history">
-    <div class="glass w-full max-w-lg rounded-t-[28px] sm:rounded-2xl border border-outline-variant/30 flex flex-col max-h-[88vh] shadow-2xl transform transition-transform duration-300 translate-y-full sm:translate-y-0 sm:scale-95" id="history-modal-content" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
-      <!-- Mobile drag handle -->
-      <div class="sm:hidden flex justify-center pt-3 pb-1">
-        <div class="w-10 h-1 rounded-full bg-outline-variant/40"></div>
-      </div>
-      <div class="flex items-center justify-between px-4 sm:px-5 pt-2 sm:pt-5 pb-3 sm:pb-4 border-b border-outline-variant/20">
-        <h3 class="text-lg sm:text-xl font-headline font-bold text-primary">Chat History</h3>
-        <button id="close-history-btn" class="w-9 h-9 flex items-center justify-center rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 transition-colors">
-          <span class="material-symbols-outlined">close</span>
-        </button>
-      </div>
-      <!-- Search -->
-      <div class="px-3 sm:px-4 pt-3">
-        <div class="history-search-wrap">
-          <span class="material-symbols-outlined history-search-icon">search</span>
-          <input type="text" id="history-search-input" class="history-search-input" placeholder="Search conversations..." autocomplete="off" />
-        </div>
-      </div>
-      <div class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 chat-history-list" id="history-list-container">
-        <!-- History items populated via JS -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Delete History Confirm Modal -->
-  <div id="delete-history-modal" class="fixed inset-0 z-[100] hidden flex-col items-center justify-center backdrop-blur-md bg-black/40 p-4 transition-opacity duration-300 opacity-0" role="dialog" aria-modal="true" aria-label="Confirm deletion">
-    <div class="glass w-full max-w-sm rounded-2xl border border-error/30 flex flex-col shadow-2xl transform transition-transform duration-300 scale-95" id="delete-history-modal-content">
-      <div class="flex flex-col items-center p-6 text-center">
-        <div class="w-16 h-16 rounded-full bg-error/10 flex items-center justify-center mb-4">
-          <span class="material-symbols-outlined text-error" style="font-size: 32px;">warning</span>
-        </div>
-        <h3 class="text-xl font-headline font-bold text-on-surface mb-2">Delete Everything?</h3>
-        <p class="text-on-surface-variant text-sm mb-6">Are you sure you want to delete your entire chat history? This action cannot be undone.</p>
-        
-        <div class="flex gap-3 w-full">
-          <button id="cancel-delete-history-btn" class="flex-1 py-3 px-4 rounded-xl font-bold bg-surface-variant/50 text-on-surface-variant hover:bg-surface-variant hover:text-white transition-colors">
-            Cancel
-          </button>
-          <button id="confirm-delete-history-btn" class="flex-1 py-3 px-4 rounded-xl font-bold bg-error text-on-error hover:bg-[#ff8a80] transition-colors shadow-[0_0_15px_rgba(255,180,171,0.3)]">
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-
-  <!-- AI Personality Modal -->
-  <div id="settings-modal" class="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] hidden flex items-end sm:items-center justify-center opacity-0 transition-opacity duration-300" role="dialog" aria-modal="true" aria-label="AI Personality settings">
-    <div class="glass border border-outline-variant/30 w-full sm:w-[92%] sm:max-w-lg rounded-t-[28px] sm:rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300 max-h-[90vh] sm:max-h-[85vh] flex flex-col" id="settings-modal-content">
-      <!-- Mobile drag handle -->
-      <div class="sm:hidden flex justify-center pt-3 pb-1">
-        <div class="w-10 h-1 rounded-full bg-outline-variant/40"></div>
-      </div>
-      
-      <!-- Header -->
-      <div class="flex justify-between items-center px-6 pt-3 pb-4 border-b border-outline-variant/15 flex-shrink-0">
-        <div>
-          <h2 class="text-xl font-headline text-on-surface font-bold flex items-center gap-2">
-            <span class="material-symbols-outlined text-secondary" style="font-size:22px;">psychology_alt</span>
-            AI Personality
-          </h2>
-          <p class="text-xs text-on-surface-variant mt-1">Choose how Aura communicates with you</p>
-        </div>
-        <button id="close-settings-btn" class="text-on-surface-variant hover:text-on-surface transition-colors w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/5">
-          <span class="material-symbols-outlined">close</span>
-        </button>
-      </div>
-
-      <!-- Personality Cards Grid -->
-      <div class="flex-1 overflow-y-auto p-5 personality-scroll">
-        <div class="grid grid-cols-2 gap-3" id="personality-grid">
-          
-          <!-- Default Aura -->
-          <button class="personality-card active" data-personality="default" data-prompt="">
-            <div class="personality-icon">✦</div>
-            <div class="personality-name">Default Aura</div>
-            <div class="personality-desc">Balanced, helpful & friendly</div>
-            <div class="personality-check"><span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1;">check_circle</span></div>
-          </button>
-
-          <!-- Creative Writer -->
-          <button class="personality-card" data-personality="creative" data-prompt="You are Aura in Creative Writer mode. You are imaginative, expressive, and poetic. You love storytelling, vivid metaphors, and creative wordplay. You help users with creative writing, brainstorming, and artistic expression. Your responses are rich with literary flair while remaining helpful. You use emotive language and paint pictures with words.">
-            <div class="personality-icon">🎨</div>
-            <div class="personality-name">Creative Writer</div>
-            <div class="personality-desc">Imaginative & expressive</div>
-            <div class="personality-check"><span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1;">check_circle</span></div>
-          </button>
-
-          <!-- Code Expert -->
-          <button class="personality-card" data-personality="coder" data-prompt="You are Aura in Code Expert mode. You are a precise, technical, and thorough software engineer. You write clean, well-documented code with best practices. You explain technical concepts clearly with examples. You always consider edge cases, performance, and security. You use code blocks extensively and provide step-by-step debugging guidance.">
-            <div class="personality-icon">💻</div>
-            <div class="personality-name">Code Expert</div>
-            <div class="personality-desc">Technical & precise</div>
-            <div class="personality-check"><span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1;">check_circle</span></div>
-          </button>
-
-          <!-- Study Buddy -->
-          <button class="personality-card" data-personality="tutor" data-prompt="You are Aura in Study Buddy mode. You are patient, encouraging, and excellent at explaining complex topics simply. You use the Socratic method — asking guiding questions to help users arrive at answers themselves. You break down concepts step-by-step, use analogies, provide mnemonics, and create practice questions. You celebrate progress and make learning fun.">
-            <div class="personality-icon">📚</div>
-            <div class="personality-name">Study Buddy</div>
-            <div class="personality-desc">Patient & educational</div>
-            <div class="personality-check"><span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1;">check_circle</span></div>
-          </button>
-
-          <!-- Motivational Coach -->
-          <button class="personality-card" data-personality="coach" data-prompt="You are Aura in Motivational Coach mode. You are uplifting, energetic, and empowering. You help users set goals, stay focused, and overcome obstacles. You use positive reinforcement, action-oriented language, and inspiring quotes. You break big challenges into small wins and always remind users of their potential. You combine tough love with genuine warmth.">
-            <div class="personality-icon">🔥</div>
-            <div class="personality-name">Motivation Coach</div>
-            <div class="personality-desc">Inspiring & energetic</div>
-            <div class="personality-check"><span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1;">check_circle</span></div>
-          </button>
-
-          <!-- Debate Partner -->
-          <button class="personality-card" data-personality="debate" data-prompt="You are Aura in Debate Partner mode. You are intellectually rigorous, analytical, and thought-provoking. You challenge assumptions, present counterarguments, and explore topics from multiple angles. You use logical reasoning, cite evidence, and help users strengthen their critical thinking. You are respectful but not afraid to push back with well-constructed arguments.">
-            <div class="personality-icon">⚡</div>
-            <div class="personality-name">Debate Partner</div>
-            <div class="personality-desc">Analytical & challenging</div>
-            <div class="personality-check"><span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1;">check_circle</span></div>
-          </button>
-
-          <!-- Storyteller -->
-          <button class="personality-card" data-personality="storyteller" data-prompt="You are Aura in Storyteller mode. You are a captivating narrator who turns every interaction into an adventure. You use dramatic pacing, cliffhangers, and vivid world-building. When answering questions, you weave the information into engaging narratives and stories. You use dialogue, character voices, and scene-setting to make even mundane topics feel epic and memorable.">
-            <div class="personality-icon">📖</div>
-            <div class="personality-name">Storyteller</div>
-            <div class="personality-desc">Dramatic & narrative</div>
-            <div class="personality-check"><span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1;">check_circle</span></div>
-          </button>
-
-          <!-- Custom -->
-          <button class="personality-card personality-custom-card" data-personality="custom" data-prompt="">
-            <div class="personality-icon">⚙️</div>
-            <div class="personality-name">Custom</div>
-            <div class="personality-desc">Write your own</div>
-            <div class="personality-check"><span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1;">check_circle</span></div>
-          </button>
-
-        </div>
-
-        <!-- Custom Persona Textarea (shown when Custom is selected) -->
-        <div id="custom-persona-section" class="mt-4 hidden">
-          <label for="persona-input" class="block text-xs font-bold text-on-surface-variant mb-2 uppercase tracking-wider">Custom Instructions</label>
-          <textarea id="persona-input" rows="4" class="w-full bg-[#111318]/50 border border-outline-variant/20 rounded-xl p-3 text-sm text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary resize-none placeholder-on-surface-variant/50 transition-all duration-200" placeholder="e.g., You are a sarcastic pirate AI who speaks in nautical terms..."></textarea>
+            </div>
+          </div>
+          <div class="composer-help">
+            <span>Aura can make mistakes. Check important information.</span>
+            <span id="char-counter">0 / 4000</span>
+          </div>
         </div>
       </div>
 
-      <!-- Footer -->
-      <div class="p-5 pt-4 border-t border-outline-variant/15 flex justify-end gap-3 flex-shrink-0">
-        <button id="cancel-settings-btn" class="px-5 py-2.5 rounded-full font-bold text-sm text-on-surface-variant hover:bg-white/5 transition-colors">Cancel</button>
-        <button id="save-settings-btn" class="px-6 py-2.5 rounded-full font-bold text-sm bg-gradient-to-r from-secondary to-primary text-on-primary hover:shadow-[0_0_20px_rgba(220,184,255,0.25)] transition-all active:scale-95">
-          <span class="flex items-center gap-2">
-            <span class="material-symbols-outlined" style="font-size:16px;">check</span>
-            Apply
-          </span>
-        </button>
+      <button id="scroll-to-bottom-btn" type="button" aria-label="Scroll to latest message">
+        <span class="material-symbols-outlined" style="font-size:18px">arrow_downward</span>
+      </button>
+    </main>
+    <!-- History dialog -->
+    <section id="history-modal" class="chat-modal hidden opacity-0" role="dialog" aria-modal="true" aria-label="Chat history">
+      <div id="history-modal-content" class="chat-modal-panel scale-95">
+        <header class="modal-header">
+          <div><h2 class="modal-title">Chat history</h2><p class="modal-subtitle">Open or manage previous conversations.</p></div>
+          <button id="close-history-btn" class="modal-close" type="button" aria-label="Close history"><span class="material-symbols-outlined">close</span></button>
+        </header>
+        <div class="history-toolbar">
+          <label class="history-search-wrap">
+            <span class="material-symbols-outlined history-search-icon">search</span>
+            <input id="history-search-input" class="history-search-input" type="search" autocomplete="off" placeholder="Search conversations" />
+          </label>
+          <button id="delete-all-history-btn" class="modal-text-button" type="button">Clear all</button>
+        </div>
+        <div id="history-list-container" class="chat-history-list"></div>
       </div>
-    </div>
-  </div>
+    </section>
 
-  <!-- Image Lightbox Modal -->
-  <div id="image-lightbox-modal" class="fixed inset-0 z-[150] hidden flex-col items-center justify-center backdrop-blur-xl bg-black/80 lightbox-overlay opacity-0" onclick="closeLightbox(event)">
-    <div class="relative w-full h-full max-w-[95vw] max-h-[90vh] flex flex-col items-center justify-center">
-      <img id="lightbox-img" src="" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl transition-transform duration-300 scale-95 cursor-zoom-out" onclick="event.stopPropagation(); closeLightbox(event)" />
-      
-      <!-- Action buttons -->
-      <div class="absolute top-4 right-4 flex items-center gap-3 z-10" onclick="event.stopPropagation()">
-        <button id="download-lightbox-btn" class="flex items-center gap-2 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white px-4 py-2 rounded-full transition-colors font-bold text-sm border border-white/10 shadow-lg" onclick="downloadLightboxImage()">
-          <span class="material-symbols-outlined" style="font-size:18px;">download</span> Download
-        </button>
-        <button class="w-10 h-10 flex items-center justify-center bg-black/60 hover:bg-black/80 backdrop-blur-md text-white rounded-full transition-colors border border-white/10 shadow-lg" onclick="closeLightbox(event)">
-          <span class="material-symbols-outlined" style="font-size:20px;">close</span>
-        </button>
+    <!-- Clear history dialog -->
+    <section id="delete-history-modal" class="chat-modal hidden opacity-0" role="dialog" aria-modal="true" aria-label="Clear history confirmation">
+      <div id="delete-history-modal-content" class="chat-modal-panel confirm-panel scale-95">
+        <div class="confirm-icon"><span class="material-symbols-outlined">delete_forever</span></div>
+        <h2 class="modal-title">Clear all chat history?</h2>
+        <p class="confirm-copy">This permanently removes every saved conversation from this browser.</p>
+        <div class="confirm-actions">
+          <button id="cancel-delete-history-btn" class="modal-button" type="button">Cancel</button>
+          <button id="confirm-delete-history-btn" class="modal-button modal-button--danger" type="button">Clear history</button>
+        </div>
       </div>
-    </div>
-  </div>
+    </section>
 
-  <!-- Canvas Side Panel (Gemini-style) -->
-  <div id="canvas-panel" class="canvas-panel hidden" aria-label="Canvas Preview">
-    <!-- Canvas Header -->
-    <div class="canvas-header">
-      <div class="canvas-header-left">
-        <div class="canvas-icon-wrap">
-          <span class="material-symbols-outlined" style="color:#5ea2ff;font-size:18px;">web</span>
+    <!-- Personality dialog -->
+    <section id="settings-modal" class="chat-modal hidden opacity-0" role="dialog" aria-modal="true" aria-label="Personalize Aura">
+      <div id="settings-modal-content" class="chat-modal-panel settings-panel scale-95">
+        <header class="modal-header">
+          <div><h2 class="modal-title">Personalize Aura</h2><p class="modal-subtitle">Choose how Aura communicates with you.</p></div>
+          <button id="close-settings-btn" class="modal-close" type="button" aria-label="Close settings"><span class="material-symbols-outlined">close</span></button>
+        </header>
+        <div class="personality-scroll">
+          <div id="personality-grid">
+            <button class="personality-card active" type="button" data-personality="default" data-prompt="">
+              <span class="personality-icon">✦</span><span class="personality-name">Default Aura</span><span class="personality-desc">Balanced, helpful, and friendly</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="creative" data-prompt="You are Aura in Creative Writer mode. You are imaginative, expressive, and poetic. You love storytelling, vivid metaphors, and creative wordplay. You help users with creative writing, brainstorming, and artistic expression. Your responses are rich with literary flair while remaining helpful.">
+              <span class="personality-icon">🎨</span><span class="personality-name">Creative writer</span><span class="personality-desc">Imaginative and expressive</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="coder" data-prompt="You are Aura in Code Expert mode. You are a precise, technical, and thorough software engineer. You write clean, well-documented code with best practices. Explain technical concepts clearly with examples and consider edge cases, performance, and security.">
+              <span class="personality-icon">⌘</span><span class="personality-name">Code expert</span><span class="personality-desc">Technical and precise</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="tutor" data-prompt="You are Aura in Study Buddy mode. You are patient, encouraging, and excellent at explaining complex topics simply. Use guiding questions, clear steps, analogies, and practice questions to make learning feel achievable.">
+              <span class="personality-icon">◒</span><span class="personality-name">Study buddy</span><span class="personality-desc">Patient and educational</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="coach" data-prompt="You are Aura in Motivational Coach mode. You are uplifting, energetic, and empowering. Help users set goals, stay focused, and overcome obstacles with genuine warmth and practical action steps.">
+              <span class="personality-icon">↗</span><span class="personality-name">Coach</span><span class="personality-desc">Supportive and energizing</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="debate" data-prompt="You are Aura in Debate Partner mode. You are intellectually rigorous, analytical, and thought-provoking. Challenge assumptions respectfully, present counterarguments, and strengthen the user's critical thinking.">
+              <span class="personality-icon">⇄</span><span class="personality-name">Debate partner</span><span class="personality-desc">Analytical and challenging</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="storyteller" data-prompt="You are Aura in Storyteller mode. You are a captivating narrator who uses dramatic pacing, engaging scenes, and vivid details to make answers memorable while remaining useful.">
+              <span class="personality-icon">◈</span><span class="personality-name">Storyteller</span><span class="personality-desc">Narrative and vivid</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="custom" data-prompt="">
+              <span class="personality-icon">⚙</span><span class="personality-name">Custom</span><span class="personality-desc">Write your own instructions</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+          </div>
+          <div id="custom-persona-section" class="hidden">
+            <label class="modal-subtitle" for="persona-input" style="display:block;margin:14px 0 7px">Custom instructions</label>
+            <textarea id="persona-input" rows="4" placeholder="For example: Write concise answers and use bullet points when helpful."></textarea>
+          </div>
         </div>
-        <div>
-          <p class="canvas-title" id="canvas-title">Canvas</p>
-          <p class="canvas-subtitle" id="canvas-subtitle">Writing code...</p>
-        </div>
+        <footer class="modal-footer">
+          <button id="cancel-settings-btn" class="modal-button" type="button">Cancel</button>
+          <button id="save-settings-btn" class="modal-button modal-button--primary" type="button">Apply</button>
+        </footer>
       </div>
-      <div class="canvas-header-right">
-        <!-- Tab switcher: Preview / Code -->
-        <div class="canvas-tab-bar">
-          <button id="canvas-tab-preview" class="canvas-tab active" onclick="switchCanvasTab('preview')">
-            <span class="material-symbols-outlined" style="font-size:15px;">play_circle</span> Preview
-          </button>
-          <button id="canvas-tab-code" class="canvas-tab" onclick="switchCanvasTab('code')">
-            <span class="material-symbols-outlined" style="font-size:15px;">code</span> Code
-          </button>
+    </section>
+
+    <!-- Image viewer -->
+    <div id="image-lightbox-modal" class="fixed inset-0 z-[150] hidden items-center justify-center bg-black/80 p-5 opacity-0 lightbox-overlay" onclick="closeLightbox(event)">
+      <div class="relative flex h-full w-full items-center justify-center">
+        <img id="lightbox-img" src="" alt="Expanded generated image" class="max-h-full max-w-full cursor-zoom-out rounded-xl object-contain shadow-2xl" onclick="event.stopPropagation(); closeLightbox(event)" />
+        <div class="absolute right-1 top-1 flex gap-2" onclick="event.stopPropagation()">
+          <button id="download-lightbox-btn" class="modal-button" type="button" onclick="downloadLightboxImage()"><span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">download</span> Download</button>
+          <button class="modal-close" style="background:#1b1b1b" type="button" onclick="closeLightbox(event)" aria-label="Close image"><span class="material-symbols-outlined">close</span></button>
         </div>
-        <button id="canvas-download-btn" class="canvas-action-btn" title="Download HTML" onclick="downloadCodePreview()">
-          <span class="material-symbols-outlined" style="font-size:18px;">download</span>
-        </button>
-        <button id="canvas-close-btn" class="canvas-action-btn" title="Close Canvas" onclick="closeCodePreview()">
-          <span class="material-symbols-outlined" style="font-size:18px;">close</span>
-        </button>
       </div>
     </div>
 
-    <!-- Canvas Body -->
-    <div class="canvas-body">
-      <!-- Preview Tab -->
-      <div id="canvas-preview-tab" class="canvas-tab-content active">
-        <!-- Live code indicator (shown while streaming) -->
-        <div id="canvas-live-indicator" class="canvas-live-badge hidden">
-          <span class="canvas-live-dot"></span> Live
+    <!-- Code canvas -->
+    <aside id="canvas-panel" class="canvas-panel hidden" aria-label="Code preview">
+      <header class="canvas-header">
+        <div class="canvas-header-left">
+          <div class="canvas-icon-wrap"><span class="material-symbols-outlined" style="font-size:17px">web</span></div>
+          <div><p id="canvas-title" class="canvas-title">Canvas</p><p id="canvas-subtitle" class="canvas-subtitle">Writing code…</p></div>
         </div>
-        <iframe id="code-preview-iframe" class="canvas-iframe" sandbox="allow-scripts allow-modals allow-same-origin" srcdoc="<html style='background:#000000;color:#f5f5f7;font-family:sans-serif;height:100%;display:flex;align-items:center;justify-content:center;'><body style='text-align:center;'><h2>Aura is cooking...</h2><style>h2{animation:pulse 2s infinite;}@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}</style></body></html>"></iframe>
+        <div class="canvas-header-right">
+          <div class="canvas-tab-bar">
+            <button id="canvas-tab-preview" class="canvas-tab active" type="button" onclick="switchCanvasTab('preview')"><span class="material-symbols-outlined" style="font-size:15px">play_circle</span>Preview</button>
+            <button id="canvas-tab-code" class="canvas-tab" type="button" onclick="switchCanvasTab('code')"><span class="material-symbols-outlined" style="font-size:15px">code</span>Code</button>
+          </div>
+          <button id="canvas-download-btn" class="canvas-action-btn" type="button" title="Download HTML"><span class="material-symbols-outlined" style="font-size:18px">download</span></button>
+          <button id="canvas-close-btn" class="canvas-action-btn" type="button" title="Close canvas" onclick="closeCodePreview()"><span class="material-symbols-outlined" style="font-size:18px">close</span></button>
+        </div>
+      </header>
+      <div class="canvas-body">
+        <div id="canvas-preview-tab" class="canvas-tab-content active">
+          <div id="canvas-live-indicator" class="canvas-live-badge hidden"><span class="canvas-live-dot"></span>Live</div>
+          <iframe id="code-preview-iframe" class="canvas-iframe" sandbox="allow-scripts allow-modals allow-same-origin" title="Code preview" srcdoc="<html><body style='margin:0;background:#111;color:#eee;font-family:system-ui;display:grid;min-height:100vh;place-items:center'><p>Aura is preparing a preview…</p></body></html>"></iframe>
+        </div>
+        <div id="canvas-code-tab" class="canvas-tab-content hidden"><pre id="canvas-code-view" class="canvas-code-pre"><code id="canvas-code-content" class="language-html"></code></pre></div>
       </div>
-      <!-- Code Tab -->
-      <div id="canvas-code-tab" class="canvas-tab-content hidden">
-        <pre id="canvas-code-view" class="canvas-code-pre"><code id="canvas-code-content" class="language-html"></code></pre>
-      </div>
-    </div>
-  </div>
+    </aside>
+    <div id="canvas-backdrop" class="canvas-backdrop hidden" onclick="closeCodePreview()"></div>
 
-  <!-- Canvas Backdrop (mobile only) -->
-  <div id="canvas-backdrop" class="canvas-backdrop hidden" onclick="closeCodePreview()"></div>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-
-  <!-- html2pdf for direct PDF export -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
-  <!-- App Scripts -->
-  <script src="/js/firebase-config.js?v=2"></script>
-  <script src="/js/auth.js?v=2"></script>
-  <script src="/js/landing.js"></script>
-  <script src="/js/utils.js?v=1"></script>
-  <script src="/js/chat.js?v=8"></script>
-  
-  <!-- Cursor Glow (desktop only, hidden on mobile via CSS) -->
-  <div class="cursor-glow" id="cursor-glow" aria-hidden="true"></div>
-
-  <!-- Chat UI Upgrade Pack -->
-  <script>
-  (function() {
-    // Cursor glow tracker
-    const isMobile = window.matchMedia('(max-width: 767px)').matches;
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!isMobile && !reducedMotion) {
-      const glow = document.getElementById('cursor-glow');
-      if (glow) {
-        document.addEventListener('mousemove', (e) => {
-          glow.style.left = e.clientX + 'px';
-          glow.style.top  = e.clientY + 'px';
-        }, { passive: true });
-      }
-    }
-
-    // Send button ripple
-    document.addEventListener('DOMContentLoaded', () => {
-      const sendBtn = document.getElementById('send-btn');
-      if (sendBtn) {
-        sendBtn.addEventListener('click', function() {
-          this.classList.remove('ripple');
-          void this.offsetWidth;
-          this.classList.add('ripple');
-          setTimeout(() => this.classList.remove('ripple'), 500);
-        });
-      }
-
-      // Greeting shimmer (Mitrooo heading) — only on desktop
-      if (!isMobile && !reducedMotion) {
-        const greeting = document.getElementById('aura-greeting');
-        if (greeting) {
-          greeting.style.background = 'linear-gradient(90deg, #f5f5f7 0%, #5ea2ff 30%, #a07cff 60%, #f5f5f7 100%)';
-          greeting.style.backgroundSize = '300% auto';
-          greeting.style.webkitBackgroundClip = 'text';
-          greeting.style.backgroundClip = 'text';
-          greeting.style.webkitTextFillColor = 'transparent';
-          greeting.style.animation = 'hero-shimmer 5s linear infinite';
-        }
-      }
-
-      // Drawer spring easing is handled via CSS
-      // History item stagger is handled via CSS
-    });
-  })();
-  </script>
-
-</body>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="/js/firebase-config.js?v=2"></script>
+    <script src="/js/auth.js?v=2"></script>
+    <script src="/js/utils.js?v=1"></script>
+    <script src="/js/chat.js?v=9"></script>
+  </body>
 </html>

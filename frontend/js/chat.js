@@ -19,6 +19,7 @@ const historyModal = document.getElementById("history-modal");
 const historyModalContent = document.getElementById("history-modal-content");
 const closeHistoryBtn = document.getElementById("close-history-btn");
 const historyListContainer = document.getElementById("history-list-container");
+const sidebarHistoryList = document.getElementById("history-list");
 const drawerToggle = document.getElementById("drawer-toggle");
 const headerLogo = document.getElementById("header-logo");
 
@@ -1105,9 +1106,36 @@ if (historySearchInput) {
 }
 
 
+function renderSidebarHistory(index) {
+  if (!sidebarHistoryList) return;
+
+  const emptyMessage = document.querySelector('.sidebar-empty');
+  sidebarHistoryList.innerHTML = '';
+
+  if (!index.length) {
+    if (emptyMessage) emptyMessage.hidden = false;
+    return;
+  }
+
+  if (emptyMessage) emptyMessage.hidden = true;
+
+  index.slice(0, 6).forEach((chat) => {
+    const item = document.createElement('li');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `sidebar-recent-item${chat.id === currentChatId ? ' active' : ''}`;
+    button.title = chat.title;
+    button.textContent = chat.title;
+    button.addEventListener('click', () => loadSession(chat.id));
+    item.appendChild(button);
+    sidebarHistoryList.appendChild(item);
+  });
+}
 
 function loadHistoryIndex(searchQuery = '') {
-  let index = getHistoryIndex();
+  const allChats = getHistoryIndex();
+  renderSidebarHistory(allChats);
+  let index = allChats;
   
   // (#1) Filter by search query
   if (searchQuery) {
