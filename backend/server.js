@@ -10,7 +10,9 @@ const OpenAI = require("openai");
 const admin = require("firebase-admin");
 
 const app = express();
-const PORT = 3000;
+// Render provides the port through its PORT environment variable. Keep 3000
+// as a convenient local-development fallback.
+const PORT = Number(process.env.PORT) || 3000;
 
 // ── Firebase Admin SDK Init ──
 // Prefer explicit service-account credentials so verifyIdToken() works.
