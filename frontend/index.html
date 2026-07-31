@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>Synapse AI — Intelligence, beautifully crafted.</title>
+    <meta name="description" content="The next generation AI workspace designed for clarity, speed, and precision. Meet Aura, your adaptive multi-LLM assistant." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="/manifest.json" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/landing.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  </head>
+  <body>
+
+    <!-- Page Transition Overlay -->
+    <div class="page-transition-overlay" id="page-overlay"></div>
+
+    <!-- Liquid Glass SVG Filter -->
+    <svg style="display:none;" aria-hidden="true">
+      <defs>
+        <filter id="liquid-glass-filter" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.05 0.05" numOctaves="1" seed="1" result="turbulence" />
+          <feGaussianBlur in="turbulence" stdDeviation="2" result="blurredNoise" />
+          <feDisplacementMap in="SourceGraphic" in2="blurredNoise" scale="70" xChannelSelector="R" yChannelSelector="B" result="displaced" />
+          <feGaussianBlur in="displaced" stdDeviation="4" result="finalBlur" />
+          <feComposite in="finalBlur" in2="finalBlur" operator="over" />
+        </filter>
+      </defs>
+    </svg>
+
+    <!-- Studio background — polished white paper lit by soft daylight -->
+    <div class="bg-ambient" aria-hidden="true">
+      <!-- WebGL Background -->
+      <canvas id="webgl-bg" style="position:absolute;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none;"></canvas>
+      
+      <div class="bg-base" style="opacity: 0.3; z-index: 1; position: relative;"></div>
+      <div class="bg-orb bg-orb-1" style="z-index: 2;"></div>
+      <div class="bg-orb bg-orb-2" style="z-index: 2;"></div>
+      <div class="bg-key-light" id="bg-key-light" style="z-index: 3;"></div>
+      <div class="bg-noise" style="z-index: 4;"></div>
+      <div class="bg-vignette" style="z-index: 5;"></div>
+    </div>
+
+    <!-- Optical refraction / displacement filters for liquid glass -->
+    <svg class="svg-defs" aria-hidden="true" focusable="false">
+      <defs>
+        <filter id="glass-refract" x="-20%" y="-20%" width="140%" height="140%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.008 0.012" numOctaves="2" seed="7" result="noise" />
+          <feGaussianBlur in="noise" stdDeviation="1.4" result="soft" />
+          <feDisplacementMap in="SourceGraphic" in2="soft" scale="14" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </defs>
+    </svg>
+
+    <div id="app">
+      <!-- Navigation -->
+      <header class="navbar-shell">
+        <nav class="navbar glass reveal-nav" id="navbar">
+          <a href="#top" class="logo">
+            <span class="logo-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 5.6v5.1M12 13.3v5.1M6.7 17.5 12 13.3M17.3 17.5 12 13.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="12" cy="4.6" r="1.9" fill="currentColor"/>
+                <circle cx="5.4" cy="18.6" r="1.9" fill="currentColor"/>
+                <circle cx="18.6" cy="18.6" r="1.9" fill="currentColor"/>
+                <circle cx="12" cy="12" r="1.6" fill="currentColor"/>
+              </svg>
+            </span>
+            <span class="logo-text">Synapse<span class="logo-ai"> AI</span></span>
+          </a>
+
+          <ul class="nav-links-desktop">
+            <li><a href="#features" class="nav-link">Features</a></li>
+            <li><a href="#models" class="nav-link">Models</a></li>
+            <li><a href="#docs" class="nav-link">Docs</a></li>
+            <li><a href="#pricing" class="nav-link">Pricing</a></li>
+            <li><a href="#company" class="nav-link">Company</a></li>
+          </ul>
+
+          <div class="nav-actions">
+            <a href="#" class="btn btn-primary nav-launch" id="nav-launch-btn">Launch Aura</a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">
+              <span class="material-symbols-outlined" style="font-size:24px;">menu</span>
+            </button>
+          </div>
+        </nav>
+
+        <!-- Mobile Navigation Overlay -->
+        <div class="mobile-nav-overlay" id="mobile-nav-overlay">
+          <button class="mobile-nav-close" id="mobile-nav-close" aria-label="Close menu">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+          <a href="#features" class="mobile-nav-link">Features</a>
+          <a href="#models" class="mobile-nav-link">Models</a>
+          <a href="#docs" class="mobile-nav-link">Docs</a>
+          <a href="#pricing" class="mobile-nav-link">Pricing</a>
+          <a href="#company" class="mobile-nav-link">Company</a>
+          <a href="#" class="btn btn-primary" style="margin-top:1rem;" id="mobile-launch-btn">Launch Aura</a>
+        </div>
+      </header>
+
+      <main id="top">
+        <!-- Hero Section -->
+        <section class="hero">
+          <div class="hero-glow" aria-hidden="true">
+            <div class="hero-glow-1"></div>
+            <div class="hero-glow-2"></div>
+          </div>
+
+          <div class="hero-content">
+            <span class="badge reveal" id="hero-badge">
+              <span class="badge-dot"></span>
+              Introducing Synapse Aura Allrounder
+            </span>
+
+            <h1 class="hero-title reveal">
+              Intelligence,<br>
+              <span class="gradient-text">beautifully</span> <span class="hero-title-bold">crafted.</span>
+            </h1>
+
+            <p class="hero-subtitle reveal">Meet Aura — your adaptive, multi-LLM assistant. Experience the perfect harmony of form, function, and intelligence, beautifully crafted for clarity, speed, and precision.</p>
+
+            <div class="hero-actions reveal">
+              <a href="#" class="liquid-btn" id="hero-start-btn">Join Waitlist</a>
+              <a href="#models" class="btn btn-lg btn-secondary" id="hero-explore-btn">Explore Models</a>
+            </div>
+          </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="section">
+          <div class="section-header reveal">
+            <span class="eyebrow">Capabilities</span>
+            <h2 class="section-title">Everything you need. <span class="gradient-text">Nothing</span> you don't.</h2>
+            <p class="section-subtitle">A complete assistant engineered around focus and speed — every feature earns its place.</p>
+          </div>
+
+          <div class="features-grid">
+            <div class="feature-card glass reveal">
+              <div class="feature-icon" style="background:linear-gradient(135deg,#7c5cff,#5ea2ff);">
+                <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">bolt</span>
+              </div>
+              <h3>Lightning Fast</h3>
+              <p>Streaming responses in milliseconds, powered by an optimized inference engine built for speed.</p>
+            </div>
+            <div class="feature-card glass reveal">
+              <div class="feature-icon" style="background:linear-gradient(135deg,#34d399,#14b8a6);">
+                <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">image</span>
+              </div>
+              <h3>Vision Capabilities</h3>
+              <p>Upload images, documents, and screenshots for Aura to analyze, explain, and extract data seamlessly.</p>
+            </div>
+            <div class="feature-card glass reveal">
+              <div class="feature-icon" style="background:linear-gradient(135deg,#fbbf24,#fb923c);">
+                <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">tune</span>
+              </div>
+              <h3>Custom Instructions</h3>
+              <p>Tailor Aura's behavior, tone, and formatting preferences to perfectly match your unique workflow.</p>
+            </div>
+            <div class="feature-card glass reveal">
+              <div class="feature-icon" style="background:linear-gradient(135deg,#e879f9,#ec4899);">
+                <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">psychology</span>
+              </div>
+              <h3>Advanced Reasoning</h3>
+              <p>Multi-step logic, planning, and analysis that tackle genuinely complex problems with Aura Allrounder.</p>
+            </div>
+            <div class="feature-card glass reveal">
+              <div class="feature-icon" style="background:linear-gradient(135deg,#22d3ee,#3b82f6);">
+                <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">hub</span>
+              </div>
+              <h3>Multi-LLM Engine</h3>
+              <p>Dynamically orchestrate across providers, switching models to find the perfect balance of speed and intelligence.</p>
+            </div>
+            <div class="feature-card glass reveal">
+              <div class="feature-icon" style="background:linear-gradient(135deg,#a78bfa,#f472b6);">
+                <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">memory</span>
+              </div>
+              <h3>Persistent Memory</h3>
+              <p>Aura remembers past conversations, learning your preferences and building context over time.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Models Section -->
+        <section id="models" class="section">
+          <div class="section-header reveal">
+            <span class="eyebrow">The Aura Family</span>
+            <h2 class="section-title">Intelligence <span class="gradient-text">tailored</span> for every task.</h2>
+            <p class="section-subtitle">A focused family of specialized models — pick the perfect one for each job, or let Aura route automatically.</p>
+          </div>
+
+          <div class="models-grid">
+            <div class="model-card glass reveal" data-model="minimax/minimax-m2.7" data-name="Aura Allrounder" role="button" tabindex="0">
+              <div class="model-card-top">
+                <span class="model-icon" style="background:linear-gradient(135deg,#7c5cff,#4f46e5);">
+                  <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">auto_awesome</span>
+                </span>
+                <span class="model-badge">Default</span>
+              </div>
+              <h3>Aura Allrounder</h3>
+              <p>Our flagship reasoning model. Tackles multi-step logic, long documents, and complex analysis with a 256k context window. Built for research, planning, and deep problem-solving — the model you reach for when the task actually matters.</p>
+              <div class="model-stats">
+                <div class="model-stat"><span class="model-stat-label">Context</span><span class="model-stat-value">256k</span></div>
+                <div class="model-stat"><span class="model-stat-label">Speed</span><span class="model-stat-value">Deep</span></div>
+              </div>
+            </div>
+
+            <div class="model-card glass reveal" data-model="openai/gpt-oss-120b" data-name="Aura Summary" role="button" tabindex="0">
+              <div class="model-card-top">
+                <span class="model-icon" style="background:linear-gradient(135deg,#34d399,#10b981);">
+                  <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">translate</span>
+                </span>
+                <span class="model-badge">Bilingual</span>
+              </div>
+              <h3>Aura Summary</h3>
+              <p>Explains any concept clearly in both English and Hinglish, making knowledge accessible to everyone. Perfect for learners, summaries, and plain-language breakdowns of tough topics — fast, fluent, and easy to follow.</p>
+              <div class="model-stats">
+                <div class="model-stat"><span class="model-stat-label">Context</span><span class="model-stat-value">96k</span></div>
+                <div class="model-stat"><span class="model-stat-label">Speed</span><span class="model-stat-value">Fluent</span></div>
+              </div>
+            </div>
+
+            <div class="model-card glass reveal" data-model="stepfun-ai/step-3.5-flash" data-name="Aura Bhai" role="button" tabindex="0">
+              <div class="model-card-top">
+                <span class="model-icon" style="background:linear-gradient(135deg,#dcb8ff,#7701d0);">
+                  <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">smart_toy</span>
+                </span>
+                <span class="model-badge">General</span>
+              </div>
+              <h3>Aura Bhai</h3>
+              <p>Your friendly, casual companion for everyday questions, brainstorming, and quick help. Chat naturally, get things done fast, and vibe with an assistant that keeps it light while still being genuinely useful.</p>
+              <div class="model-stats">
+                <div class="model-stat"><span class="model-stat-label">Context</span><span class="model-stat-value">128k</span></div>
+                <div class="model-stat"><span class="model-stat-label">Speed</span><span class="model-stat-value">Optimized</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Stats Ribbon -->
+        <section class="stats-ribbon reveal">
+          <div class="stat-item">
+            <span class="stat-number">3</span>
+            <span class="stat-label">AI Models</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-number">∞</span>
+            <span class="stat-label">Conversations</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-number">&lt;1s</span>
+            <span class="stat-label">Response Time</span>
+          </div>
+        </section>
+
+        <!-- Footer / CTA -->
+        <footer id="company" class="landing-footer reveal">
+          <section id="chat" class="cta-band">
+            <div class="cta-glow" aria-hidden="true"></div>
+            <h2 class="cta-title">Ready to think clearer?</h2>
+            <p class="cta-subtitle">Start building with Synapse AI today. Meet Aura — no credit card required, just clarity, speed, and precision.</p>
+            <div class="cta-actions">
+              <a href="#" class="liquid-btn" id="footer-start-btn">Join Waitlist</a>
+              <a href="#models" class="btn btn-lg btn-secondary">Explore Models</a>
+            </div>
+          </section>
+
+          <div class="footer-bar">
+            <a href="#top" class="logo">
+              <span class="logo-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 5.6v5.1M12 13.3v5.1M6.7 17.5 12 13.3M17.3 17.5 12 13.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  <circle cx="12" cy="4.6" r="1.9" fill="currentColor"/>
+                  <circle cx="5.4" cy="18.6" r="1.9" fill="currentColor"/>
+                  <circle cx="18.6" cy="18.6" r="1.9" fill="currentColor"/>
+                  <circle cx="12" cy="12" r="1.6" fill="currentColor"/>
+                </svg>
+              </span>
+              <span class="logo-text">Synapse<span class="logo-ai"> AI</span></span>
+            </a>
+            <nav class="footer-links">
+              <a href="#features" class="footer-link">Features</a>
+              <a href="#models" class="footer-link">Models</a>
+              <a href="#docs" class="footer-link">Docs</a>
+              <a href="#pricing" class="footer-link">Pricing</a>
+              <a href="#" class="footer-link" id="footer-launch-btn">Launch Aura</a>
+            </nav>
+            <p class="footer-copy">© 2026 Synapse AI. All rights reserved.</p>
+          </div>
+        </footer>
+      </main>
+    </div>
+
+    <!-- Auth Modal Overlay -->
+    <div id="auth-modal" role="dialog" aria-modal="true" aria-label="Sign in to Synapse AI" style="
+      position: fixed; inset: 0; z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: rgba(9,10,18,0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    ">
+      <div class="auth-card" id="auth-modal-content" style="
+        width: 100%;
+        max-width: 440px;
+        position: relative;
+        transform: scale(0.95);
+        transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      ">
+        <!-- Close Button -->
+        <button id="close-auth-modal" style="
+          position: absolute; top: 1.25rem; right: 1.25rem;
+          background: rgba(255,255,255,0.06);
+          border: none; cursor: pointer;
+          border-radius: 50%; width: 36px; height: 36px;
+          display: flex; align-items: center; justify-content: center;
+          color: rgba(226,226,233,0.5);
+          transition: background 0.2s, color 0.2s;
+          z-index: 2;
+        " onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.06)';this.style.color='rgba(226,226,233,0.5)'">
+          <span class="material-symbols-outlined" style="font-size: 20px; line-height:1;">close</span>
+        </button>
+
+        <!-- Logo & Header -->
+        <div style="text-align: center; margin-bottom: 2rem; padding-top: 0.5rem;">
+          <div style="display: inline-flex; align-items: center; gap: 0.6rem; margin-bottom: 1.25rem;">
+            <div style="width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #7c5cff, #5ea2ff); display: flex; align-items: center; justify-content: center;">
+              <span class="material-symbols-outlined" style="color: #fff; font-size: 22px; font-variation-settings: 'FILL' 1;">auto_awesome</span>
+            </div>
+            <h1 style="font-size: 1.6rem; font-weight: 800; color: #f5f5f7; font-family: 'Inter', sans-serif; letter-spacing: -0.02em; margin: 0;">Synapse AI</h1>
+          </div>
+          <h2 id="auth-title" style="font-size: 1.35rem; font-weight: 700; font-family: 'Inter', sans-serif; color: #f5f5f7; margin: 0 0 0.35rem 0;">Welcome Back</h2>
+          <p id="auth-subtitle" style="font-size: 0.9rem; color: rgba(142,147,168,0.85); margin: 0;">Sign in to continue with Aura</p>
+        </div>
+
+        <!-- Error Display -->
+        <div id="auth-error" class="auth-error" style="margin-bottom: 1rem;"></div>
+
+        <!-- Auth Form -->
+        <form id="auth-form" style="display: flex; flex-direction: column; gap: 0.85rem;">
+          <div id="name-field" style="display: none;">
+            <input id="display-name" type="text" class="auth-input" placeholder="Your name" autocomplete="name" />
+          </div>
+
+          <div>
+            <input id="email" type="email" class="auth-input" placeholder="Email address" required autocomplete="email" />
+          </div>
+
+          <div style="position: relative;">
+            <input id="password" type="password" class="auth-input" placeholder="Password" required minlength="6" autocomplete="current-password" style="padding-right: 3rem;" />
+            <button type="button" id="toggle-password" tabindex="-1" style="position:absolute;right:1rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(226,226,233,0.5);padding:0;display:flex;align-items:center;">
+              <span class="material-symbols-outlined" id="toggle-password-icon" style="font-size:20px;">visibility</span>
+            </button>
+          </div>
+
+          <div id="password-strength-bar" style="display:none; margin-top: -0.25rem;">
+            <div style="display:flex; gap:4px; margin-bottom:4px;">
+              <div class="strength-seg" style="flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,0.1);transition:background 0.3s;"></div>
+              <div class="strength-seg" style="flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,0.1);transition:background 0.3s;"></div>
+              <div class="strength-seg" style="flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,0.1);transition:background 0.3s;"></div>
+            </div>
+            <span id="strength-label" style="font-size:0.7rem;color:rgba(226,226,233,0.4);">Password strength</span>
+          </div>
+
+          <div id="forgot-password-wrap" style="text-align: right; margin-top: -0.35rem;">
+            <a href="#" id="forgot-password-link" style="font-size: 0.78rem; color: rgba(142,147,168,0.7); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#7c5cff'" onmouseout="this.style.color='rgba(142,147,168,0.7)'">Forgot password?</a>
+          </div>
+
+          <button id="auth-btn" type="submit" class="auth-btn" style="margin-top: 0.35rem;">
+            <span id="auth-btn-text">Sign In</span>
+          </button>
+        </form>
+
+        <div class="auth-divider" style="margin: 1.5rem 0;">
+          <span>or</span>
+        </div>
+
+        <button id="google-btn" class="google-btn">
+          <svg class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+          </svg>
+          Continue with Google
+        </button>
+
+        <p style="text-align: center; margin-top: 1.5rem; font-size: 0.88rem; color: rgba(142,147,168,0.7);">
+          <a href="#" id="auth-toggle" style="color: inherit; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#7c5cff'" onmouseout="this.style.color='rgba(142,147,168,0.7)'">
+            Don't have an account? <strong style="color: #7c5cff;">Create one</strong>
+          </a>
+        </p>
+
+        <p style="text-align: center; margin-top: 1.25rem; margin-bottom: 0; font-size: 0.72rem; color: rgba(142,147,168,0.35); letter-spacing: 0.04em; font-family: 'Inter', sans-serif;">Made by Aarav</p>
+      </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
+    <!-- App Scripts -->
+    <script src="/js/firebase-config.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/landing.js"></script>
+  </body>
+</html>

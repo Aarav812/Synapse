@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#090909" />
+    <meta name="description" content="A focused conversation workspace for Synapse Aura." />
+    <title>Synapse AI — Aura</title>
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,600;1,700&family=Inter:wght@400;500;600;650;700;800&family=Playfair+Display:ital,wght@1,600;1,700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/atom-one-dark.min.css" />
+    <link rel="stylesheet" href="/css/styles.css?v=13" />
+    <link rel="stylesheet" href="/css/chat.css?v=1" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  </head>
+
+  <body class="chat-page">
+    <div class="page-transition-overlay" id="page-overlay" aria-hidden="true"></div>
+    <div class="chat-background" aria-hidden="true"></div>
+
+    <input id="drawer-toggle" type="checkbox" aria-label="Toggle sidebar" />
+    <label id="drawer-overlay" for="drawer-toggle" aria-label="Close sidebar"></label>
+
+    <aside id="drawer" aria-label="Chat navigation">
+      <a class="sidebar-brand" href="/index.html" aria-label="Synapse AI home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M12 5.6v5.1M12 13.3v5.1M6.7 17.5 12 13.3M17.3 17.5 12 13.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            <circle cx="12" cy="4.6" r="1.9" fill="currentColor" /><circle cx="5.4" cy="18.6" r="1.9" fill="currentColor" /><circle cx="18.6" cy="18.6" r="1.9" fill="currentColor" /><circle cx="12" cy="12" r="1.6" fill="currentColor" />
+          </svg>
+        </span>
+        <span class="brand-name">Synapse <em class="brand-ai-badge">AI</em></span>
+      </a>
+
+      <nav class="sidebar-primary" aria-label="Primary navigation">
+        <button id="nav-new-chat-btn" class="sidebar-action sidebar-action--new glowing-new-btn" type="button">
+          <span class="material-symbols-outlined">edit_square</span>
+          <span>New Chat</span>
+        </button>
+        <button id="nav-history-btn" class="sidebar-action" type="button">
+          <span class="material-symbols-outlined">history</span>
+          <span>Chat history</span>
+        </button>
+      </nav>
+
+      <section class="sidebar-history-groups" aria-label="Chat history">
+        <div class="history-group">
+          <span class="sidebar-section-label">Recent</span>
+          <ul id="history-list" class="history-group-list" aria-live="polite"></ul>
+          <p class="sidebar-empty hidden">No recent chats yet.</p>
+        </div>
+        <div class="history-group">
+          <span class="sidebar-section-label">Yesterday</span>
+          <ul id="history-list-yesterday" class="history-group-list">
+            <li><button class="history-item" type="button"><span class="material-symbols-outlined history-icon">chat_bubble</span><span class="history-title">React 19 Server Components Architecture</span></button></li>
+            <li><button class="history-item" type="button"><span class="material-symbols-outlined history-icon">chat_bubble</span><span class="history-title">Futuristic Glassmorphic UI System</span></button></li>
+          </ul>
+        </div>
+        <div class="history-group">
+          <span class="sidebar-section-label">Previous 7 Days</span>
+          <ul id="history-list-previous" class="history-group-list">
+            <li><button class="history-item" type="button"><span class="material-symbols-outlined history-icon">chat_bubble</span><span class="history-title">Q3 Product Roadmaps & AI Strategy</span></button></li>
+            <li><button class="history-item" type="button"><span class="material-symbols-outlined history-icon">chat_bubble</span><span class="history-title">Executive PDF Summary Analysis</span></button></li>
+            <li><button class="history-item" type="button"><span class="material-symbols-outlined history-icon">chat_bubble</span><span class="history-title">Tailwind CSS & WebGL Shader Pipeline</span></button></li>
+          </ul>
+        </div>
+      </section>
+
+      <div class="sidebar-bottom">
+        <div class="upgrade-pro-card" role="region" aria-label="Upgrade to Pro">
+          <div class="pro-card-header">
+            <span class="pro-badge">PRO</span>
+            <span class="pro-title">Upgrade to Pro</span>
+          </div>
+          <p class="pro-desc">Unlock Aura Allrounder 120B, infinite context, and custom prism themes.</p>
+          <button class="pro-upgrade-btn" type="button">
+            <span>Upgrade Now</span>
+            <span class="material-symbols-outlined pro-btn-icon">auto_awesome</span>
+          </button>
+        </div>
+        <div class="sidebar-footer-actions">
+          <button id="settings-btn" class="sidebar-action" type="button">
+            <span class="material-symbols-outlined">tune</span>
+            <span>Personalize Aura</span>
+          </button>
+          <button id="logout-btn" class="sidebar-action sidebar-action--logout" type="button">
+            <span class="material-symbols-outlined">logout</span>
+            <span>Log out</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="chat-workspace">
+      <header class="chat-header">
+        <div class="header-side">
+          <label class="mobile-menu-btn" for="drawer-toggle" aria-label="Open sidebar">
+            <span class="material-symbols-outlined">menu</span>
+          </label>
+          <button id="header-logo" type="button" aria-label="Start a new chat">
+            <span class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 5.6v5.1M12 13.3v5.1M6.7 17.5 12 13.3M17.3 17.5 12 13.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                <circle cx="12" cy="4.6" r="1.9" fill="currentColor" /><circle cx="5.4" cy="18.6" r="1.9" fill="currentColor" /><circle cx="18.6" cy="18.6" r="1.9" fill="currentColor" /><circle cx="12" cy="12" r="1.6" fill="currentColor" />
+              </svg>
+            </span>
+            <span class="brand-name">Synapse</span>
+          </button>
+
+          <div class="model-selector-wrap" id="model-selector-container">
+            <button id="model-selector-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+              <span id="current-model-name">Aura Allrounder</span>
+              <span class="material-symbols-outlined">expand_more</span>
+            </button>
+            <div id="model-dropdown" class="hidden opacity-0 translate-y-2 pointer-events-none" role="listbox" aria-label="Choose an AI model">
+              <button class="model-option" type="button" data-model="minimax/minimax-m2.7" data-name="Aura Allrounder" role="option">
+                <span class="material-symbols-outlined">auto_awesome</span>
+                <span><span class="model-option-title">Aura Allrounder</span><span class="model-option-description">Balanced reasoning for everyday work</span></span>
+                <span class="material-symbols-outlined model-active-check">check</span>
+              </button>
+              <button class="model-option" type="button" data-model="openai/gpt-oss-120b" data-name="Aura Summary" role="option">
+                <span class="material-symbols-outlined">short_text</span>
+                <span><span class="model-option-title">Aura Summary</span><span class="model-option-description">Clear explanations and concise answers</span></span>
+                <span class="material-symbols-outlined model-active-check">check</span>
+              </button>
+              <button class="model-option" type="button" data-model="stepfun-ai/step-3.5-flash" data-name="Aura Flash" role="option">
+                <span class="material-symbols-outlined">bolt</span>
+                <span><span class="model-option-title">Aura Flash</span><span class="model-option-description">Ultra-fast latency with high intelligence</span></span>
+                <span class="material-symbols-outlined model-active-check">check</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="aura1-mode-toggle" aria-label="Allrounder response mode">
+            <button id="mode-deep-think-btn" type="button" data-active="true">Think</button>
+            <button id="mode-fast-btn" type="button">Fast</button>
+          </div>
+        </div>
+
+        <div class="header-side header-side-right">
+          <div class="top-nav-search" role="search">
+            <span class="material-symbols-outlined search-icon">search</span>
+            <input id="nav-search-input" type="text" placeholder="Search conversations..." aria-label="Search conversations" />
+            <kbd class="shortcut-badge">⌘K</kbd>
+          </div>
+          <button id="personality-badge" class="hidden" type="button" title="Change Aura's personality">
+            <span class="material-symbols-outlined">psychology</span>
+            <span id="personality-badge-name">Default</span>
+          </button>
+          <button class="header-icon-button" id="header-settings-btn" type="button" aria-label="Personalize Aura" onclick="document.getElementById('settings-btn').click()" title="Settings">
+            <span class="material-symbols-outlined">tune</span>
+          </button>
+          <button class="header-icon-button" id="header-notifications-btn" type="button" aria-label="Notifications" title="Notifications">
+            <span class="material-symbols-outlined">notifications</span>
+            <span class="notif-dot"></span>
+          </button>
+          <button id="user-avatar" class="avatar-button" type="button" aria-label="Your profile" title="Your profile"></button>
+        </div>
+      </header>
+
+      <div id="scroll-container">
+        <div class="chat-content">
+          <section id="empty-state" aria-labelledby="aura-greeting">
+            <div class="empty-mark hidden" id="aura-state-orb" aria-hidden="true" style="display:none !important;">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 5.6v5.1M12 13.3v5.1M6.7 17.5 12 13.3M17.3 17.5 12 13.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                <circle cx="12" cy="4.6" r="1.9" fill="currentColor" /><circle cx="5.4" cy="18.6" r="1.9" fill="currentColor" /><circle cx="18.6" cy="18.6" r="1.9" fill="currentColor" /><circle cx="12" cy="12" r="1.6" fill="currentColor" />
+              </svg>
+            </div>
+            <div class="welcome-heading-container">
+              <span class="welcome-hello">Hello 👋</span>
+              <h1 id="aura-greeting" class="welcome-question">
+                How can <span class="serif-aura">Aura</span> help you today?
+              </h1>
+            </div>
+            <div id="category-chips" class="suggestion-grid" aria-label="Suggested prompts"></div>
+            <p id="empty-state-cta" class="hidden" style="display:none !important;">Choose a prompt or start with your own question.</p>
+          </section>
+
+          <div id="chat-messages" aria-live="polite" aria-label="Conversation"></div>
+        </div>
+      </div>
+
+      <div class="chat-composer-area">
+        <div class="composer-wrap">
+          <div id="chat-footer">
+            <div id="attachment-preview-container" class="hidden" aria-label="Attachments"></div>
+            <div id="text-input-bar" class="luxury-composer">
+              <div class="composer-rainbow-streak" aria-hidden="true"></div>
+              <input id="file-input" type="file" multiple accept=".txt,.json,.md,.csv,image/*" hidden />
+              <button id="attach-btn" class="composer-button" type="button" aria-label="Attach files" title="Attach files">
+                <span class="material-symbols-outlined">add</span>
+              </button>
+              <textarea id="chat-input" rows="1" maxlength="4000" placeholder="Ask Aura anything..."></textarea>
+              <button id="mic-btn" class="composer-button" type="button" aria-label="Use voice input" title="Use voice input">
+                <span class="material-symbols-outlined">mic</span>
+              </button>
+              <button id="stop-btn" class="hidden" type="button" aria-label="Stop generating" title="Stop generating">
+                <span class="material-symbols-outlined">stop</span>
+              </button>
+              <button id="send-btn" type="button" aria-label="Send message" title="Send message">
+                <span class="material-symbols-outlined">arrow_upward</span>
+              </button>
+            </div>
+          </div>
+          <div class="composer-help">
+            <span>Aura can make mistakes. Check important information.</span>
+            <span id="char-counter">0 / 4000</span>
+          </div>
+        </div>
+      </div>
+
+      <button id="scroll-to-bottom-btn" type="button" aria-label="Scroll to latest message">
+        <span class="material-symbols-outlined" style="font-size:18px">arrow_downward</span>
+      </button>
+    </main>
+    <!-- History dialog -->
+    <section id="history-modal" class="chat-modal hidden opacity-0" role="dialog" aria-modal="true" aria-label="Chat history">
+      <div id="history-modal-content" class="chat-modal-panel scale-95">
+        <header class="modal-header">
+          <div><h2 class="modal-title">Chat history</h2><p class="modal-subtitle">Open or manage previous conversations.</p></div>
+          <button id="close-history-btn" class="modal-close" type="button" aria-label="Close history"><span class="material-symbols-outlined">close</span></button>
+        </header>
+        <div class="history-toolbar">
+          <label class="history-search-wrap">
+            <span class="material-symbols-outlined history-search-icon">search</span>
+            <input id="history-search-input" class="history-search-input" type="search" autocomplete="off" placeholder="Search conversations" />
+          </label>
+          <button id="delete-all-history-btn" class="modal-text-button" type="button">Clear all</button>
+        </div>
+        <div id="history-list-container" class="chat-history-list"></div>
+      </div>
+    </section>
+
+    <!-- Clear history dialog -->
+    <section id="delete-history-modal" class="chat-modal hidden opacity-0" role="dialog" aria-modal="true" aria-label="Clear history confirmation">
+      <div id="delete-history-modal-content" class="chat-modal-panel confirm-panel scale-95">
+        <div class="confirm-icon"><span class="material-symbols-outlined">delete_forever</span></div>
+        <h2 class="modal-title">Clear all chat history?</h2>
+        <p class="confirm-copy">This permanently removes every saved conversation from this browser.</p>
+        <div class="confirm-actions">
+          <button id="cancel-delete-history-btn" class="modal-button" type="button">Cancel</button>
+          <button id="confirm-delete-history-btn" class="modal-button modal-button--danger" type="button">Clear history</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Personality dialog -->
+    <section id="settings-modal" class="chat-modal hidden opacity-0" role="dialog" aria-modal="true" aria-label="Personalize Aura">
+      <div id="settings-modal-content" class="chat-modal-panel settings-panel scale-95">
+        <header class="modal-header">
+          <div><h2 class="modal-title">Personalize Aura</h2><p class="modal-subtitle">Choose how Aura communicates with you.</p></div>
+          <button id="close-settings-btn" class="modal-close" type="button" aria-label="Close settings"><span class="material-symbols-outlined">close</span></button>
+        </header>
+        <div class="personality-scroll">
+          <div id="personality-grid">
+            <button class="personality-card active" type="button" data-personality="default" data-prompt="">
+              <span class="personality-icon">✦</span><span class="personality-name">Default Aura</span><span class="personality-desc">Balanced, helpful, and friendly</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="creative" data-prompt="You are Aura in Creative Writer mode. You are imaginative, expressive, and poetic. You love storytelling, vivid metaphors, and creative wordplay. You help users with creative writing, brainstorming, and artistic expression. Your responses are rich with literary flair while remaining helpful.">
+              <span class="personality-icon">🎨</span><span class="personality-name">Creative writer</span><span class="personality-desc">Imaginative and expressive</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="coder" data-prompt="You are Aura in Code Expert mode. You are a precise, technical, and thorough software engineer. You write clean, well-documented code with best practices. Explain technical concepts clearly with examples and consider edge cases, performance, and security.">
+              <span class="personality-icon">⌘</span><span class="personality-name">Code expert</span><span class="personality-desc">Technical and precise</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="tutor" data-prompt="You are Aura in Study Buddy mode. You are patient, encouraging, and excellent at explaining complex topics simply. Use guiding questions, clear steps, analogies, and practice questions to make learning feel achievable.">
+              <span class="personality-icon">◒</span><span class="personality-name">Study buddy</span><span class="personality-desc">Patient and educational</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="coach" data-prompt="You are Aura in Motivational Coach mode. You are uplifting, energetic, and empowering. Help users set goals, stay focused, and overcome obstacles with genuine warmth and practical action steps.">
+              <span class="personality-icon">↗</span><span class="personality-name">Coach</span><span class="personality-desc">Supportive and energizing</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="debate" data-prompt="You are Aura in Debate Partner mode. You are intellectually rigorous, analytical, and thought-provoking. Challenge assumptions respectfully, present counterarguments, and strengthen the user's critical thinking.">
+              <span class="personality-icon">⇄</span><span class="personality-name">Debate partner</span><span class="personality-desc">Analytical and challenging</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="storyteller" data-prompt="You are Aura in Storyteller mode. You are a captivating narrator who uses dramatic pacing, engaging scenes, and vivid details to make answers memorable while remaining useful.">
+              <span class="personality-icon">◈</span><span class="personality-name">Storyteller</span><span class="personality-desc">Narrative and vivid</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="custom" data-prompt="">
+              <span class="personality-icon">⚙</span><span class="personality-name">Custom</span><span class="personality-desc">Write your own instructions</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+          </div>
+          <div id="custom-persona-section" class="hidden">
+            <label class="modal-subtitle" for="persona-input" style="display:block;margin:14px 0 7px">Custom instructions</label>
+            <textarea id="persona-input" rows="4" placeholder="For example: Write concise answers and use bullet points when helpful."></textarea>
+          </div>
+        </div>
+        <footer class="modal-footer">
+          <button id="cancel-settings-btn" class="modal-button" type="button">Cancel</button>
+          <button id="save-settings-btn" class="modal-button modal-button--primary" type="button">Apply</button>
+        </footer>
+      </div>
+    </section>
+
+    <!-- Image viewer -->
+    <div id="image-lightbox-modal" class="fixed inset-0 z-[150] hidden items-center justify-center bg-black/80 p-5 opacity-0 lightbox-overlay" onclick="closeLightbox(event)">
+      <div class="relative flex h-full w-full items-center justify-center">
+        <img id="lightbox-img" src="" alt="Expanded generated image" class="max-h-full max-w-full cursor-zoom-out rounded-xl object-contain shadow-2xl" onclick="event.stopPropagation(); closeLightbox(event)" />
+        <div class="absolute right-1 top-1 flex gap-2" onclick="event.stopPropagation()">
+          <button id="download-lightbox-btn" class="modal-button" type="button" onclick="downloadLightboxImage()"><span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">download</span> Download</button>
+          <button class="modal-close" style="background:#1b1b1b" type="button" onclick="closeLightbox(event)" aria-label="Close image"><span class="material-symbols-outlined">close</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Code canvas -->
+    <aside id="canvas-panel" class="canvas-panel hidden" aria-label="Code preview">
+      <header class="canvas-header">
+        <div class="canvas-header-left">
+          <div class="canvas-icon-wrap"><span class="material-symbols-outlined" style="font-size:17px">web</span></div>
+          <div><p id="canvas-title" class="canvas-title">Canvas</p><p id="canvas-subtitle" class="canvas-subtitle">Writing code…</p></div>
+        </div>
+        <div class="canvas-header-right">
+          <div class="canvas-tab-bar">
+            <button id="canvas-tab-preview" class="canvas-tab active" type="button" onclick="switchCanvasTab('preview')"><span class="material-symbols-outlined" style="font-size:15px">play_circle</span>Preview</button>
+            <button id="canvas-tab-code" class="canvas-tab" type="button" onclick="switchCanvasTab('code')"><span class="material-symbols-outlined" style="font-size:15px">code</span>Code</button>
+          </div>
+          <button id="canvas-download-btn" class="canvas-action-btn" type="button" title="Download HTML"><span class="material-symbols-outlined" style="font-size:18px">download</span></button>
+          <button id="canvas-close-btn" class="canvas-action-btn" type="button" title="Close canvas" onclick="closeCodePreview()"><span class="material-symbols-outlined" style="font-size:18px">close</span></button>
+        </div>
+      </header>
+      <div class="canvas-body">
+        <div id="canvas-preview-tab" class="canvas-tab-content active">
+          <div id="canvas-live-indicator" class="canvas-live-badge hidden"><span class="canvas-live-dot"></span>Live</div>
+          <iframe id="code-preview-iframe" class="canvas-iframe" sandbox="allow-scripts allow-modals allow-same-origin" title="Code preview" srcdoc="<html><body style='margin:0;background:#111;color:#eee;font-family:system-ui;display:grid;min-height:100vh;place-items:center'><p>Aura is preparing a preview…</p></body></html>"></iframe>
+        </div>
+        <div id="canvas-code-tab" class="canvas-tab-content hidden"><pre id="canvas-code-view" class="canvas-code-pre"><code id="canvas-code-content" class="language-html"></code></pre></div>
+      </div>
+    </aside>
+    <div id="canvas-backdrop" class="canvas-backdrop hidden" onclick="closeCodePreview()"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="/js/firebase-config.js?v=2"></script>
+    <script src="/js/auth.js?v=2"></script>
+    <script src="/js/utils.js?v=1"></script>
+    <script src="/js/chat.js?v=9"></script>
+  </body>
+</html>

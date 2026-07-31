@@ -1,0 +1,122 @@
+    <!-- History dialog -->
+    <section id="history-modal" class="chat-modal hidden opacity-0" role="dialog" aria-modal="true" aria-label="Chat history">
+      <div id="history-modal-content" class="chat-modal-panel scale-95">
+        <header class="modal-header">
+          <div><h2 class="modal-title">Chat history</h2><p class="modal-subtitle">Open or manage previous conversations.</p></div>
+          <button id="close-history-btn" class="modal-close" type="button" aria-label="Close history"><span class="material-symbols-outlined">close</span></button>
+        </header>
+        <div class="history-toolbar">
+          <label class="history-search-wrap">
+            <span class="material-symbols-outlined history-search-icon">search</span>
+            <input id="history-search-input" class="history-search-input" type="search" autocomplete="off" placeholder="Search conversations" />
+          </label>
+          <button id="delete-all-history-btn" class="modal-text-button" type="button">Clear all</button>
+        </div>
+        <div id="history-list-container" class="chat-history-list"></div>
+      </div>
+    </section>
+
+    <!-- Clear history dialog -->
+    <section id="delete-history-modal" class="chat-modal hidden opacity-0" role="dialog" aria-modal="true" aria-label="Clear history confirmation">
+      <div id="delete-history-modal-content" class="chat-modal-panel confirm-panel scale-95">
+        <div class="confirm-icon"><span class="material-symbols-outlined">delete_forever</span></div>
+        <h2 class="modal-title">Clear all chat history?</h2>
+        <p class="confirm-copy">This permanently removes every saved conversation from this browser.</p>
+        <div class="confirm-actions">
+          <button id="cancel-delete-history-btn" class="modal-button" type="button">Cancel</button>
+          <button id="confirm-delete-history-btn" class="modal-button modal-button--danger" type="button">Clear history</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Personality dialog -->
+    <section id="settings-modal" class="chat-modal hidden opacity-0" role="dialog" aria-modal="true" aria-label="Personalize Aura">
+      <div id="settings-modal-content" class="chat-modal-panel settings-panel scale-95">
+        <header class="modal-header">
+          <div><h2 class="modal-title">Personalize Aura</h2><p class="modal-subtitle">Choose how Aura communicates with you.</p></div>
+          <button id="close-settings-btn" class="modal-close" type="button" aria-label="Close settings"><span class="material-symbols-outlined">close</span></button>
+        </header>
+        <div class="personality-scroll">
+          <div id="personality-grid">
+            <button class="personality-card active" type="button" data-personality="default" data-prompt="">
+              <span class="personality-icon">✦</span><span class="personality-name">Default Aura</span><span class="personality-desc">Balanced, helpful, and friendly</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="creative" data-prompt="You are Aura in Creative Writer mode. You are imaginative, expressive, and poetic. You love storytelling, vivid metaphors, and creative wordplay. You help users with creative writing, brainstorming, and artistic expression. Your responses are rich with literary flair while remaining helpful.">
+              <span class="personality-icon">🎨</span><span class="personality-name">Creative writer</span><span class="personality-desc">Imaginative and expressive</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="coder" data-prompt="You are Aura in Code Expert mode. You are a precise, technical, and thorough software engineer. You write clean, well-documented code with best practices. Explain technical concepts clearly with examples and consider edge cases, performance, and security.">
+              <span class="personality-icon">⌘</span><span class="personality-name">Code expert</span><span class="personality-desc">Technical and precise</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="tutor" data-prompt="You are Aura in Study Buddy mode. You are patient, encouraging, and excellent at explaining complex topics simply. Use guiding questions, clear steps, analogies, and practice questions to make learning feel achievable.">
+              <span class="personality-icon">◒</span><span class="personality-name">Study buddy</span><span class="personality-desc">Patient and educational</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="coach" data-prompt="You are Aura in Motivational Coach mode. You are uplifting, energetic, and empowering. Help users set goals, stay focused, and overcome obstacles with genuine warmth and practical action steps.">
+              <span class="personality-icon">↗</span><span class="personality-name">Coach</span><span class="personality-desc">Supportive and energizing</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="debate" data-prompt="You are Aura in Debate Partner mode. You are intellectually rigorous, analytical, and thought-provoking. Challenge assumptions respectfully, present counterarguments, and strengthen the user's critical thinking.">
+              <span class="personality-icon">⇄</span><span class="personality-name">Debate partner</span><span class="personality-desc">Analytical and challenging</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="storyteller" data-prompt="You are Aura in Storyteller mode. You are a captivating narrator who uses dramatic pacing, engaging scenes, and vivid details to make answers memorable while remaining useful.">
+              <span class="personality-icon">◈</span><span class="personality-name">Storyteller</span><span class="personality-desc">Narrative and vivid</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+            <button class="personality-card" type="button" data-personality="custom" data-prompt="">
+              <span class="personality-icon">⚙</span><span class="personality-name">Custom</span><span class="personality-desc">Write your own instructions</span><span class="personality-check material-symbols-outlined">check_circle</span>
+            </button>
+          </div>
+          <div id="custom-persona-section" class="hidden">
+            <label class="modal-subtitle" for="persona-input" style="display:block;margin:14px 0 7px">Custom instructions</label>
+            <textarea id="persona-input" rows="4" placeholder="For example: Write concise answers and use bullet points when helpful."></textarea>
+          </div>
+        </div>
+        <footer class="modal-footer">
+          <button id="cancel-settings-btn" class="modal-button" type="button">Cancel</button>
+          <button id="save-settings-btn" class="modal-button modal-button--primary" type="button">Apply</button>
+        </footer>
+      </div>
+    </section>
+
+    <!-- Image viewer -->
+    <div id="image-lightbox-modal" class="fixed inset-0 z-[150] hidden items-center justify-center bg-black/80 p-5 opacity-0 lightbox-overlay" onclick="closeLightbox(event)">
+      <div class="relative flex h-full w-full items-center justify-center">
+        <img id="lightbox-img" src="" alt="Expanded generated image" class="max-h-full max-w-full cursor-zoom-out rounded-xl object-contain shadow-2xl" onclick="event.stopPropagation(); closeLightbox(event)" />
+        <div class="absolute right-1 top-1 flex gap-2" onclick="event.stopPropagation()">
+          <button id="download-lightbox-btn" class="modal-button" type="button" onclick="downloadLightboxImage()"><span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">download</span> Download</button>
+          <button class="modal-close" style="background:#1b1b1b" type="button" onclick="closeLightbox(event)" aria-label="Close image"><span class="material-symbols-outlined">close</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Code canvas -->
+    <aside id="canvas-panel" class="canvas-panel hidden" aria-label="Code preview">
+      <header class="canvas-header">
+        <div class="canvas-header-left">
+          <div class="canvas-icon-wrap"><span class="material-symbols-outlined" style="font-size:17px">web</span></div>
+          <div><p id="canvas-title" class="canvas-title">Canvas</p><p id="canvas-subtitle" class="canvas-subtitle">Writing code…</p></div>
+        </div>
+        <div class="canvas-header-right">
+          <div class="canvas-tab-bar">
+            <button id="canvas-tab-preview" class="canvas-tab active" type="button" onclick="switchCanvasTab('preview')"><span class="material-symbols-outlined" style="font-size:15px">play_circle</span>Preview</button>
+            <button id="canvas-tab-code" class="canvas-tab" type="button" onclick="switchCanvasTab('code')"><span class="material-symbols-outlined" style="font-size:15px">code</span>Code</button>
+          </div>
+          <button id="canvas-download-btn" class="canvas-action-btn" type="button" title="Download HTML"><span class="material-symbols-outlined" style="font-size:18px">download</span></button>
+          <button id="canvas-close-btn" class="canvas-action-btn" type="button" title="Close canvas" onclick="closeCodePreview()"><span class="material-symbols-outlined" style="font-size:18px">close</span></button>
+        </div>
+      </header>
+      <div class="canvas-body">
+        <div id="canvas-preview-tab" class="canvas-tab-content active">
+          <div id="canvas-live-indicator" class="canvas-live-badge hidden"><span class="canvas-live-dot"></span>Live</div>
+          <iframe id="code-preview-iframe" class="canvas-iframe" sandbox="allow-scripts allow-modals allow-same-origin" title="Code preview" srcdoc="<html><body style='margin:0;background:#111;color:#eee;font-family:system-ui;display:grid;min-height:100vh;place-items:center'><p>Aura is preparing a preview…</p></body></html>"></iframe>
+        </div>
+        <div id="canvas-code-tab" class="canvas-tab-content hidden"><pre id="canvas-code-view" class="canvas-code-pre"><code id="canvas-code-content" class="language-html"></code></pre></div>
+      </div>
+    </aside>
+    <div id="canvas-backdrop" class="canvas-backdrop hidden" onclick="closeCodePreview()"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="/js/firebase-config.js?v=2"></script>
+    <script src="/js/auth.js?v=2"></script>
+    <script src="/js/chat.js?v=9"></script>
+  </body>
+</html>
