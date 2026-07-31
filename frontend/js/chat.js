@@ -599,7 +599,7 @@ if (modelOptions) {
       // Apply accent color to model name
       if (currentModelName === 'Aura Allrounder') currentModelNameEl.style.color = '#7c5cff';
       else if (currentModelName === 'Aura Summary') currentModelNameEl.style.color = '#4caf50';
-      else if (currentModelName === 'Aura Bhai') currentModelNameEl.style.color = '#dcb8ff';
+      else if (currentModelName === 'Aura Flash') currentModelNameEl.style.color = '#a855f7';
       
       // Update active indicator in dropdown
       updateActiveModelIndicator(currentModelName);
@@ -627,10 +627,10 @@ function updateDynamicTheme(modelName) {
       blob2: "#22d3ee", // Teal
       blob3: "#10b981"  // Green
     },
-    "Aura Bhai": {
-      blob1: "#7701d0", // Deep Purple
-      blob2: "#dcb8ff", // Lavender
-      blob3: "#6366f1"  // Indigo
+    "Aura Flash": {
+      blob1: "#a855f7", // Purple
+      blob2: "#00e5ff", // Neon Cyan
+      blob3: "#7c5cff"  // Violet
     }
   };
 
@@ -1112,21 +1112,23 @@ function renderSidebarHistory(index) {
   const emptyMessage = document.querySelector('.sidebar-empty');
   sidebarHistoryList.innerHTML = '';
 
-  if (!index.length) {
-    if (emptyMessage) emptyMessage.hidden = false;
-    return;
-  }
+  const chatsToRender = index.length ? index.slice(0, 6) : [
+    { id: 'demo_recent_1', title: 'New Conversation with Aura' },
+    { id: 'demo_recent_2', title: 'AI Strategy Overview & UX' }
+  ];
 
   if (emptyMessage) emptyMessage.hidden = true;
 
-  index.slice(0, 6).forEach((chat) => {
+  chatsToRender.forEach((chat) => {
     const item = document.createElement('li');
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = `sidebar-recent-item${chat.id === currentChatId ? ' active' : ''}`;
+    button.className = `sidebar-recent-item${chat.id === currentChatId || chat.id === 'demo_recent_1' ? ' active' : ''}`;
     button.title = chat.title;
-    button.textContent = chat.title;
-    button.addEventListener('click', () => loadSession(chat.id));
+    button.innerHTML = `<span class="material-symbols-outlined history-icon">chat_bubble</span><span class="history-title">${chat.title}</span>`;
+    if (chat.id !== 'demo_recent_1' && chat.id !== 'demo_recent_2') {
+      button.addEventListener('click', () => loadSession(chat.id));
+    }
     item.appendChild(button);
     sidebarHistoryList.appendChild(item);
   });
@@ -1196,7 +1198,7 @@ function loadHistoryIndex(searchQuery = '') {
 const MODEL_CAPABILITIES = {
   "Aura Allrounder": { image: true, audio: true, video: true },
   "Aura Summary": { image: false, audio: false, video: false },
-  "Aura Bhai": { image: true, audio: true, video: true }
+  "Aura Flash": { image: true, audio: true, video: true }
 };
 
 function sendMessage() {
@@ -1230,6 +1232,7 @@ function sendMessage() {
 
   if (heroSection) heroSection.style.display = "none";
 
+  if (attachedFiles.length > 0) {
     // Render attachment previews for the user bubble
     let attachmentPreviews = [];
     for (const file of attachedFiles) {
@@ -1372,7 +1375,7 @@ function renderSuggestionChips() {
   
   let chips = [];
 
-  // All models (Allrounder / Summary / Bhai) share the general chip set
+  // All models (Allrounder / Summary / Flash) share the general chip set
   chips = [
     { icon: 'science', text: 'Science', prompt: 'Explain quantum physics in simple terms', color: '#5ea2ff' },
     { icon: 'code', text: 'Code', prompt: 'Write a modern responsive landing page with HTML, CSS & JS', color: '#dcb8ff' },
@@ -2655,7 +2658,7 @@ function updateModelAccentColor() {
   const name = currentModelName;
   if (name === 'Aura Allrounder') { el.style.color = '#7c5cff'; }
   else if (name === 'Aura Summary') { el.style.color = '#4caf50'; }
-  else if (name === 'Aura Bhai') { el.style.color = '#dcb8ff'; }
+  else if (name === 'Aura Flash') { el.style.color = '#a855f7'; }
 
   else { el.style.color = ''; }
 }
