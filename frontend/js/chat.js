@@ -15,6 +15,8 @@ const logoutBtn = document.getElementById("logout-btn");
 // UI Elements for History & Navigation
 const navNewChatBtn = document.getElementById("nav-new-chat-btn");
 const navHistoryBtn = document.getElementById("nav-history-btn");
+const headerNewChatBtn = document.getElementById("header-new-chat-btn");
+const navSearchInput = document.getElementById("nav-search-input");
 const historyModal = document.getElementById("history-modal");
 const historyModalContent = document.getElementById("history-modal-content");
 const closeHistoryBtn = document.getElementById("close-history-btn");
@@ -545,6 +547,7 @@ if (modelSelectorBtn && modelDropdown) {
     e.stopPropagation();
     const isHidden = modelDropdown.classList.contains("hidden");
     if (isHidden) {
+      modelSelectorBtn.setAttribute("aria-expanded", "true");
       modelDropdown.classList.remove("hidden");
       modelDropdown.classList.remove("pointer-events-none");
       setTimeout(() => {
@@ -565,6 +568,7 @@ if (modelSelectorBtn && modelDropdown) {
 
 function closeModelDropdown() {
   if (!modelDropdown) return;
+  if (modelSelectorBtn) modelSelectorBtn.setAttribute("aria-expanded", "false");
   modelDropdown.classList.add("opacity-0");
   modelDropdown.classList.add("translate-y-2");
   modelDropdown.classList.add("pointer-events-none");
@@ -715,9 +719,10 @@ function saveSession() {
       index.push({ id: currentChatId, title: firstMsg, updatedAt: Date.now(), model: currentModelName });
     }
     
-    // Sort by newest
+    // Sort by newest and keep the visible sidebar in sync immediately.
     index.sort((a, b) => b.updatedAt - a.updatedAt);
     saveHistoryIndex(index);
+    renderSidebarHistory(index);
 
     // Clear draft on successful save
     localStorage.removeItem('synapse_draft_input');
@@ -755,6 +760,7 @@ function autoRenameChat(aiResponse) {
   entry.title = title;
   entry._renamed = true;
   saveHistoryIndex(index);
+  renderSidebarHistory(index);
 }
 
 async function loadSession(id) {
@@ -1042,6 +1048,12 @@ if (navNewChatBtn) {
   });
 }
 
+if (headerNewChatBtn) {
+  headerNewChatBtn.addEventListener("click", () => {
+    createNewChat();
+  });
+}
+
 if (headerLogo) {
   headerLogo.addEventListener("click", () => {
     createNewChat();
@@ -1096,6 +1108,22 @@ function closeHistoryModal() {
 if (navHistoryBtn) navHistoryBtn.addEventListener("click", openHistoryModal);
 if (closeHistoryBtn) closeHistoryBtn.addEventListener("click", closeHistoryModal);
 
+// The compact search in the floating header opens the full history search
+// with the current query, instead of looking like an inactive decoration.
+if (navSearchInput) {
+  navSearchInput.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    const query = navSearchInput.value.trim();
+    openHistoryModal();
+    const historySearch = document.getElementById("history-search-input");
+    if (historySearch) {
+      historySearch.value = query;
+      loadHistoryIndex(query.toLowerCase());
+    }
+  });
+}
+
 // (#1) History Search
 const historySearchInput = document.getElementById('history-search-input');
 if (historySearchInput) {
@@ -1112,23 +1140,18 @@ function renderSidebarHistory(index) {
   const emptyMessage = document.querySelector('.sidebar-empty');
   sidebarHistoryList.innerHTML = '';
 
-  const chatsToRender = index.length ? index.slice(0, 6) : [
-    { id: 'demo_recent_1', title: 'New Conversation with Aura' },
-    { id: 'demo_recent_2', title: 'AI Strategy Overview & UX' }
-  ];
+  const chatsToRender = index.slice(0, 6);
 
-  if (emptyMessage) emptyMessage.hidden = true;
+  if (emptyMessage) emptyMessage.hidden = chatsToRender.length > 0;
 
   chatsToRender.forEach((chat) => {
     const item = document.createElement('li');
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = `sidebar-recent-item${chat.id === currentChatId || chat.id === 'demo_recent_1' ? ' active' : ''}`;
+    button.className = `sidebar-recent-item${chat.id === currentChatId ? ' active' : ''}`;
     button.title = chat.title;
-    button.innerHTML = `<span class="material-symbols-outlined history-icon">chat_bubble</span><span class="history-title">${chat.title}</span>`;
-    if (chat.id !== 'demo_recent_1' && chat.id !== 'demo_recent_2') {
-      button.addEventListener('click', () => loadSession(chat.id));
-    }
+    button.innerHTML = `<span class="material-symbols-outlined history-icon">chat_bubble</span><span class="history-title">${escapeHtml(chat.title)}</span>`;
+    button.addEventListener('click', () => loadSession(chat.id));
     item.appendChild(button);
     sidebarHistoryList.appendChild(item);
   });
@@ -1377,32 +1400,27 @@ function renderSuggestionChips() {
 
   // All models (Allrounder / Summary / Flash) share the general chip set
   chips = [
-    { icon: 'science', text: 'Science', prompt: 'Explain quantum physics in simple terms', color: '#5ea2ff' },
-    { icon: 'code', text: 'Code', prompt: 'Write a modern responsive landing page with HTML, CSS & JS', color: '#dcb8ff' },
-    { icon: 'school', text: 'Study', prompt: 'Help me study for my math exam — quiz me on calculus', color: '#4caf50' },
-    { icon: 'edit_note', text: 'Writing', prompt: 'Write a short creative story about a time traveler', color: '#ff9800' },
-    { icon: 'calculate', text: 'Math', prompt: 'Solve this math problem step by step: integrate x^2 * e^x dx', color: '#e91e63' },
-    { icon: 'forum', text: 'Debate', prompt: 'Debate: Is AI a threat to humanity? Take the opposing side', color: '#00bcd4' }
+    { icon: 'science', title: 'Explain a concept', description: 'Make a difficult idea feel simple.', prompt: 'Explain quantum physics in simple terms', color: '#78a6ff' },
+    { icon: 'code', title: 'Build something', description: 'Plan or write a polished web experience.', prompt: 'Write a modern responsive landing page with HTML, CSS & JS', color: '#c9a5ff' },
+    { icon: 'school', title: 'Study with me', description: 'Turn a topic into a useful lesson.', prompt: 'Help me study for my math exam — quiz me on calculus', color: '#72d7ad' },
+    { icon: 'edit_note', title: 'Write and refine', description: 'Find the right words and tone.', prompt: 'Write a short creative story about a time traveler', color: '#ffb56e' },
+    { icon: 'calculate', title: 'Solve a problem', description: 'Work through it step by step.', prompt: 'Solve this math problem step by step: integrate x^2 * e^x dx', color: '#f58bbb' },
+    { icon: 'forum', title: 'Think it through', description: 'Explore a perspective or decision.', prompt: 'Debate: Is AI a threat to humanity? Take the opposing side', color: '#76d9e8' }
   ];
   
   chips.forEach(chip => {
     const btn = document.createElement('button');
-    btn.className = 'category-chip flex items-center gap-1.5 glass text-xs px-3.5 py-2 rounded-full transition-all whitespace-nowrap active:scale-95 shadow-sm text-[#f5f5f7]';
+    btn.type = 'button';
+    btn.className = 'category-chip suggestion-card';
     btn.dataset.prompt = chip.prompt;
-    
-    // Add hover color dynamically
-    btn.onmouseover = () => {
-      btn.style.borderColor = chip.color + '4D'; // 30% opacity
-      btn.style.color = chip.color;
-      btn.style.backgroundColor = 'rgba(255,255,255,0.1)';
-    };
-    btn.onmouseout = () => {
-      btn.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-      btn.style.color = '#f5f5f7';
-      btn.style.backgroundColor = 'transparent';
-    };
-    
-    btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px;">${chip.icon}</span> ${chip.text}`;
+    btn.style.setProperty('--chip-color', chip.color);
+    btn.innerHTML = `
+      <span class="suggestion-card-icon"><span class="material-symbols-outlined">${chip.icon}</span></span>
+      <span class="suggestion-card-text">
+        <span class="suggestion-card-title">${chip.title}</span>
+        <span class="suggestion-card-desc">${chip.description}</span>
+      </span>
+    `;
     categoryChipsContainer.appendChild(btn);
   });
 }
