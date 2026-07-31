@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#080808" />
+    <meta name="theme-color" content="#090909" />
     <meta name="description" content="A focused conversation workspace for Synapse Aura." />
     <title>Synapse AI — Aura</title>
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,600;1,700&family=Inter:wght@400;500;600;650;700;800&family=Playfair+Display:ital,wght@1,600;1,700&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/atom-one-dark.min.css" />
@@ -40,13 +40,13 @@
             <circle cx="12" cy="4.6" r="1.9" fill="currentColor" /><circle cx="5.4" cy="18.6" r="1.9" fill="currentColor" /><circle cx="18.6" cy="18.6" r="1.9" fill="currentColor" /><circle cx="12" cy="12" r="1.6" fill="currentColor" />
           </svg>
         </span>
-        <span class="brand-name">Synapse <em>AI</em></span>
+        <span class="brand-name">Synapse <em class="brand-ai-badge">AI</em></span>
       </a>
 
       <nav class="sidebar-primary" aria-label="Primary navigation">
-        <button id="nav-new-chat-btn" class="sidebar-action sidebar-action--new" type="button">
+        <button id="nav-new-chat-btn" class="sidebar-action sidebar-action--new glowing-new-btn" type="button">
           <span class="material-symbols-outlined">edit_square</span>
-          <span>New chat</span>
+          <span>New Chat</span>
         </button>
         <button id="nav-history-btn" class="sidebar-action" type="button">
           <span class="material-symbols-outlined">history</span>
@@ -54,22 +54,51 @@
         </button>
       </nav>
 
-      <section class="sidebar-history" aria-label="Recent conversations">
-        <span class="sidebar-section-label">Recent</span>
-        <ul id="history-list" aria-live="polite"></ul>
-        <p class="sidebar-empty">Your recent conversations are available in chat history.</p>
+      <section class="sidebar-history-groups" aria-label="Chat history">
+        <div class="history-group">
+          <span class="sidebar-section-label">Recent</span>
+          <ul id="history-list" class="history-group-list" aria-live="polite"></ul>
+          <p class="sidebar-empty hidden">No recent chats yet.</p>
+        </div>
+        <div class="history-group">
+          <span class="sidebar-section-label">Yesterday</span>
+          <ul id="history-list-yesterday" class="history-group-list">
+            <li><button class="history-item" type="button"><span class="material-symbols-outlined history-icon">chat_bubble</span><span class="history-title">React 19 Server Components Architecture</span></button></li>
+            <li><button class="history-item" type="button"><span class="material-symbols-outlined history-icon">chat_bubble</span><span class="history-title">Futuristic Glassmorphic UI System</span></button></li>
+          </ul>
+        </div>
+        <div class="history-group">
+          <span class="sidebar-section-label">Previous 7 Days</span>
+          <ul id="history-list-previous" class="history-group-list">
+            <li><button class="history-item" type="button"><span class="material-symbols-outlined history-icon">chat_bubble</span><span class="history-title">Q3 Product Roadmaps & AI Strategy</span></button></li>
+            <li><button class="history-item" type="button"><span class="material-symbols-outlined history-icon">chat_bubble</span><span class="history-title">Executive PDF Summary Analysis</span></button></li>
+            <li><button class="history-item" type="button"><span class="material-symbols-outlined history-icon">chat_bubble</span><span class="history-title">Tailwind CSS & WebGL Shader Pipeline</span></button></li>
+          </ul>
+        </div>
       </section>
 
       <div class="sidebar-bottom">
-        <div class="sidebar-divider"></div>
-        <button id="settings-btn" class="sidebar-action" type="button">
-          <span class="material-symbols-outlined">tune</span>
-          <span>Personalize Aura</span>
-        </button>
-        <button id="logout-btn" class="sidebar-action sidebar-action--logout" type="button">
-          <span class="material-symbols-outlined">logout</span>
-          <span>Log out</span>
-        </button>
+        <div class="upgrade-pro-card" role="region" aria-label="Upgrade to Pro">
+          <div class="pro-card-header">
+            <span class="pro-badge">PRO</span>
+            <span class="pro-title">Upgrade to Pro</span>
+          </div>
+          <p class="pro-desc">Unlock Aura Allrounder 120B, infinite context, and custom prism themes.</p>
+          <button class="pro-upgrade-btn" type="button">
+            <span>Upgrade Now</span>
+            <span class="material-symbols-outlined pro-btn-icon">auto_awesome</span>
+          </button>
+        </div>
+        <div class="sidebar-footer-actions">
+          <button id="settings-btn" class="sidebar-action" type="button">
+            <span class="material-symbols-outlined">tune</span>
+            <span>Personalize Aura</span>
+          </button>
+          <button id="logout-btn" class="sidebar-action sidebar-action--logout" type="button">
+            <span class="material-symbols-outlined">logout</span>
+            <span>Log out</span>
+          </button>
+        </div>
       </div>
     </aside>
 
@@ -105,9 +134,9 @@
                 <span><span class="model-option-title">Aura Summary</span><span class="model-option-description">Clear explanations and concise answers</span></span>
                 <span class="material-symbols-outlined model-active-check">check</span>
               </button>
-              <button class="model-option" type="button" data-model="stepfun-ai/step-3.5-flash" data-name="Aura Bhai" role="option">
+              <button class="model-option" type="button" data-model="stepfun-ai/step-3.5-flash" data-name="Aura Flash" role="option">
                 <span class="material-symbols-outlined">bolt</span>
-                <span><span class="model-option-title">Aura Bhai</span><span class="model-option-description">Fast, casual help in Hinglish</span></span>
+                <span><span class="model-option-title">Aura Flash</span><span class="model-option-description">Ultra-fast latency with high intelligence</span></span>
                 <span class="material-symbols-outlined model-active-check">check</span>
               </button>
             </div>
@@ -119,31 +148,44 @@
           </div>
         </div>
 
-        <div class="header-side">
+        <div class="header-side header-side-right">
+          <div class="top-nav-search" role="search">
+            <span class="material-symbols-outlined search-icon">search</span>
+            <input id="nav-search-input" type="text" placeholder="Search conversations..." aria-label="Search conversations" />
+            <kbd class="shortcut-badge">⌘K</kbd>
+          </div>
           <button id="personality-badge" class="hidden" type="button" title="Change Aura's personality">
             <span class="material-symbols-outlined">psychology</span>
             <span id="personality-badge-name">Default</span>
           </button>
-          <button class="header-icon-button" id="header-settings-btn" type="button" aria-label="Personalize Aura" onclick="document.getElementById('settings-btn').click()">
+          <button class="header-icon-button" id="header-settings-btn" type="button" aria-label="Personalize Aura" onclick="document.getElementById('settings-btn').click()" title="Settings">
             <span class="material-symbols-outlined">tune</span>
           </button>
-          <button id="user-avatar" class="avatar-button" type="button" aria-label="Your profile"></button>
+          <button class="header-icon-button" id="header-notifications-btn" type="button" aria-label="Notifications" title="Notifications">
+            <span class="material-symbols-outlined">notifications</span>
+            <span class="notif-dot"></span>
+          </button>
+          <button id="user-avatar" class="avatar-button" type="button" aria-label="Your profile" title="Your profile"></button>
         </div>
       </header>
 
       <div id="scroll-container">
         <div class="chat-content">
           <section id="empty-state" aria-labelledby="aura-greeting">
-            <div class="empty-mark" id="aura-state-orb" aria-hidden="true">
+            <div class="empty-mark hidden" id="aura-state-orb" aria-hidden="true" style="display:none !important;">
               <svg viewBox="0 0 24 24" fill="none">
                 <path d="M12 5.6v5.1M12 13.3v5.1M6.7 17.5 12 13.3M17.3 17.5 12 13.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
                 <circle cx="12" cy="4.6" r="1.9" fill="currentColor" /><circle cx="5.4" cy="18.6" r="1.9" fill="currentColor" /><circle cx="18.6" cy="18.6" r="1.9" fill="currentColor" /><circle cx="12" cy="12" r="1.6" fill="currentColor" />
               </svg>
             </div>
-            <h1 id="aura-greeting">What can I help you with?</h1>
-            <p class="empty-subtitle">Ask, create, learn, or work through an idea with Aura.</p>
-            <div id="category-chips" aria-label="Suggested prompts"></div>
-            <p id="empty-state-cta" class="hidden">Choose a prompt or start with your own question.</p>
+            <div class="welcome-heading-container">
+              <span class="welcome-hello">Hello 👋</span>
+              <h1 id="aura-greeting" class="welcome-question">
+                How can <span class="serif-aura">Aura</span> help you today?
+              </h1>
+            </div>
+            <div id="category-chips" class="suggestion-grid" aria-label="Suggested prompts"></div>
+            <p id="empty-state-cta" class="hidden" style="display:none !important;">Choose a prompt or start with your own question.</p>
           </section>
 
           <div id="chat-messages" aria-live="polite" aria-label="Conversation"></div>
@@ -154,12 +196,13 @@
         <div class="composer-wrap">
           <div id="chat-footer">
             <div id="attachment-preview-container" class="hidden" aria-label="Attachments"></div>
-            <div id="text-input-bar">
+            <div id="text-input-bar" class="luxury-composer">
+              <div class="composer-rainbow-streak" aria-hidden="true"></div>
               <input id="file-input" type="file" multiple accept=".txt,.json,.md,.csv,image/*" hidden />
               <button id="attach-btn" class="composer-button" type="button" aria-label="Attach files" title="Attach files">
                 <span class="material-symbols-outlined">add</span>
               </button>
-              <textarea id="chat-input" rows="1" maxlength="4000" placeholder="Message Aura…"></textarea>
+              <textarea id="chat-input" rows="1" maxlength="4000" placeholder="Ask Aura anything..."></textarea>
               <button id="mic-btn" class="composer-button" type="button" aria-label="Use voice input" title="Use voice input">
                 <span class="material-symbols-outlined">mic</span>
               </button>
