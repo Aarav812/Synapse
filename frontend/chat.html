@@ -200,17 +200,17 @@
               <div class="composer-rainbow-streak" aria-hidden="true"></div>
               <input id="file-input" type="file" multiple accept=".txt,.json,.md,.csv,image/*" hidden />
               <button id="attach-btn" class="composer-button" type="button" aria-label="Attach files" title="Attach files">
-                <span class="material-symbols-outlined">add</span>
+                <span class="material-symbols-outlined" aria-hidden="true">add</span>
               </button>
               <textarea id="chat-input" rows="1" maxlength="4000" placeholder="Ask Aura anything..."></textarea>
               <button id="mic-btn" class="composer-button" type="button" aria-label="Use voice input" title="Use voice input">
-                <span class="material-symbols-outlined">mic</span>
+                <span class="material-symbols-outlined" aria-hidden="true">mic</span>
               </button>
               <button id="stop-btn" class="hidden" type="button" aria-label="Stop generating" title="Stop generating">
-                <span class="material-symbols-outlined">stop</span>
+                <span class="material-symbols-outlined" aria-hidden="true">stop</span>
               </button>
               <button id="send-btn" type="button" aria-label="Send message" title="Send message">
-                <span class="material-symbols-outlined">arrow_upward</span>
+                <span class="material-symbols-outlined" aria-hidden="true">arrow_upward</span>
               </button>
             </div>
           </div>
@@ -325,8 +325,8 @@
             <button id="canvas-tab-preview" class="canvas-tab active" type="button" onclick="switchCanvasTab('preview')"><span class="material-symbols-outlined" style="font-size:15px">play_circle</span>Preview</button>
             <button id="canvas-tab-code" class="canvas-tab" type="button" onclick="switchCanvasTab('code')"><span class="material-symbols-outlined" style="font-size:15px">code</span>Code</button>
           </div>
-          <button id="canvas-download-btn" class="canvas-action-btn" type="button" title="Download HTML"><span class="material-symbols-outlined" style="font-size:18px">download</span></button>
-          <button id="canvas-close-btn" class="canvas-action-btn" type="button" title="Close canvas" onclick="closeCodePreview()"><span class="material-symbols-outlined" style="font-size:18px">close</span></button>
+          <button id="canvas-download-btn" class="canvas-action-btn" type="button" title="Download HTML" aria-label="Download HTML"><span class="material-symbols-outlined" style="font-size:18px" aria-hidden="true">download</span></button>
+          <button id="canvas-close-btn" class="canvas-action-btn" type="button" title="Close canvas" aria-label="Close canvas" onclick="closeCodePreview()"><span class="material-symbols-outlined" style="font-size:18px" aria-hidden="true">close</span></button>
         </div>
       </header>
       <div class="canvas-body">

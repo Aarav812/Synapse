@@ -1,0 +1,3 @@
+## 2024-07-31 - Accessibility of Material Symbols in icon-only buttons
+**Learning:** The application uses Google Material Symbols with ligatures (text inside spans) for icons. For screen readers, if an icon-only button doesn't have an `aria-label`, or if the inner span doesn't have `aria-hidden="true"`, screen readers will read the literal text of the ligature (e.g., "add", "arrow_upward"), which is confusing.
+**Action:** When implementing new icon-only buttons using Material Symbols ligatures, always add a descriptive `aria-label` to the parent `<button>` and set `aria-hidden="true"` on the inner `<span>` element.
