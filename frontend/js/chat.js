@@ -57,7 +57,14 @@ if (currentModel === "moonshotai/kimi-k2.6" || currentModel === "mistralai/mistr
   localStorage.setItem("selected_model", currentModel);
   localStorage.setItem("aura1_mode", "deep_think"); // Reset toggle to Deep Think for new default
 }
-let currentModelName = localStorage.getItem("selected_model_name") || "Aura Allrounder";
+let currentModelName = localStorage.getItem("selected_model_name") || "Aura 2.0 Pro";
+// Migration: the flagship model is presented as "Aura 2.0 Pro". Returning
+// visitors still have the previous label saved, which would leave the model
+// name unmatched by the capability/theme/toggle lookups below.
+if (currentModelName === "Aura Allrounder" || currentModelName === "Aura 1") {
+  currentModelName = "Aura 2.0 Pro";
+  localStorage.setItem("selected_model_name", currentModelName);
+}
 let abortController = null; // For stopping generation
 let lastRawUserMessage = null; // Raw (full base64) payload of the most recent user turn
 
@@ -97,7 +104,7 @@ function getMessagesForRequest() {
   return msgs;
 }
 
-// ── Aura Allrounder Toggle State ──
+// ── Aura 2.0 Pro Toggle State ──
 let aura1Mode = localStorage.getItem("aura1_mode") || "deep_think"; // "deep_think" or "fast"
 
 // Stop button
@@ -105,14 +112,14 @@ const stopBtn = document.getElementById("stop-btn");
 
 if (currentModelNameEl) currentModelNameEl.textContent = currentModelName;
 
-// Aura Allrounder Mode Toggle DOM
+// Aura 2.0 Pro Mode Toggle DOM
 const aura1ModeToggle = document.getElementById("aura1-mode-toggle");
 const modeDeepThinkBtn = document.getElementById("mode-deep-think-btn");
 const modeFastBtn = document.getElementById("mode-fast-btn");
 
 function updateAura1ToggleUI() {
   if (!aura1ModeToggle) return;
-  if (currentModelName === "Aura Allrounder") {
+  if (currentModelName === "Aura 2.0 Pro") {
     aura1ModeToggle.style.display = "flex";
     if (aura1Mode === "deep_think") {
       modeDeepThinkBtn.className = "px-2.5 py-1 rounded-lg text-xs font-bold transition-all text-on-surface bg-white/10 shadow-sm";
@@ -591,7 +598,7 @@ if (modelOptions) {
       currentModelName = selectedName;
       localStorage.setItem("selected_model_name", currentModelName);
 
-      if (selectedName === "Aura Allrounder") {
+      if (selectedName === "Aura 2.0 Pro") {
         updateAura1ToggleUI(); // Sets currentModel internally based on toggle state
       } else {
         currentModel = selectedModel;
@@ -601,7 +608,7 @@ if (modelOptions) {
 
       if (currentModelNameEl) currentModelNameEl.textContent = currentModelName;
       // Apply accent color to model name
-      if (currentModelName === 'Aura Allrounder') currentModelNameEl.style.color = '#7c5cff';
+      if (currentModelName === 'Aura 2.0 Pro') currentModelNameEl.style.color = '#7c5cff';
       else if (currentModelName === 'Aura Summary') currentModelNameEl.style.color = '#4caf50';
       else if (currentModelName === 'Aura Flash') currentModelNameEl.style.color = '#a855f7';
       
@@ -621,7 +628,7 @@ function updateDynamicTheme(modelName) {
   const root = document.documentElement;
   
   const themes = {
-    "Aura Allrounder": {
+    "Aura 2.0 Pro": {
       blob1: "#7c5cff", // Iris
       blob2: "#5ea2ff", // Azure
       blob3: "#a07cff"  // Soft violet
@@ -638,7 +645,7 @@ function updateDynamicTheme(modelName) {
     }
   };
 
-  const theme = themes[modelName] || themes["Aura Allrounder"];
+  const theme = themes[modelName] || themes["Aura 2.0 Pro"];
   
   root.style.setProperty("--blob-1-color", theme.blob1);
   root.style.setProperty("--blob-2-color", theme.blob2);
@@ -1134,27 +1141,57 @@ if (historySearchInput) {
 }
 
 
+// The sidebar mirrors the history modal's time buckets so recent work is easy
+// to scan: Recent (today), Yesterday, and Previous 7 Days.
 function renderSidebarHistory(index) {
   if (!sidebarHistoryList) return;
 
   const emptyMessage = document.querySelector('.sidebar-empty');
-  sidebarHistoryList.innerHTML = '';
+  const lists = {
+    recent: sidebarHistoryList,
+    yesterday: document.getElementById('history-list-yesterday'),
+    previous7: document.getElementById('history-list-previous7'),
+  };
+  Object.values(lists).forEach((list) => { if (list) list.innerHTML = ''; });
 
-  const chatsToRender = index.slice(0, 6);
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const todayMs = startOfToday.getTime();
+  const dayMs = 86400000;
 
-  if (emptyMessage) emptyMessage.hidden = chatsToRender.length > 0;
-
-  chatsToRender.forEach((chat) => {
-    const item = document.createElement('li');
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = `sidebar-recent-item${chat.id === currentChatId ? ' active' : ''}`;
-    button.title = chat.title;
-    button.innerHTML = `<span class="material-symbols-outlined history-icon">chat_bubble</span><span class="history-title">${escapeHtml(chat.title)}</span>`;
-    button.addEventListener('click', () => loadSession(chat.id));
-    item.appendChild(button);
-    sidebarHistoryList.appendChild(item);
+  const buckets = { recent: [], yesterday: [], previous7: [] };
+  index.forEach((chat) => {
+    const updatedAt = chat.updatedAt || 0;
+    if (updatedAt >= todayMs) buckets.recent.push(chat);
+    else if (updatedAt >= todayMs - dayMs) buckets.yesterday.push(chat);
+    else if (updatedAt >= todayMs - dayMs * 7) buckets.previous7.push(chat);
   });
+
+  // Keep the sidebar short: cap each bucket, favouring the most recent work.
+  const caps = { recent: 6, yesterday: 4, previous7: 4 };
+
+  Object.entries(buckets).forEach(([key, chats]) => {
+    const list = lists[key];
+    if (!list) return;
+    const visible = chats.slice(0, caps[key]);
+    visible.forEach((chat) => {
+      const item = document.createElement('li');
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `sidebar-recent-item${chat.id === currentChatId ? ' active' : ''}`;
+      button.title = chat.title;
+      button.innerHTML = `<span class="material-symbols-outlined history-icon">chat_bubble</span><span class="history-title">${escapeHtml(chat.title)}</span>`;
+      button.addEventListener('click', () => loadSession(chat.id));
+      item.appendChild(button);
+      list.appendChild(item);
+    });
+    // "Recent" always stays visible (it owns the empty-state copy); the dated
+    // groups only appear once they actually hold a conversation.
+    const group = list.closest('.history-group');
+    if (group && key !== 'recent') group.hidden = visible.length === 0;
+  });
+
+  if (emptyMessage) emptyMessage.hidden = buckets.recent.length > 0;
 }
 
 function loadHistoryIndex(searchQuery = '') {
@@ -1219,7 +1256,7 @@ function loadHistoryIndex(searchQuery = '') {
 
 // ── Send Message ──
 const MODEL_CAPABILITIES = {
-  "Aura Allrounder": { image: true, audio: true, video: true },
+  "Aura 2.0 Pro": { image: true, audio: true, video: true },
   "Aura Summary": { image: false, audio: false, video: false },
   "Aura Flash": { image: true, audio: true, video: true }
 };
@@ -1398,14 +1435,13 @@ function renderSuggestionChips() {
   
   let chips = [];
 
-  // All models (Allrounder / Summary / Flash) share the general chip set
+  // All models share the same four starting points, matching the four-card
+  // grid the empty state is designed around.
   chips = [
-    { icon: 'science', title: 'Explain a concept', description: 'Make a difficult idea feel simple.', prompt: 'Explain quantum physics in simple terms', color: '#78a6ff' },
-    { icon: 'code', title: 'Build something', description: 'Plan or write a polished web experience.', prompt: 'Write a modern responsive landing page with HTML, CSS & JS', color: '#c9a5ff' },
-    { icon: 'school', title: 'Study with me', description: 'Turn a topic into a useful lesson.', prompt: 'Help me study for my math exam — quiz me on calculus', color: '#72d7ad' },
-    { icon: 'edit_note', title: 'Write and refine', description: 'Find the right words and tone.', prompt: 'Write a short creative story about a time traveler', color: '#ffb56e' },
-    { icon: 'calculate', title: 'Solve a problem', description: 'Work through it step by step.', prompt: 'Solve this math problem step by step: integrate x^2 * e^x dx', color: '#f58bbb' },
-    { icon: 'forum', title: 'Think it through', description: 'Explore a perspective or decision.', prompt: 'Debate: Is AI a threat to humanity? Take the opposing side', color: '#76d9e8' }
+    { icon: 'web', title: 'Create Landing Page', description: 'Polished and responsive.', prompt: 'Create a modern, responsive SaaS landing page with HTML, CSS and JavaScript', color: '#7c5cff' },
+    { icon: 'code_blocks', title: 'Build React Component', description: 'Clean, reusable and typed.', prompt: 'Build a reusable React component with props, TypeScript types and an accessible API', color: '#8f7bff' },
+    { icon: 'picture_as_pdf', title: 'Summarize PDF', description: 'Key points, fast.', prompt: 'Summarize this document into key takeaways, decisions and action items', color: '#a479ff' },
+    { icon: 'design_services', title: 'Generate UI Design', description: 'Layout, spacing and colour.', prompt: 'Generate a premium dark-mode dashboard UI design with layout, spacing and colour tokens', color: '#b87dff' }
   ];
   
   chips.forEach(chip => {
@@ -1683,8 +1719,8 @@ async function getAuraResponse(multimodalState = {}) {
             fullContent += data.content;
 
             // ── Canvas Live Streaming ──
-            // Detect HTML block start and auto-open Canvas for Aura Allrounder
-            if (currentModelName === "Aura Allrounder") {
+            // Detect HTML block start and auto-open Canvas for Aura 2.0 Pro
+            if (currentModelName === "Aura 2.0 Pro") {
               const htmlBlockMatch = fullContent.match(/```html\n?([\s\S]*)/);
               if (htmlBlockMatch) {
                 // Extract code captured so far (before closing ```)
@@ -2006,7 +2042,7 @@ function showTypingIndicator(multimodalState = {}) {
     typingText = "Listening to audio";
   } else if (multimodalState.hasVideo) {
     typingText = "Analyzing video";
-  } else if (currentModelName === "Aura Allrounder" && aura1Mode === "deep_think") {
+  } else if (currentModelName === "Aura 2.0 Pro" && aura1Mode === "deep_think") {
     typingText = "Reasoning deeply";
   }
   
@@ -2293,14 +2329,53 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ── Sidebar collapse (desktop) ──
+  // The hamburger in the sidebar header hides the rail; a matching hamburger
+  // in the top bar brings it back. The choice is remembered between visits.
+  const sidebarCollapseEl = document.getElementById('sidebar-collapse');
+  if (sidebarCollapseEl) {
+    if (localStorage.getItem('sidebar_collapsed') === '1') {
+      sidebarCollapseEl.checked = true;
+    }
+    sidebarCollapseEl.addEventListener('change', () => {
+      localStorage.setItem('sidebar_collapsed', sidebarCollapseEl.checked ? '1' : '0');
+    });
+    document.querySelectorAll('[data-sidebar-toggle]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        // Narrow screens use the overlay drawer instead of the docked rail.
+        if (window.matchMedia('(max-width: 767px)').matches) {
+          if (drawerToggleEl) drawerToggleEl.checked = !drawerToggleEl.checked;
+          return;
+        }
+        sidebarCollapseEl.checked = !sidebarCollapseEl.checked;
+        sidebarCollapseEl.dispatchEvent(new Event('change'));
+      });
+    });
+  }
+
   // ── Keyboard Shortcuts ──
   document.addEventListener('keydown', (e) => {
-    // Ctrl+K or Cmd+K to open/close history drawer
+    // Cmd/Ctrl+K focuses the top-bar search, matching its ⌘K badge.
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
       e.preventDefault();
-      if (drawerToggleEl) {
-        drawerToggleEl.checked = !drawerToggleEl.checked;
+      const search = document.getElementById('nav-search-input');
+      if (search && search.offsetParent !== null) {
+        search.focus();
+        search.select();
+      } else {
+        openHistoryModal();
       }
+    }
+    // Cmd/Ctrl+B toggles the sidebar.
+    if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+      e.preventDefault();
+      const toggle = document.querySelector('[data-sidebar-toggle]');
+      if (toggle) toggle.click();
+    }
+    // Cmd/Ctrl+N starts a new chat, matching the ⌘N hint in the sidebar.
+    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+      e.preventDefault();
+      createNewChat();
     }
   });
 
@@ -2674,7 +2749,7 @@ function updateModelAccentColor() {
   const el = document.getElementById('current-model-name');
   if (!el) return;
   const name = currentModelName;
-  if (name === 'Aura Allrounder') { el.style.color = '#7c5cff'; }
+  if (name === 'Aura 2.0 Pro') { el.style.color = '#7c5cff'; }
   else if (name === 'Aura Summary') { el.style.color = '#4caf50'; }
   else if (name === 'Aura Flash') { el.style.color = '#a855f7'; }
 
@@ -2710,7 +2785,7 @@ function updateModelAccentColor() {
 // ── Canvas State ──
 let canvasLiveCode = "";       // currently-streaming HTML
 let canvasLiveTimer = null;    // debounce timer for live preview updates
-let canvasIsStreaming = false; // true while Aura Allrounder is streaming code to Canvas
+let canvasIsStreaming = false; // true while Aura 2.0 Pro is streaming code to Canvas
 
 // ── Open Canvas Panel ──
 function openCanvasPanel(title = "Web App", subtitle = "Writing code...") {
