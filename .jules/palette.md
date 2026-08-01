@@ -1,0 +1,3 @@
+## 2024-08-01 - Material Symbols Icon-Only Buttons
+**Learning:** In dynamically generated icon-only buttons using Material Symbols (`<span class="material-symbols-outlined">icon</span>`), the span must be explicitly hidden from screen readers using `aria-hidden="true"`, and the parent button must have a clear `aria-label`. Without this, screen readers may read the text ligature (e.g. "content_copy") rather than the intended action.
+**Action:** When injecting HTML strings for icon buttons via JS (`createElement` + `innerHTML`), always set the parent's `aria-label` attribute and ensure the inner icon span includes `aria-hidden="true"`.
