@@ -14,9 +14,30 @@ const firebaseConfig = {
   measurementId: "G-81ZNBSKTEP"
 };
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
+// Initialize Firebase.
+// `auth` is declared with `var` and initialised to null BEFORE the try block so
+// the binding always exists for later scripts, even if the Firebase SDK (loaded
+// from www.gstatic.com) fails to arrive — e.g. offline development, a blocked
+// network, a strict CSP, or an ad/DNS blocker. Previously this threw a bare
+// ReferenceError here, which left `auth` undefined and made every later script
+// (auth.js, chat.js) die on its first `auth.` reference, freezing the whole UI.
+var auth = null;
+try {
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
 
-// Set persistence to LOCAL (survives browser close)
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+  // Set persistence to LOCAL (survives browser close). This returns a promise
+  // that rejects in environments without IndexedDB (e.g. some private-browsing
+  // modes) — swallow it instead of producing an unhandled rejection.
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((err) => {
+    console.warn("[firebase] Could not enable LOCAL auth persistence:", err);
+  });
+} catch (err) {
+  console.error(
+    "[firebase] SDK failed to initialise — sign-in will be unavailable, " +
+      "but the interface stays usable. Check that firebase-app-compat.js and " +
+      "firebase-auth-compat.js loaded (network/CSP/ad-blocker).",
+    err
+  );
+  auth = null;
+}

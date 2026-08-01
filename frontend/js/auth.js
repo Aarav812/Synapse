@@ -30,6 +30,11 @@ const passwordStrengthBar = document.getElementById('password-strength-bar');
 let isSignUp = false;
 let explicitLoginAttempt = false;
 
+// Shown whenever an auth action is attempted while the Firebase SDK failed to
+// initialise (blocked CDN, offline, strict CSP). Keeps the UI responsive with
+// a clear message instead of a silent dead click or a thrown ReferenceError.
+const AUTH_UNAVAILABLE_MSG = 'Sign-in is unavailable right now — the authentication service failed to load. Check your connection and refresh the page.';
+
 // ── Wire up UI interactions once DOM is ready ──
 window.addEventListener('DOMContentLoaded', () => {
 
@@ -74,6 +79,10 @@ window.addEventListener('DOMContentLoaded', () => {
   if (forgotLink) {
     forgotLink.addEventListener('click', async (e) => {
       e.preventDefault();
+      if (!auth) {
+        showError(AUTH_UNAVAILABLE_MSG);
+        return;
+      }
       const emailEl = document.getElementById('email');
       const email = emailEl?.value.trim();
       if (!email) {
@@ -148,6 +157,10 @@ if (authForm) {
   authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     hideError();
+    if (!auth) {
+      showError(AUTH_UNAVAILABLE_MSG);
+      return;
+    }
     setLoading(true);
 
     const email       = document.getElementById('email').value.trim();
@@ -181,6 +194,10 @@ if (authForm) {
 if (googleBtn) {
   googleBtn.addEventListener('click', async () => {
     hideError();
+    if (!auth) {
+      showError(AUTH_UNAVAILABLE_MSG);
+      return;
+    }
     try {
       explicitLoginAttempt = true;
       const provider = new firebase.auth.GoogleAuthProvider();
@@ -199,6 +216,10 @@ if (googleBtn) {
 }
 
 // ── Auth State Listener ──
+// Guarded: when the Firebase SDK failed to load, `auth` is null. Without this
+// check the bare `auth.` reference throws a ReferenceError that unwinds this
+// whole script — previously one of the reasons the page froze.
+if (auth) {
 auth.onAuthStateChanged((user) => {
   const currentPage = window.location.pathname;
 
@@ -228,6 +249,13 @@ auth.onAuthStateChanged((user) => {
     }
   }
 });
+} else {
+  // Firebase never initialised (CDN blocked / offline / CSP). Do NOT redirect
+  // or throw — leave the page fully interactive in offline mode; chat.js
+  // applies the same guard and keeps local UI working.
+  console.warn('[auth] Firebase Auth unavailable — running without sign-in. ' +
+    'Check that the gstatic.com Firebase scripts loaded.');
+}
 
 // ── Helpers ──
 function showError(msg) {
