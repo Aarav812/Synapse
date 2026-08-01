@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const href = link.getAttribute('href');
       if (href === '/login.html') {
         e.preventDefault();
-        if (typeof auth !== 'undefined' && auth.currentUser) {
+        if (typeof auth !== 'undefined' && auth && auth.currentUser) {
           landingNavigateTo('/chat.html');
         } else {
           openAuthModal();
@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (heroStartBtn) {
     heroStartBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      if (typeof auth !== 'undefined' && auth.currentUser) {
+      if (typeof auth !== 'undefined' && auth && auth.currentUser) {
         landingNavigateTo('/chat.html');
       } else {
         openAuthModal();
@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (footerStartBtn) {
     footerStartBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      if (typeof auth !== 'undefined' && auth.currentUser) {
+      if (typeof auth !== 'undefined' && auth && auth.currentUser) {
         landingNavigateTo('/chat.html');
       } else {
         openAuthModal();
@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btn) {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
-        if (typeof auth !== 'undefined' && auth.currentUser) {
+        if (typeof auth !== 'undefined' && auth && auth.currentUser) {
           landingNavigateTo('/chat.html');
         } else {
           openAuthModal();
@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.model-card[data-model]').forEach((card) => {
     const launchModel = (e) => {
       e.preventDefault();
-      if (typeof auth !== 'undefined' && auth.currentUser) {
+      if (typeof auth !== 'undefined' && auth && auth.currentUser) {
         localStorage.setItem('selected_model', card.getAttribute('data-model'));
         localStorage.setItem('selected_model_name', card.getAttribute('data-name'));
         landingNavigateTo('/chat.html');
@@ -147,16 +147,22 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ── Scroll Reveal Animations ──
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('active');
-        observer.unobserve(entry.target);
-      }
-    });
-  }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+  // Guarded: without IntersectionObserver (very old browsers / embedded
+  // webviews) a ReferenceError here would abort the rest of this handler.
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('active');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
 
-  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  } else {
+    document.querySelectorAll('.reveal').forEach((el) => el.classList.add('active'));
+  }
 });
 
 // ── Mobile Hamburger Menu ──
@@ -202,6 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── Stats Count-up Animation ──
 (function() {
+  if (!('IntersectionObserver' in window)) return;
   const statItems = document.querySelectorAll('.stat-number');
   if (!statItems.length) return;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;

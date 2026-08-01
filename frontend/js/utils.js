@@ -142,7 +142,9 @@ function renderMarkdown(text, isStreaming = false) {
       if (!isStreaming) {
         const artifactId = 'artifact_' + (artifactCounter++);
         artifactStore.set(artifactId, block.code);
-        if (typeof saveToDB === "function") saveToDB("artifacts", artifactId, block.code);
+        // Fire-and-forget persist — never let an IndexedDB failure become an
+        // unhandled promise rejection.
+        if (typeof saveToDB === "function") Promise.resolve(saveToDB("artifacts", artifactId, block.code)).catch((e) => console.warn("Artifact persist failed:", e));
         return `
           <div class="artifact-card" data-artifact-id="${artifactId}" style="background:rgba(94,162,255,0.05); border:1px solid rgba(94,162,255,0.2); border-radius:12px; padding:16px; margin:12px 0; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
           <div style="display:flex; align-items:center; gap:12px;">

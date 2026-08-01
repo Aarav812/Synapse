@@ -209,31 +209,48 @@ async function getFromDB(storeName, id) {
 }
 
 // ── Auth Guard + User Info ──
-auth.onAuthStateChanged((user) => {
-  if (!user) {
-    window.location.href = "/index.html";
-    return;
-  }
-  if (userNameEl) userNameEl.textContent = user.displayName || user.email?.split("@")[0] || "User";
-  if (userAvatarEl) {
-    if (user.photoURL) {
-      const avatarImg = document.createElement('img');
-      avatarImg.src = user.photoURL;
-      avatarImg.alt = 'Profile';
-      avatarImg.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
-      userAvatarEl.innerHTML = '';
-      userAvatarEl.appendChild(avatarImg);
-    } else {
-      const initial = (user.displayName || user.email || "U")[0].toUpperCase();
-      userAvatarEl.innerHTML = `<span style="font-size:16px;font-weight:700;color:#5ea2ff;">${initial}</span>`;
+// Guarded: if the Firebase SDK failed to load (blocked CDN / offline / CSP)
+// `auth` is null. The previous bare `auth.onAuthStateChanged(...)` threw a
+// ReferenceError at this exact line, which aborted the ENTIRE remainder of
+// this script — no send button, no Enter handler, no dropdown, no sidebar
+// toggle, no modals. That single throw is what made the page feel "frozen".
+if (auth) {
+  auth.onAuthStateChanged((user) => {
+    if (!user) {
+      window.location.href = "/index.html";
+      return;
     }
+    if (userNameEl) userNameEl.textContent = user.displayName || user.email?.split("@")[0] || "User";
+    if (userAvatarEl) {
+      if (user.photoURL) {
+        const avatarImg = document.createElement('img');
+        avatarImg.src = user.photoURL;
+        avatarImg.alt = 'Profile';
+        avatarImg.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
+        userAvatarEl.innerHTML = '';
+        userAvatarEl.appendChild(avatarImg);
+      } else {
+        const initial = (user.displayName || user.email || "U")[0].toUpperCase();
+        userAvatarEl.innerHTML = `<span style="font-size:16px;font-weight:700;color:#5ea2ff;">${initial}</span>`;
+      }
+    }
+    loadHistoryIndex(); // Load past chats when user logs in
+  });
+} else {
+  // Offline mode: keep the workspace fully usable without sign-in. Local
+  // history still renders; sending a message surfaces a clear warning instead
+  // of a frozen page.
+  console.warn("[chat] Firebase Auth unavailable — running in offline mode. " +
+    "The interface remains interactive; sign-in and AI requests need connectivity.");
+  if (userAvatarEl) {
+    userAvatarEl.innerHTML = `<span style="font-size:16px;font-weight:700;color:#5ea2ff;">G</span>`;
   }
-  loadHistoryIndex(); // Load past chats when user logs in
-});
+  loadHistoryIndex(); // render locally-stored history without waiting for auth
+}
 
 if (logoutBtn) {
   logoutBtn.addEventListener('click', async () => {
-    await auth.signOut();
+    if (auth) await auth.signOut();
     window.location.href = '/index.html';
   });
 }
@@ -527,6 +544,99 @@ function closeSettings() {
 
 if (closeSettingsBtn) closeSettingsBtn.addEventListener("click", closeSettings);
 if (cancelSettingsBtn) cancelSettingsBtn.addEventListener("click", closeSettings);
+
+// ── Header notification bell ──
+// This button previously had NO click handler at all — it rendered with a
+// pulsing dot but swallowed every click. Now it acks notifications: the dot
+// is cleared and the user gets explicit feedback.
+const notificationsBtn = document.getElementById("header-notifications-btn");
+if (notificationsBtn) {
+  notificationsBtn.addEventListener("click", () => {
+    const dot = notificationsBtn.querySelector(".notification-dot");
+    if (dot) dot.style.display = "none";
+    showToast("You're all caught up — no new notifications.", "success");
+  });
+}
+
+// ── Header avatar → profile menu ──
+// The avatar also had NO click handler. It now opens a small account menu
+// (name/email + log out), built entirely in JS so no HTML changes are needed.
+let profileMenuEl = null;
+
+function closeProfileMenu() {
+  if (!profileMenuEl) return;
+  profileMenuEl.classList.add("hidden");
+  if (userAvatarEl) userAvatarEl.setAttribute("aria-expanded", "false");
+}
+
+function openProfileMenu() {
+  if (!userAvatarEl) return;
+
+  if (!profileMenuEl) {
+    profileMenuEl = document.createElement("div");
+    profileMenuEl.id = "profile-menu";
+    profileMenuEl.className = "hidden";
+    profileMenuEl.setAttribute("role", "menu");
+    profileMenuEl.setAttribute("aria-label", "Account menu");
+
+    const user = auth ? auth.currentUser : null;
+    const name = user?.displayName || user?.email?.split("@")[0] || "Guest";
+    const email = user?.email || "Not signed in (offline mode)";
+
+    profileMenuEl.innerHTML = `
+      <div class="profile-menu-head">
+        <p class="profile-menu-name">${escapeHtml(name)}</p>
+        <p class="profile-menu-email">${escapeHtml(email)}</p>
+      </div>
+      <div class="profile-menu-divider"></div>
+      <button id="profile-menu-logout" class="sidebar-action" type="button" role="menuitem">
+        <span class="material-symbols-outlined">logout</span>
+        <span>Log out</span>
+      </button>
+    `;
+    document.body.appendChild(profileMenuEl);
+
+    profileMenuEl.querySelector("#profile-menu-logout").addEventListener("click", () => {
+      closeProfileMenu();
+      // Reuse the sidebar logout flow (handles both online and offline mode).
+      if (logoutBtn) logoutBtn.click();
+    });
+
+    // Close on outside click — registered once, alongside the menu element.
+    document.addEventListener("click", (e) => {
+      if (!profileMenuEl || profileMenuEl.classList.contains("hidden")) return;
+      if (!profileMenuEl.contains(e.target) && !userAvatarEl.contains(e.target)) {
+        closeProfileMenu();
+      }
+    });
+    // Close on Escape, consistent with the other popovers.
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeProfileMenu();
+    });
+  }
+
+  // Position the menu directly under the avatar (it is position:fixed).
+  const rect = userAvatarEl.getBoundingClientRect();
+  profileMenuEl.style.top = `${rect.bottom + 10}px`;
+  profileMenuEl.style.right = `${Math.max(8, window.innerWidth - rect.right)}px`;
+
+  userAvatarEl.setAttribute("aria-expanded", "true");
+  profileMenuEl.classList.remove("hidden");
+}
+
+if (userAvatarEl) {
+  userAvatarEl.setAttribute("aria-haspopup", "menu");
+  userAvatarEl.setAttribute("aria-expanded", "false");
+  userAvatarEl.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (profileMenuEl && !profileMenuEl.classList.contains("hidden")) {
+      closeProfileMenu();
+    } else {
+      openProfileMenu();
+    }
+  });
+}
+
 if (saveSettingsBtn) {
   saveSettingsBtn.addEventListener("click", () => {
     // Get the selected card's personality
@@ -702,7 +812,9 @@ function saveSession() {
           content: msg.content.map(block => {
             if (block.type === 'image_url' && block.image_url?.url?.startsWith('data:')) {
               const imgId = `img_${currentChatId}_${Math.random().toString(36).substr(2, 9)}`;
-              saveToDB("attachments", imgId, block.image_url.url);
+              // Fire-and-forget: swallow rejections (IndexedDB unavailable in
+              // some private modes) so they never surface as unhandled.
+              saveToDB("attachments", imgId, block.image_url.url).catch((e) => console.warn("Attachment persist failed:", e));
               return { type: 'image_url', image_url: { url: `db:${imgId}` } };
             }
             return block;
@@ -1647,8 +1759,8 @@ async function getAuraResponse(multimodalState = {}) {
   let reasoningEl = null;
 
   try {
-    const user = auth.currentUser;
-    if (!user) throw new Error("Not authenticated");
+    const user = auth ? auth.currentUser : null;
+    if (!user) throw new Error("You're not signed in — the authentication service didn't load. Check your connection and refresh the page.");
 
     const idToken = await user.getIdToken();
 
@@ -1964,7 +2076,7 @@ function appendMessage(role, content, explicitIndex = -1, isRawHtmlForUser = fal
   if (role === "ai") {
     avatar.innerHTML = "✦";
   } else {
-    const user = auth.currentUser;
+    const user = auth ? auth.currentUser : null;
     if (user?.photoURL) {
       const avatarImg = document.createElement('img');
       avatarImg.src = user.photoURL;
@@ -2420,8 +2532,12 @@ function exportCurrentChat() {
     showToast('No conversation to export', 'error');
     return;
   }
+  if (typeof html2pdf !== "function") {
+    showToast('PDF engine failed to load — check your connection and refresh.', 'error');
+    return;
+  }
 
-  const user = auth.currentUser;
+  const user = auth ? auth.currentUser : null;
   const userName = user?.displayName || user?.email || 'You';
   const index = getHistoryIndex();
   const entry = index.find(c => c.id === currentChatId);
@@ -2773,6 +2889,8 @@ function updateModelAccentColor() {
 // but to minimize diff risk we guard against the redirect race by checking
 // that we're actually on the chat page before opening the modal.
 (function initPersonalityIntro() {
+  // Skip entirely when the Auth SDK failed to load (offline mode).
+  if (!auth) return;
   // Use a one-shot listener that piggybacks on the existing auth state
   const unsubPersonality = auth.onAuthStateChanged((user) => {
     if (!user) return;
