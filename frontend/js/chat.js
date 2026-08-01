@@ -65,6 +65,12 @@ if (currentModelName === "Aura Allrounder" || currentModelName === "Aura 1") {
   currentModelName = "Aura 2.0 Pro";
   localStorage.setItem("selected_model_name", currentModelName);
 }
+// Migration: "Aura Flash" was renamed to "Aura Bhai" for consistency with
+// the landing page and backend routing.
+if (currentModelName === "Aura Flash") {
+  currentModelName = "Aura Bhai";
+  localStorage.setItem("selected_model_name", currentModelName);
+}
 let abortController = null; // For stopping generation
 let lastRawUserMessage = null; // Raw (full base64) payload of the most recent user turn
 
@@ -610,7 +616,7 @@ if (modelOptions) {
       // Apply accent color to model name
       if (currentModelName === 'Aura 2.0 Pro') currentModelNameEl.style.color = '#7c5cff';
       else if (currentModelName === 'Aura Summary') currentModelNameEl.style.color = '#4caf50';
-      else if (currentModelName === 'Aura Flash') currentModelNameEl.style.color = '#a855f7';
+      else if (currentModelName === 'Aura Bhai') currentModelNameEl.style.color = '#a855f7';
       
       // Update active indicator in dropdown
       updateActiveModelIndicator(currentModelName);
@@ -638,7 +644,7 @@ function updateDynamicTheme(modelName) {
       blob2: "#22d3ee", // Teal
       blob3: "#10b981"  // Green
     },
-    "Aura Flash": {
+    "Aura Bhai": {
       blob1: "#a855f7", // Purple
       blob2: "#00e5ff", // Neon Cyan
       blob3: "#7c5cff"  // Violet
@@ -1258,7 +1264,7 @@ function loadHistoryIndex(searchQuery = '') {
 const MODEL_CAPABILITIES = {
   "Aura 2.0 Pro": { image: true, audio: true, video: true },
   "Aura Summary": { image: false, audio: false, video: false },
-  "Aura Flash": { image: true, audio: true, video: true }
+  "Aura Bhai": { image: true, audio: true, video: true }
 };
 
 function sendMessage() {
@@ -1292,6 +1298,10 @@ function sendMessage() {
 
   if (heroSection) heroSection.style.display = "none";
 
+  // Initialize display content and backend payload for text-only messages
+  let displayContent = escapeHtml(text);
+  let backendPayload = text;
+
   if (attachedFiles.length > 0) {
     // Render attachment previews for the user bubble
     let attachmentPreviews = [];
@@ -1308,6 +1318,8 @@ function sendMessage() {
     }
     displayContent += `\n<br><div style="display:flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">${attachmentPreviews.join("")}</div>`;
     
+    const isMultimodal = hasImage || hasAudio || hasVideo;
+
     if (isMultimodal) {
       backendPayload = [
         { type: "text", text: text || "Please analyze the attached files." }
@@ -2751,7 +2763,7 @@ function updateModelAccentColor() {
   const name = currentModelName;
   if (name === 'Aura 2.0 Pro') { el.style.color = '#7c5cff'; }
   else if (name === 'Aura Summary') { el.style.color = '#4caf50'; }
-  else if (name === 'Aura Flash') { el.style.color = '#a855f7'; }
+  else if (name === 'Aura Bhai') { el.style.color = '#a855f7'; }
 
   else { el.style.color = ''; }
 }

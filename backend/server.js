@@ -278,13 +278,13 @@ app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
   try {
     console.log(`[DEBUG] Routing request to: ${targetModel}`);
 
-    if (targetModel === "qwen-image") {
+    if (targetModel === "nvidia/qwen-image") {
       // Find the last user message to use as the prompt
-      const lastMsg = messages.slice().reverse().find(m => m.role === "user");
+      const imgLastMsg = messages.slice().reverse().find(m => m.role === "user");
       let promptText = "A beautiful AI generated image";
-      if (lastMsg) {
-        if (typeof lastMsg.content === "string") promptText = lastMsg.content;
-        else if (Array.isArray(lastMsg.content)) promptText = lastMsg.content.find(c => c.type === "text")?.text || promptText;
+      if (imgLastMsg) {
+        if (typeof imgLastMsg.content === "string") promptText = imgLastMsg.content;
+        else if (Array.isArray(imgLastMsg.content)) promptText = imgLastMsg.content.find(c => c.type === "text")?.text || promptText;
       }
 
       console.log(`[IMAGE] Generating image for prompt: "${promptText}"`);
