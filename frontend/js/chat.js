@@ -1832,13 +1832,14 @@ function appendActionBar(bubbleEl, content) {
   const copyBtn = document.createElement("button");
   copyBtn.className = "action-btn";
   copyBtn.title = "Copy response";
-  copyBtn.innerHTML = '<span class="material-symbols-outlined">content_copy</span>';
+  copyBtn.setAttribute("aria-label", "Copy response");
+  copyBtn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">content_copy</span>';
   copyBtn.onclick = () => {
     navigator.clipboard.writeText(content).then(() => {
-      copyBtn.innerHTML = '<span class="material-symbols-outlined">check</span>';
+      copyBtn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">check</span>';
       copyBtn.style.color = "#4ade80";
       setTimeout(() => {
-        copyBtn.innerHTML = '<span class="material-symbols-outlined">content_copy</span>';
+        copyBtn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">content_copy</span>';
         copyBtn.style.color = "";
       }, 2000);
     });
@@ -1848,7 +1849,8 @@ function appendActionBar(bubbleEl, content) {
   const thumbUpBtn = document.createElement("button");
   thumbUpBtn.className = "action-btn";
   thumbUpBtn.title = "Good response";
-  thumbUpBtn.innerHTML = '<span class="material-symbols-outlined">thumb_up</span>';
+  thumbUpBtn.setAttribute("aria-label", "Good response");
+  thumbUpBtn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">thumb_up</span>';
   thumbUpBtn.onclick = () => {
     thumbUpBtn.style.color = "#5ea2ff";
     thumbDownBtn.style.color = "";
@@ -1860,7 +1862,8 @@ function appendActionBar(bubbleEl, content) {
   const thumbDownBtn = document.createElement("button");
   thumbDownBtn.className = "action-btn";
   thumbDownBtn.title = "Bad response";
-  thumbDownBtn.innerHTML = '<span class="material-symbols-outlined">thumb_down</span>';
+  thumbDownBtn.setAttribute("aria-label", "Bad response");
+  thumbDownBtn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">thumb_down</span>';
   thumbDownBtn.onclick = () => {
     thumbDownBtn.style.color = "#ffb4ab";
     thumbUpBtn.style.color = "";
@@ -1872,7 +1875,8 @@ function appendActionBar(bubbleEl, content) {
   const retryBtn = document.createElement("button");
   retryBtn.className = "action-btn";
   retryBtn.title = "Retry response";
-  retryBtn.innerHTML = '<span class="material-symbols-outlined">refresh</span>';
+  retryBtn.setAttribute("aria-label", "Retry response");
+  retryBtn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">refresh</span>';
   retryBtn.onclick = () => {
     if (isStreaming) return;
     // Pop the last assistant message from history
@@ -1889,7 +1893,8 @@ function appendActionBar(bubbleEl, content) {
   const exportBtn = document.createElement("button");
   exportBtn.className = "action-btn";
   exportBtn.title = "Export as PDF";
-  exportBtn.innerHTML = '<span class="material-symbols-outlined">picture_as_pdf</span>';
+  exportBtn.setAttribute("aria-label", "Export as PDF");
+  exportBtn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">picture_as_pdf</span>';
   exportBtn.onclick = () => exportCurrentChat();
 
   bar.appendChild(copyBtn);
@@ -1947,7 +1952,8 @@ function appendMessage(role, content, explicitIndex = -1, isRawHtmlForUser = fal
     // Add Edit Button
     const editBtn = document.createElement("button");
     editBtn.className = "edit-message-btn";
-    editBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;">edit</span>';
+    editBtn.setAttribute("aria-label", "Edit message");
+    editBtn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true" style="font-size:18px;">edit</span>';
     editBtn.title = "Edit message";
     editBtn.onclick = () => openEditMode(row, index);
     row.appendChild(editBtn);
