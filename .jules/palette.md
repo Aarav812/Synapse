@@ -1,0 +1,3 @@
+## 2024-05-24 - Interactive Elements Focus and Dynamic ARIA State
+**Learning:** Adding `tabindex="-1"` to custom interactive elements (like an inline password visibility toggle button) completely removes them from the document's sequential focus navigation, breaking keyboard accessibility for that crucial action. Additionally, state-changing icons inside a button need `aria-hidden="true"`, and the parent button's `aria-label` must be dynamically updated to reflect the current state (e.g., "Show password" vs "Hide password"), rather than only changing the visual icon.
+**Action:** Never use `tabindex="-1"` on form controls or interactive buttons meant for general use. Always remember to sync the `aria-label` of a toggle button with its visual state changes via JavaScript.
