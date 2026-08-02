@@ -1,0 +1,4 @@
+## 2025-02-09 - Insecure DOM-based HTML escaping
+**Vulnerability:** The `escapeHtml` utility function was using `div.textContent = text; return div.innerHTML;` to escape HTML. This successfully escapes `<` and `>`, but fails to escape single and double quotes (`'` and `"`). Since this function was used within HTML attributes (like `<img alt="${escapeHtml(file.filename)}">`), it left the application vulnerable to attribute injection XSS.
+**Learning:** Using DOM properties like `textContent` and `innerHTML` for escaping is a common anti-pattern because browsers do not escape quotes when generating `innerHTML` from `textContent`.
+**Prevention:** Always use robust string replacement mechanisms (like regex with `.replace()`) or established security libraries (like DOMPurify or dedicated HTML escaping libraries) to ensure all potentially dangerous characters (`&`, `<`, `>`, `"`, `'`) are properly escaped.
