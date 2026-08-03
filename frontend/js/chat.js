@@ -1634,21 +1634,30 @@ function updateScrollBtn() {
 // ── Scroll To Bottom ──
 let userHasScrolledUp = false;
 let lastScrollY = window.scrollY || 0;
+let tickingScrollToBottom = false;
 
+// ⚡ Bolt: Throttled scroll listener using requestAnimationFrame
+// to prevent layout thrashing and main thread blocking on frequent scroll events.
 window.addEventListener("scroll", () => {
-  const currentScrollY = window.scrollY;
-  const distFromBottom = document.documentElement.scrollHeight - currentScrollY - window.innerHeight;
-  
-  if (currentScrollY < lastScrollY) {
-    if (distFromBottom > 200) {
-      userHasScrolledUp = true;
-    }
-  } else if (distFromBottom <= 200) {
-    userHasScrolledUp = false;
+  if (!tickingScrollToBottom) {
+    window.requestAnimationFrame(() => {
+      const currentScrollY = window.scrollY;
+      const distFromBottom = document.documentElement.scrollHeight - currentScrollY - window.innerHeight;
+
+      if (currentScrollY < lastScrollY) {
+        if (distFromBottom > 200) {
+          userHasScrolledUp = true;
+        }
+      } else if (distFromBottom <= 200) {
+        userHasScrolledUp = false;
+      }
+
+      lastScrollY = currentScrollY;
+      updateScrollBtn();
+      tickingScrollToBottom = false;
+    });
+    tickingScrollToBottom = true;
   }
-  
-  lastScrollY = currentScrollY;
-  updateScrollBtn();
 }, { passive: true });
 
 if (scrollToBottomBtn) {
@@ -2510,11 +2519,20 @@ document.addEventListener("DOMContentLoaded", () => {
   // ── Header Scroll Shadow ──
   const headerEl = document.querySelector('header');
   if (headerEl) {
+    let tickingHeaderScroll = false;
+    // ⚡ Bolt: Throttled scroll listener using requestAnimationFrame
+    // to prevent layout thrashing on frequent scroll events.
     window.addEventListener('scroll', () => {
-      if (window.scrollY > 10) {
-        headerEl.classList.add('scrolled');
-      } else {
-        headerEl.classList.remove('scrolled');
+      if (!tickingHeaderScroll) {
+        window.requestAnimationFrame(() => {
+          if (window.scrollY > 10) {
+            headerEl.classList.add('scrolled');
+          } else {
+            headerEl.classList.remove('scrolled');
+          }
+          tickingHeaderScroll = false;
+        });
+        tickingHeaderScroll = true;
       }
     }, { passive: true });
   }
