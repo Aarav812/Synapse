@@ -1,0 +1,4 @@
+## 2024-05-24 - DOM-based HTML Escaping fails for Attribute Injection
+**Vulnerability:** The application used `div.textContent = text; return div.innerHTML;` for escaping HTML output. This fails to escape quotation marks (`'` and `"`).
+**Learning:** DOM-based text escaping relies on standard node rendering but often leaves quote attributes intact depending on the browser, which allows attribute injection (e.g. `<img src="x" onerror="alert(1)">`) if this rendered string is used inside an HTML attribute in other parts of the application. It is insufficient against attribute XSS.
+**Prevention:** Strictly use regex-based string replacements to explicitly encode all 5 critical characters (`<`, `>`, `&`, `'`, `"`) into their safe HTML entity representations.

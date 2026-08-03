@@ -10,9 +10,12 @@ let artifactCounter = 0;
  */
 function escapeHtml(text) {
   if (typeof text !== "string") return String(text ?? "");
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 /**
