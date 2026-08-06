@@ -1,0 +1,3 @@
+## 2025-02-18 - Stateful Icon Buttons Require Dynamic ARIA Labels
+**Learning:** When using stateful icon-only buttons (like a password visibility toggle) that change visually, static `aria-label`s cause screen readers to become out of sync with the visual state. Furthermore, setting `tabindex="-1"` on interactive elements completely breaks keyboard accessibility.
+**Action:** Always bind the `aria-label` to the component's state in JavaScript for stateful icon buttons (e.g. updating from "Show password" to "Hide password"), and never use `tabindex="-1"` on form controls or toggles meant to be interactive.
