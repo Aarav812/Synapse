@@ -1,0 +1,4 @@
+## 2024-05-18 - [Inadequate DOM-based HTML escaping in utils.js]
+**Vulnerability:** The `escapeHtml` function in `frontend/js/utils.js` relied on DOM manipulation (`div.textContent = text; return div.innerHTML`) which successfully escaped `<`, `>`, and `&`, but completely failed to escape quotes (`"` and `'`). This exposed the application to attribute injection XSS vulnerabilities.
+**Learning:** Using `textContent` to `innerHTML` conversion in the browser for HTML escaping is fundamentally incomplete and insecure for attribute contexts. It does not serialize quotes.
+**Prevention:** Always strictly use regex-based string replacements for the complete set of HTML special characters (`<`, `>`, `&`, `'`, and `"`) to ensure safety in all contexts (both text content and HTML attributes) when rolling custom escape functions, rather than relying on standard DOM serialization behavior.
