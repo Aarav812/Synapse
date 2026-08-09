@@ -1,0 +1,3 @@
+## 2025-02-27 - [Scroll Event Layout Thrashing]
+**Learning:** Continuous DOM measurements like `scrollHeight` and `innerHeight` triggered directly within high-frequency `scroll` event listeners lead to main thread blocking and layout thrashing. The application executes scroll handlers faster than the browser's 60 FPS paint cycle.
+**Action:** Always throttle UI scroll event listeners involving DOM reading or writing using `window.requestAnimationFrame()` coupled with a boolean tracking flag (e.g., `ticking = false`) to synchronize with the browser's paint cycle, thereby maintaining layout performance.
