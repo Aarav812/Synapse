@@ -1634,21 +1634,31 @@ function updateScrollBtn() {
 // ── Scroll To Bottom ──
 let userHasScrolledUp = false;
 let lastScrollY = window.scrollY || 0;
+let scrollTicking1 = false;
 
 window.addEventListener("scroll", () => {
-  const currentScrollY = window.scrollY;
-  const distFromBottom = document.documentElement.scrollHeight - currentScrollY - window.innerHeight;
-  
-  if (currentScrollY < lastScrollY) {
-    if (distFromBottom > 200) {
-      userHasScrolledUp = true;
-    }
-  } else if (distFromBottom <= 200) {
-    userHasScrolledUp = false;
+  if (!scrollTicking1) {
+    window.requestAnimationFrame(() => {
+      // ⚡ BOLT PERF OPTIMIZATION: Throttled scroll event with rAF.
+      // Reduces layout thrashing and main thread blocking during fast scrolling.
+      // Expected impact: smoother scroll performance, fewer unneeded calculations.
+      const currentScrollY = window.scrollY;
+      const distFromBottom = document.documentElement.scrollHeight - currentScrollY - window.innerHeight;
+
+      if (currentScrollY < lastScrollY) {
+        if (distFromBottom > 200) {
+          userHasScrolledUp = true;
+        }
+      } else if (distFromBottom <= 200) {
+        userHasScrolledUp = false;
+      }
+
+      lastScrollY = currentScrollY;
+      updateScrollBtn();
+      scrollTicking1 = false;
+    });
+    scrollTicking1 = true;
   }
-  
-  lastScrollY = currentScrollY;
-  updateScrollBtn();
 }, { passive: true });
 
 if (scrollToBottomBtn) {
@@ -2510,11 +2520,20 @@ document.addEventListener("DOMContentLoaded", () => {
   // ── Header Scroll Shadow ──
   const headerEl = document.querySelector('header');
   if (headerEl) {
+    let scrollTicking2 = false;
     window.addEventListener('scroll', () => {
-      if (window.scrollY > 10) {
-        headerEl.classList.add('scrolled');
-      } else {
-        headerEl.classList.remove('scrolled');
+      if (!scrollTicking2) {
+        window.requestAnimationFrame(() => {
+          // ⚡ BOLT PERF OPTIMIZATION: Throttled header scroll listener with rAF.
+          // Reduces unnecessary DOM modifications during continuous scrolling.
+          if (window.scrollY > 10) {
+            headerEl.classList.add('scrolled');
+          } else {
+            headerEl.classList.remove('scrolled');
+          }
+          scrollTicking2 = false;
+        });
+        scrollTicking2 = true;
       }
     }, { passive: true });
   }
