@@ -1,0 +1,4 @@
+## 2024-05-15 - DOM-based HTML Escaping Fails to Prevent Attribute Injection XSS
+**Vulnerability:** The `escapeHtml` function in `frontend/js/utils.js` used a DOM-based approach (`div.textContent = text; return div.innerHTML;`) to escape HTML. This correctly escapes `<` and `>`, but leaves quotes (`'` and `"`) untouched. This allowed for attribute injection XSS if the escaped output was used inside an HTML attribute (e.g. `<img src="x" title="${escapeHtml(input)}">`).
+**Learning:** DOM-based text escaping is not safe for general-purpose HTML escaping, especially when the output might be embedded inside HTML attributes, because it does not reliably escape quotes.
+**Prevention:** Always use a regex-based replacement (or a robust dedicated library) that explicitly escapes `<`, `>`, `&`, `"`, and `'`.
