@@ -61,8 +61,14 @@ const corsOptions = process.env.FRONTEND_ORIGIN
   ? { origin: process.env.FRONTEND_ORIGIN.split(",").map((o) => o.trim()) }
   : {};
 app.use(cors(corsOptions));
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ limit: "10mb", extended: true }));
+
+// 🛡️ Sentinel: Apply 10mb limit only to /api/chat which requires it for image payloads
+app.use("/api/chat", express.json({ limit: "10mb" }));
+app.use("/api/chat", express.urlencoded({ limit: "10mb", extended: true }));
+// 🛡️ Sentinel: Apply stricter 100kb limit globally to prevent payload DoS
+app.use(express.json({ limit: "100kb" }));
+app.use(express.urlencoded({ limit: "100kb", extended: true }));
+
 app.use(express.static(path.join(__dirname, "../frontend"), { extensions: ["html"] }));
 
 // ── Simple Rate Limiter (in-memory) ──
