@@ -70,12 +70,18 @@ app.use(express.static(path.join(__dirname, "../frontend"), { extensions: ["html
 const rateLimitMap = new Map();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX = 20; // 20 requests per minute per user
+const RATE_LIMIT_MAX_USERS = 10000; // Prevent memory leak
 
 function rateLimit(req, res, next) {
   const userId = req.user?.uid || req.ip;
   const now = Date.now();
   
   if (!rateLimitMap.has(userId)) {
+    if (rateLimitMap.size >= RATE_LIMIT_MAX_USERS) {
+      // Memory leak protection: clear oldest entry
+      const oldestKey = rateLimitMap.keys().next().value;
+      rateLimitMap.delete(oldestKey);
+    }
     rateLimitMap.set(userId, []);
   }
   
