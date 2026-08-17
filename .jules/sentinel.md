@@ -1,0 +1,4 @@
+## 2024-05-14 - Prevent Denial of Service in In-Memory Rate Limiter
+**Vulnerability:** Unbounded in-memory `Map` used for rate-limiting allowed potential Denial of Service (DoS) through memory exhaustion. Each new unique user/IP added an entry to `rateLimitMap` without a strict ceiling, letting malicious actors flood requests with fake IPs/IDs to crash the server.
+**Learning:** Even with periodic cleanup (`setInterval` based on timestamps), peak traffic spikes or sustained brute-force from rotating IPs can overwhelm Node's memory limits before the cleanup interval fires.
+**Prevention:** Bound in-memory caches using a maximum size limit (e.g., `MAX_MAP_SIZE = 10000`). Before adding new entries, implement an eviction policy such as deleting the oldest entry (`map.delete(map.keys().next().value)`) to maintain bounded memory usage. For robust production environments, consider Redis.
