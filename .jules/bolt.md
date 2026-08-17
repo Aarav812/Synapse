@@ -1,0 +1,3 @@
+## 2025-02-17 - Scroll Event Listener Performance Optimization
+**Learning:** Found an unthrottled `scroll` event listener in `frontend/js/chat.js` being used to apply a `.scrolled` class to the header. Unthrottled scroll listeners can block the main thread and cause layout thrashing because the scroll event can fire hundreds of times per second.
+**Action:** Always throttle scroll or resize events using `window.requestAnimationFrame()` and a `ticking` boolean to synchronize DOM updates with the browser's refresh rate. This limits updates to at most ~60fps and guarantees the main thread is freed to handle normal layout/paint tasks in between.
