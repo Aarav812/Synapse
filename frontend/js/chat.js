@@ -2510,11 +2510,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // ── Header Scroll Shadow ──
   const headerEl = document.querySelector('header');
   if (headerEl) {
+    let ticking = false;
     window.addEventListener('scroll', () => {
-      if (window.scrollY > 10) {
-        headerEl.classList.add('scrolled');
-      } else {
-        headerEl.classList.remove('scrolled');
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (window.scrollY > 10) {
+            headerEl.classList.add('scrolled');
+          } else {
+            headerEl.classList.remove('scrolled');
+          }
+          ticking = false;
+        });
+        ticking = true;
       }
     }, { passive: true });
   }
