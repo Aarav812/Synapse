@@ -1616,9 +1616,9 @@ function setOrbState(state) {
 // ── Scroll-to-Bottom Button ──
 const scrollToBottomBtn = document.getElementById("scroll-to-bottom-btn");
 
-function updateScrollBtn() {
+function updateScrollBtn(providedDistFromBottom) {
   if (!scrollToBottomBtn) return;
-  const distFromBottom = document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
+  const distFromBottom = providedDistFromBottom !== undefined ? providedDistFromBottom : (document.documentElement.scrollHeight - window.scrollY - window.innerHeight);
   // Compare distFromBottom; we use 200px threshold
   if (distFromBottom > 200) {
     scrollToBottomBtn.style.opacity = "1";
@@ -1635,20 +1635,30 @@ function updateScrollBtn() {
 let userHasScrolledUp = false;
 let lastScrollY = window.scrollY || 0;
 
+let ticking = false;
+
 window.addEventListener("scroll", () => {
-  const currentScrollY = window.scrollY;
-  const distFromBottom = document.documentElement.scrollHeight - currentScrollY - window.innerHeight;
-  
-  if (currentScrollY < lastScrollY) {
-    if (distFromBottom > 200) {
-      userHasScrolledUp = true;
-    }
-  } else if (distFromBottom <= 200) {
-    userHasScrolledUp = false;
+  // Throttling scroll events with requestAnimationFrame to prevent main thread blocking and layout thrashing
+  if (!ticking) {
+    window.requestAnimationFrame(() => {
+      const currentScrollY = window.scrollY;
+      const distFromBottom = document.documentElement.scrollHeight - currentScrollY - window.innerHeight;
+
+      if (currentScrollY < lastScrollY) {
+        if (distFromBottom > 200) {
+          userHasScrolledUp = true;
+        }
+      } else if (distFromBottom <= 200) {
+        userHasScrolledUp = false;
+      }
+
+      lastScrollY = currentScrollY;
+      // Pass the precalculated distFromBottom to prevent duplicate expensive DOM reads
+      updateScrollBtn(distFromBottom);
+      ticking = false;
+    });
+    ticking = true;
   }
-  
-  lastScrollY = currentScrollY;
-  updateScrollBtn();
 }, { passive: true });
 
 if (scrollToBottomBtn) {
