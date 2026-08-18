@@ -76,6 +76,10 @@ function rateLimit(req, res, next) {
   const now = Date.now();
   
   if (!rateLimitMap.has(userId)) {
+    // Prevent memory exhaustion DoS by bounding the map size
+    if (rateLimitMap.size >= 10000) {
+      rateLimitMap.delete(rateLimitMap.keys().next().value);
+    }
     rateLimitMap.set(userId, []);
   }
   
