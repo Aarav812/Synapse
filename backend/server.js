@@ -584,6 +584,10 @@ app.all("/api/*", (req, res) => {
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../frontend", "index.html"));
 });
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`\n  ✦ Synapse AI Server running at http://0.0.0.0:${PORT}\n`);
-});
+
+if (require.main === module) {
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`\n  ✦ Synapse AI Server running at http://0.0.0.0:${PORT}\n`);
+  });
+}
+module.exports = app;
