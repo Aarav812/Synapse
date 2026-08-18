@@ -1,7 +1,7 @@
 const { describe, it, after } = require('node:test');
 const assert = require('node:assert');
 const request = require('supertest');
-const app = require('./server.js');
+const app = require('../server.js');
 
 describe('API Routes', () => {
   it('should return 404 and error message for undefined API routes', async () => {
