@@ -1,0 +1,3 @@
+## 2024-05-18 - Material Symbols in Icon-Only Buttons
+**Learning:** Material Symbols ligatures in icon-only buttons require an explicit `aria-hidden="true"` on the inner `<span>` to prevent screen readers from reading the icon text (e.g., "close") instead of acting on the parent button's `aria-label`.
+**Action:** Always add `aria-hidden="true"` to inner `<span>` tags containing Material Symbols inside icon-only `<button>` elements.
