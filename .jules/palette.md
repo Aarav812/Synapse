@@ -1,0 +1,3 @@
+## $(date +%Y-%m-%d) - Add ARIA Labels to Icon-Only Buttons
+**Learning:** In the frontend UI, Material Symbols ligatures (e.g., `<span class="material-symbols-outlined">icon_name</span>`) are used for icons. When used in icon-only buttons, they require an explicit `aria-label` on the parent `<button>` and `aria-hidden="true"` on the inner `<span>` to prevent screen readers from reading the raw ligature text instead of the button's action.
+**Action:** Always ensure icon-only buttons combining text ligatures have both the parent `aria-label` and inner `aria-hidden="true"` attributes to properly guide screen readers.
