@@ -2520,11 +2520,19 @@ document.addEventListener("DOMContentLoaded", () => {
   // ── Header Scroll Shadow ──
   const headerEl = document.querySelector('header');
   if (headerEl) {
+    let headerTicking = false;
     window.addEventListener('scroll', () => {
-      if (window.scrollY > 10) {
-        headerEl.classList.add('scrolled');
-      } else {
-        headerEl.classList.remove('scrolled');
+      // ⚡ Bolt: Throttling scroll events with requestAnimationFrame to prevent main thread blocking and layout thrashing
+      if (!headerTicking) {
+        window.requestAnimationFrame(() => {
+          if (window.scrollY > 10) {
+            headerEl.classList.add('scrolled');
+          } else {
+            headerEl.classList.remove('scrolled');
+          }
+          headerTicking = false;
+        });
+        headerTicking = true;
       }
     }, { passive: true });
   }
