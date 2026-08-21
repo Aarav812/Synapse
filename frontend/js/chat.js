@@ -1252,9 +1252,16 @@ if (navSearchInput) {
 // (#1) History Search
 const historySearchInput = document.getElementById('history-search-input');
 if (historySearchInput) {
+  // ⚡ Performance optimization: Debounce search input to prevent main thread blocking
+  // and layout thrashing (DOM repaints) when filtering large chat histories on every keystroke.
+  // Impact: Reduces history filtering operations to at most once per 300ms while typing.
+  const debouncedSearch = debounce((query) => {
+    loadHistoryIndex(query);
+  }, 300);
+
   historySearchInput.addEventListener('input', () => {
     const query = historySearchInput.value.trim().toLowerCase();
-    loadHistoryIndex(query);
+    debouncedSearch(query);
   });
 }
 
