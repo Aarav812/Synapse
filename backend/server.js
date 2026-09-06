@@ -111,7 +111,20 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
-app.use(express.static(path.join(__dirname, "../frontend"), { extensions: ["html"] }));
+// Block source/backup/config files from ever being served, even if one lands
+// in frontend/ later (e.g. *.broken-backup, *.py, dotfiles, package manifests).
+// Defense-in-depth: the tree should only contain public web assets.
+const BLOCKED_STATIC = /(^|\/)\.|\.(py|bak|backup|broken-backup|log|env)$|(^|\/)(package(-lock)?\.json)$/i;
+app.use((req, res, next) => {
+  if (BLOCKED_STATIC.test(req.path)) {
+    return res.status(404).json({ error: "Not found" });
+  }
+  next();
+});
+app.use(express.static(path.join(__dirname, "../frontend"), {
+  extensions: ["html"],
+  dotfiles: "ignore",
+}));
 
 // ── Simple Rate Limiter (in-memory) ──
 // NOTE: For production, consider using Redis to maintain state across restarts and instances.

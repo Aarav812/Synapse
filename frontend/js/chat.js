@@ -1726,8 +1726,8 @@ document.addEventListener("keydown", (e) => {
       closeHistoryModal();
       return;
     }
-    const canvasPanel = document.getElementById("canvas-panel");
-    if (canvasPanel && !canvasPanel.classList.contains("hidden")) {
+    const artifactPreview = document.getElementById("artifact-preview-overlay");
+    if (artifactPreview && typeof window.closeCodePreview === "function") {
       window.closeCodePreview();
       return;
     }
@@ -1974,6 +1974,14 @@ async function getAuraResponse(multimodalState = {}) {
       setOrbState('error');
     }
   } finally {
+    // Guarantee the reasoning timer is cleared. If the user hits Stop while the
+    // model is still emitting reasoning (before any content arrives), neither
+    // the content-start nor the success-path finalize clears it — leaking a
+    // 1s interval per aborted "thinking" generation. This is the backstop.
+    if (reasoningEl && reasoningEl._timer) {
+      clearInterval(reasoningEl._timer);
+      reasoningEl._timer = null;
+    }
     if (pendingRAF) {
       cancelAnimationFrame(pendingRAF);
       pendingRAF = null;

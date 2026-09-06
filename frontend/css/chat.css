@@ -704,7 +704,7 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
   z-index: 75;
   top: calc(100% + 10px);
   left: 0;
-  width: 290px;
+  width: min(290px, calc(100vw - 2rem));
   padding: 6px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1407,7 +1407,7 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
 .modal-close .material-symbols-outlined { font-size: 18px; }
 .history-toolbar { display: flex; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--hairline); }
 .history-search-wrap { position: relative; flex: 1; }.history-search-icon { position: absolute; top: 50%; left: 10px; color: var(--ink-3); font-size: 17px; transform: translateY(-50%); }
-.history-search-input { width: 100%; height: 36px; padding: 0 10px 0 33px; border: 1px solid var(--hairline) !important; border-radius: 9px; outline: 0; background: rgba(0, 0, 0, 0.22) !important; color: #f4f4f6 !important; font-size: 12px; }
+.history-search-input { width: 100%; height: 40px; padding: 0 10px 0 33px; border: 1px solid var(--hairline) !important; border-radius: 9px; outline: 0; background: rgba(0, 0, 0, 0.22) !important; color: #f4f4f6 !important; font-size: 16px; }
 .history-search-input:focus { border-color: rgba(151, 137, 255, 0.58) !important; }
 .modal-text-button { min-height: 36px; padding: 0 10px; border: 1px solid rgba(230, 138, 134, 0.28); border-radius: 9px; background: transparent; color: #e7aaa6; font-size: 11px; font-weight: 600; }.modal-text-button:hover { background: rgba(230, 138, 134, 0.09); }
 .chat-history-list { max-height: 440px; padding: 10px 14px 16px; overflow-y: auto; }
@@ -1417,6 +1417,64 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
 /* ── Canvas ────────────────────────────────────────────────────────── */
 .canvas-panel { position: fixed; z-index: 100; top: 16px; right: 16px; bottom: 16px; display: flex; width: min(52vw, 720px); flex-direction: column; overflow: hidden; border-radius: 22px; box-shadow: -18px 22px 65px rgba(0,0,0,.52); }.canvas-panel.hidden { display: none; }.canvas-header { display: flex; min-height: 58px; align-items: center; justify-content: space-between; padding: 0 13px 0 16px; border-bottom: 1px solid var(--hairline); }.canvas-header-left, .canvas-header-right, .canvas-tab-bar { display: flex; align-items: center; gap: 8px; }.canvas-icon-wrap { display: grid; width: 29px; height: 29px; place-items: center; border-radius: 9px; background: rgba(94, 139, 255, .12); color: #b9caff; }.canvas-title { margin: 0; color: #f2f1f5; font-size: 12px; font-weight: 650; }.canvas-subtitle { margin: 2px 0 0; color: var(--ink-3); font-size: 10px; }.canvas-tab, .canvas-action-btn { display: inline-flex; height: 29px; align-items: center; gap: 4px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: var(--ink-2); font-size: 11px; }.canvas-tab.active, .canvas-tab:hover, .canvas-action-btn:hover { background: rgba(255,255,255,.08); color: #fff; }.canvas-body, .canvas-tab-content, .canvas-iframe, .canvas-code-pre { min-height: 0; height: 100%; flex: 1; margin: 0; }.canvas-body { display: flex; overflow: hidden; }.canvas-tab-content { position: relative; }.canvas-tab-content.hidden { display: none; }.canvas-iframe { width: 100%; border: 0; background: #fff; }.canvas-code-pre { padding: 16px; overflow: auto; background: #101010; }.canvas-live-badge { position: absolute; z-index: 2; top: 11px; right: 11px; padding: 4px 7px; border-radius: 999px; background: #242428; color: #c2b9ff; font-size: 10px; }.canvas-live-badge.hidden { display: none; }.canvas-live-dot { display: inline-block; width: 5px; height: 5px; margin-right: 4px; border-radius: 50%; background: #8a7cff; }.canvas-backdrop { display: none; }
 .lightbox-overlay { transition: opacity 200ms ease; }
+
+/* ── Artifact preview overlay (generated web apps) ─────────────────────── */
+#artifact-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  background: rgba(6, 6, 9, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 0;
+  transition: opacity 220ms var(--ease-out, ease);
+  padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px));
+}
+#artifact-preview-overlay.visible { opacity: 1; }
+.artifact-preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 8px 10px 14px;
+  margin: 0 auto;
+  width: min(100%, 1100px);
+  border-radius: 16px 16px 0 0;
+  background: rgba(20, 20, 24, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-bottom: 0;
+}
+.artifact-preview-title { color: #f2f1f5; font-size: 13px; font-weight: 650; letter-spacing: -0.01em; }
+.artifact-preview-actions { display: flex; gap: 6px; }
+.artifact-preview-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink-2, #c9c9d2);
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+.artifact-preview-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.artifact-preview-btn .material-symbols-outlined { font-size: 20px; }
+.artifact-preview-frame {
+  flex: 1;
+  width: min(100%, 1100px);
+  margin: 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 0 0 16px 16px;
+  background: #fff;
+}
+@media (max-width: 767px) {
+  #artifact-preview-overlay { padding: max(8px, env(safe-area-inset-top, 0px)) 8px max(8px, env(safe-area-inset-bottom, 0px)); }
+  .artifact-preview-btn { width: 44px; height: 44px; }
+}
 
 /* Keep the existing code canvas usable without losing the sidebar layout. */
 @media (min-width: 768px) {
@@ -1455,7 +1513,7 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
   .sidebar-reveal-btn, .sidebar-collapse-btn { display: none !important; }
   /* Floating pill header on mobile */
   .chat-header {
-    top: 8px;
+    top: calc(8px + env(safe-area-inset-top, 0px));
     height: 52px;
     margin: 8px 10px 0;
     padding: 0 8px 0 10px;
@@ -1464,6 +1522,8 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
     background: rgba(10, 10, 12, 0.88);
   }
   .mobile-menu-btn, #header-logo { display: inline-flex; }
+  /* Larger tap targets for the two controls that survive on mobile. */
+  .mobile-menu-btn, .avatar-button { width: 42px; height: 42px; }
   .header-side { gap: 3px; }
   .header-side-left { max-width: calc(100% - 118px); }
   .header-side-right { gap: 2px; }
@@ -1499,10 +1559,11 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
   .chat-composer-area { left: 0; padding: 12px 12px max(10px, env(safe-area-inset-bottom, 10px)); }
   .composer-help { padding: 7px 10px 0; }
   .composer-help span:last-child { display: none; }
-  #text-input-bar { min-height: 56px; gap: 3px; padding: 8px 8px 8px 12px !important; border-radius: 22px !important; }
+  #text-input-bar { min-height: 60px; gap: 2px; padding: 8px 8px 8px 10px !important; border-radius: 24px !important; }
   .composer-prism { right: 16px; left: 16px; }
-  .composer-button { width: 36px; height: 36px; }
-  #send-btn, #stop-btn { width: 38px !important; height: 38px !important; }
+  /* Meet the 44px minimum touch target on mobile (WCAG 2.5.5 / iOS HIG). */
+  .composer-button { width: 44px; height: 44px; }
+  #send-btn, #stop-btn { width: 44px !important; height: 44px !important; }
   #chat-input { line-height: 22px !important; }
   #scroll-to-bottom-btn { right: 16px; bottom: max(118px, calc(108px + env(safe-area-inset-bottom, 0px))); }
   /* Modals: full bottom sheet treatment */
@@ -1582,7 +1643,7 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
 .attachment-chip img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .attachment-chip-file { display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; color: var(--ink-3); }
 .attachment-chip-file .material-symbols-outlined { font-size: 26px; }
-.attachment-chip-remove { position: absolute; top: 3px; right: 3px; display: flex; width: 20px; height: 20px; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 999px; background: rgba(0, 0, 0, 0.6); color: #fff; cursor: pointer; opacity: 1; transition: opacity 160ms var(--ease-out), background 160ms var(--ease-out); }
+.attachment-chip-remove { position: absolute; top: 3px; right: 3px; display: flex; width: 24px; height: 24px; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 999px; background: rgba(0, 0, 0, 0.6); color: #fff; cursor: pointer; opacity: 1; transition: opacity 160ms var(--ease-out), background 160ms var(--ease-out); }
 .attachment-chip-remove:hover { background: rgba(0, 0, 0, 0.82); }
 .attachment-chip-remove:focus-visible { opacity: 1; outline: 2px solid var(--accent-soft); outline-offset: 1px; }
 /* Reveal-on-hover only where hover is a real affordance (pointer devices); on

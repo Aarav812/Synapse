@@ -272,3 +272,114 @@ function renderMarkdown(text, isStreaming = false) {
 
   return html;
 }
+
+// ── Interactive artifact preview ────────────────────────────────────────────
+// Restores the "Open Preview" button on generated web-app (HTML) artifact
+// cards. renderMarkdown() emits `onclick="previewCode(this)"`, so this must be
+// a global. The generated HTML lives in the in-memory `artifactStore` keyed by
+// the card's data-artifact-id; on a fresh page load (history re-render) that
+// map is empty, so we fall back to the IndexedDB `artifacts` store.
+//
+// The document is shown in a *sandboxed* iframe (allow-scripts only, NOT
+// allow-same-origin) so the untrusted model-generated page cannot touch this
+// app's DOM, cookies, storage, or origin.
+async function previewCode(buttonEl) {
+  try {
+    const card = buttonEl?.closest?.(".artifact-card");
+    const artifactId = card?.getAttribute("data-artifact-id");
+    if (!artifactId) return;
+
+    let code = artifactStore.get(artifactId);
+    if (code == null && typeof getFromDB === "function") {
+      try { code = await getFromDB("artifacts", artifactId); } catch (_) { /* ignore */ }
+    }
+    if (code == null) {
+      if (typeof showToast === "function") showToast("Preview unavailable — artifact not found.", "error");
+      return;
+    }
+    openArtifactPreview(code);
+  } catch (err) {
+    console.error("[preview] Failed to open artifact preview:", err);
+    if (typeof showToast === "function") showToast("Couldn't open the preview.", "error");
+  }
+}
+
+function openArtifactPreview(code) {
+  // Reuse a single overlay across previews.
+  closeCodePreview();
+
+  const overlay = document.createElement("div");
+  overlay.id = "artifact-preview-overlay";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.setAttribute("aria-label", "Web app preview");
+
+  const bar = document.createElement("div");
+  bar.className = "artifact-preview-bar";
+
+  const title = document.createElement("span");
+  title.className = "artifact-preview-title";
+  title.textContent = "Interactive Web App";
+
+  const actions = document.createElement("div");
+  actions.className = "artifact-preview-actions";
+
+  const openTabBtn = document.createElement("button");
+  openTabBtn.type = "button";
+  openTabBtn.className = "artifact-preview-btn";
+  openTabBtn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">open_in_new</span>';
+  openTabBtn.setAttribute("aria-label", "Open in new tab");
+  openTabBtn.title = "Open in new tab";
+
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "artifact-preview-btn";
+  closeBtn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">close</span>';
+  closeBtn.setAttribute("aria-label", "Close preview");
+  closeBtn.title = "Close preview";
+
+  actions.append(openTabBtn, closeBtn);
+  bar.append(title, actions);
+
+  const frame = document.createElement("iframe");
+  frame.className = "artifact-preview-frame";
+  frame.setAttribute("sandbox", "allow-scripts allow-forms allow-popups allow-modals");
+  frame.setAttribute("title", "Web app preview");
+  // srcdoc keeps the document on a null (opaque) origin — combined with the
+  // sandbox above, the page can run its own JS but cannot reach this origin.
+  frame.srcdoc = code;
+
+  overlay.append(bar, frame);
+  document.body.appendChild(overlay);
+  // Prevent the page behind the overlay from scrolling.
+  overlay.dataset.prevOverflow = document.body.style.overflow || "";
+  document.body.style.overflow = "hidden";
+
+  requestAnimationFrame(() => overlay.classList.add("visible"));
+
+  closeBtn.addEventListener("click", closeCodePreview);
+  openTabBtn.addEventListener("click", () => {
+    const blob = new Blob([code], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank", "noopener");
+    // Revoke after the tab has had time to load.
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  });
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) closeCodePreview(); });
+}
+
+// Safe to call when nothing is open — the Escape handler in chat.js relies on
+// this being defined (previously an undefined-reference crash waiting to happen).
+function closeCodePreview() {
+  const overlay = document.getElementById("artifact-preview-overlay");
+  if (!overlay) return;
+  document.body.style.overflow = overlay.dataset.prevOverflow || "";
+  overlay.classList.remove("visible");
+  overlay.addEventListener("transitionend", () => overlay.remove(), { once: true });
+  // Fallback removal in case the transition never fires (reduced motion).
+  setTimeout(() => overlay.remove(), 400);
+}
+
+// Expose as globals for the inline onclick handler and chat.js Escape handler.
+window.previewCode = previewCode;
+window.closeCodePreview = closeCodePreview;

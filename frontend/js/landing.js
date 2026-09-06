@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
     authModal.style.display = 'flex';
     requestAnimationFrame(() => {
       authModal.style.opacity = '1';
-      authModalContent.style.transform = 'scale(1)';
+      if (authModalContent) authModalContent.style.transform = 'scale(1)';
     });
     setTimeout(() => {
       const emailEl = document.getElementById('email');
@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.closeAuthModal = function() {
     if (!authModal) return;
     authModal.style.opacity = '0';
-    authModalContent.style.transform = 'scale(0.95)';
+    if (authModalContent) authModalContent.style.transform = 'scale(0.95)';
     setTimeout(() => {
       authModal.style.display = 'none';
     }, 300);
