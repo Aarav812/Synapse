@@ -908,6 +908,7 @@ async function loadSession(id) {
   // (#6) Apply syntax highlighting to loaded code blocks
   if (window.hljs) {
     document.querySelectorAll('pre code').forEach(block => {
+      if (block.dataset.highlighted) return;
       hljs.highlightElement(block);
     });
   }
@@ -1941,6 +1942,7 @@ async function getAuraResponse(multimodalState = {}) {
       // (#6) Apply syntax highlighting to code blocks
       if (window.hljs && bubbleEl) {
         bubbleEl.querySelectorAll('pre code').forEach(block => {
+          if (block.dataset.highlighted) return;
           hljs.highlightElement(block);
         });
       }
@@ -2598,6 +2600,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // (#6) Highlight existing code blocks on page load
   if (window.hljs) {
     document.querySelectorAll('pre code').forEach(block => {
+      if (block.dataset.highlighted) return;
       hljs.highlightElement(block);
     });
   }
