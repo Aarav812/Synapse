@@ -402,6 +402,10 @@ function renderAttachments() {
   attachmentPreviewContainer.classList.remove("hidden");
   attachmentPreviewContainer.innerHTML = "";
   
+  // ⚡ Bolt: Batch DOM Insertions with DocumentFragment
+  // Impact: O(N) -> O(1) layout recalculations. Appending directly to container
+  // inside the loop causes layout thrashing for users with multiple attachments.
+  const fragment = document.createDocumentFragment();
   attachedFiles.forEach((attachment, index) => {
     const item = document.createElement("div");
     item.className = "relative w-16 h-16 rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 group flex-shrink-0 bg-surface-variant/30";
@@ -419,8 +423,9 @@ function renderAttachments() {
         <span class="material-symbols-outlined" style="font-size:14px;">close</span>
       </button>
     `;
-    attachmentPreviewContainer.appendChild(item);
+    fragment.appendChild(item);
   });
+  attachmentPreviewContainer.appendChild(fragment);
 }
 
 window.removeAttachment = function(index) {
@@ -1568,6 +1573,10 @@ function renderSuggestionChips() {
     { icon: 'history_edu', title: 'Write a Story', description: 'Engaging and fun.', prompt: 'Write a short story about a time traveler who visits ancient Rome.', color: '#b87dff' }
   ];
   
+  // ⚡ Bolt: Batch DOM Insertions with DocumentFragment
+  // Impact: O(N) -> O(1) layout recalculations. Appending directly to container
+  // inside the loop causes layout thrashing.
+  const fragment = document.createDocumentFragment();
   chips.forEach(chip => {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -1581,8 +1590,9 @@ function renderSuggestionChips() {
         <span class="suggestion-card-desc">${chip.description}</span>
       </span>
     `;
-    categoryChipsContainer.appendChild(btn);
+    fragment.appendChild(btn);
   });
+  categoryChipsContainer.appendChild(fragment);
 }
 
 // Call on initial load
