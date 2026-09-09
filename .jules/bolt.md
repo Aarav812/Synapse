@@ -4,3 +4,6 @@
 ## 2024-03-24 - highlight.js optimization
 **Learning:** `hljs.highlightElement(block)` in `chat.js` runs on every stream chunk, updating the DOM. This gets very slow for long responses with many code blocks (O(N^2) complexity because `querySelectorAll('pre code')` finds *all* blocks in the message over and over). `highlightElement` naturally bails if it sees `data-highlighted`, but it prints a console warning, and the work done before throwing the warning still wastes time.
 **Action:** Adding a simple `if (block.dataset.highlighted) return;` check before calling `hljs.highlightElement(block)` skips previously highlighted code blocks entirely, improving performance (from ~889ms to ~0.8ms for 100 iterations on large blocks) and removing console spam, while keeping the CSS classes intact.
+## 2024-03-24 - hljs.highlight optimization
+**Learning:** During AI response streaming, the entire accumulated text is re-parsed on every chunk via `renderMarkdown`. This means `hljs.highlight` is called repeatedly for the exact same code blocks hundreds of times as the stream progresses, causing main-thread blocking and UI jank (O(N^2) work over the stream).
+**Action:** Implement a `Map` cache for `hljs.highlight` results, keyed by `language + '_' + code` with a max size eviction policy, so that already-highlighted blocks are just O(1) lookups on subsequent chunks.
