@@ -143,6 +143,16 @@ function renderMarkdown(text, isStreaming = false) {
   }
 
   let html = "";
+
+  // ⚡ Bolt: Cache syntax highlighting during streaming
+  // Impact: Prevents O(N^2) rendering overhead during AI response streaming.
+  // Without this, the entire accumulated text is re-parsed and every code block
+  // is re-highlighted via hljs on every chunk, causing main thread blocking.
+  if (typeof window.cachedHighlight === "undefined") {
+    window.cachedHighlight = new Map();
+  }
+  const maxHighlightCacheSize = 1000;
+
   if (typeof marked !== "undefined") {
     if (!cachedMarkedRenderer) {
       cachedMarkedRenderer = new marked.Renderer();
@@ -150,8 +160,18 @@ function renderMarkdown(text, isStreaming = false) {
         const language = (lang || '').split(' ')[0] || 'plaintext';
         let highlighted = escapeHtml(code);
         if (typeof hljs !== 'undefined') {
-          const validLang = hljs.getLanguage(language) ? language : 'plaintext';
-          highlighted = hljs.highlight(code, { language: validLang }).value;
+          const cacheKey = language + '_' + code;
+          if (window.cachedHighlight.has(cacheKey)) {
+            highlighted = window.cachedHighlight.get(cacheKey);
+          } else {
+            const validLang = hljs.getLanguage(language) ? language : 'plaintext';
+            highlighted = hljs.highlight(code, { language: validLang }).value;
+            // Prevent unbounded memory growth
+            if (window.cachedHighlight.size >= maxHighlightCacheSize) {
+              window.cachedHighlight.delete(window.cachedHighlight.keys().next().value);
+            }
+            window.cachedHighlight.set(cacheKey, highlighted);
+          }
         }
         return `
 <div class="code-block-wrapper">
