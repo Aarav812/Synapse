@@ -7,3 +7,4 @@
 ## 2024-03-24 - hljs.highlight optimization
 **Learning:** During AI response streaming, the entire accumulated text is re-parsed on every chunk via `renderMarkdown`. This means `hljs.highlight` is called repeatedly for the exact same code blocks hundreds of times as the stream progresses, causing main-thread blocking and UI jank (O(N^2) work over the stream).
 **Action:** Implement a `Map` cache for `hljs.highlight` results, keyed by `language + '_' + code` with a max size eviction policy, so that already-highlighted blocks are just O(1) lookups on subsequent chunks.
+## 2024-05-30 - Prevent redundant layout thrashing\n**Learning:** High-frequency event handlers (like scroll or input) should cache state instead of blindly applying inline styles on every frame.\n**Action:** Add early return logic based on cached state to `updateScrollBtn` and `animateSendButton`.

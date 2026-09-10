@@ -1514,9 +1514,17 @@ if (chatInput) {
 }
 
 // ── Animated Send Button ──
+let _sendBtnHasText = null;
 function animateSendButton() {
   if (!sendBtn) return;
   const hasText = chatInput.value.trim().length > 0 || attachedFiles.length > 0;
+
+  // ⚡ Bolt: Cache button state
+  // Impact: Prevents unconditional style assignments on every keystroke, which
+  // dirties the DOM style state and causes redundant layout calculations.
+  if (hasText === _sendBtnHasText) return;
+  _sendBtnHasText = hasText;
+
   if (hasText) {
     sendBtn.style.background = "linear-gradient(135deg, #5ea2ff, #7701d0)";
     sendBtn.style.boxShadow = "0 0 18px rgba(94,162,255,0.45)";
@@ -1611,11 +1619,20 @@ function setOrbState(state) {
 // ── Scroll-to-Bottom Button ──
 const scrollToBottomBtn = document.getElementById("scroll-to-bottom-btn");
 
+let _scrollBtnVisible = null;
 function updateScrollBtn(providedDistFromBottom) {
   if (!scrollToBottomBtn) return;
   const distFromBottom = providedDistFromBottom !== undefined ? providedDistFromBottom : (document.documentElement.scrollHeight - window.scrollY - window.innerHeight);
   // Compare distFromBottom; we use 200px threshold
-  if (distFromBottom > 200) {
+  const isVisible = distFromBottom > 200;
+
+  // ⚡ Bolt: Cache scroll button visibility state
+  // Impact: Prevents unconditional style assignments on every scroll frame, which
+  // dirties the DOM style state and causes redundant layout calculations.
+  if (isVisible === _scrollBtnVisible) return;
+  _scrollBtnVisible = isVisible;
+
+  if (isVisible) {
     scrollToBottomBtn.style.opacity = "1";
     scrollToBottomBtn.style.pointerEvents = "auto";
     scrollToBottomBtn.style.transform = "scale(1)";
