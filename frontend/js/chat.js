@@ -2616,11 +2616,25 @@ document.addEventListener("DOMContentLoaded", () => {
   // ── Header Scroll Shadow ──
   const headerEl = document.querySelector('header');
   if (headerEl) {
+    let headerScrolled = false;
+    let headerTicking = false;
     window.addEventListener('scroll', () => {
-      if (window.scrollY > 10) {
-        headerEl.classList.add('scrolled');
-      } else {
-        headerEl.classList.remove('scrolled');
+      if (!headerTicking) {
+        window.requestAnimationFrame(() => {
+          const isScrolled = window.scrollY > 10;
+          // ⚡ Bolt: Cache header scroll state
+          // Impact: Prevents unconditional DOM modifications and redundant layout thrashing
+          if (isScrolled !== headerScrolled) {
+            headerScrolled = isScrolled;
+            if (isScrolled) {
+              headerEl.classList.add('scrolled');
+            } else {
+              headerEl.classList.remove('scrolled');
+            }
+          }
+          headerTicking = false;
+        });
+        headerTicking = true;
       }
     }, { passive: true });
   }
