@@ -11,3 +11,6 @@
 ## 2024-09-12 - Fast-path for HTML Escaping
 **Learning:** String manipulation utilities like `escapeHtml` that use multiple sequential `.replace()` calls are surprisingly expensive, even on strings that don't contain the target characters, due to the engine scanning and allocating strings anyway. This function was used constantly throughout the app's chat rendering lifecycle.
 **Action:** Always add a fast-path RegExp check (e.g., `if (!/[&<>"']/.test(text)) return text;`) to bypass the string replacements for the majority of inputs that do not require modification. This yielded a ~5x speedup for safe text blocks in this codebase.
+## 2024-11-20 - Prevent redundant layout thrashing in scroll listeners
+**Learning:** High-frequency event handlers like scroll listeners should cache their computed boolean state instead of blindly applying DOM changes (like class additions/removals) on every frame, which dirties the DOM style state and causes redundant layout recalculations.
+**Action:** Add early return logic based on cached state and throttle with `requestAnimationFrame` when responding to scroll events, e.g. for the Header Scroll Shadow.
