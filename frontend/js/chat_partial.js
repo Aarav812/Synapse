@@ -1584,10 +1584,10 @@ function renderSuggestionChips() {
     btn.dataset.prompt = chip.prompt;
     btn.style.setProperty('--chip-color', chip.color);
     btn.innerHTML = `
-      <span class="suggestion-card-icon"><span class="material-symbols-outlined">${chip.icon}</span></span>
+      <span class="suggestion-card-icon"><span aria-hidden="true" class="material-symbols-outlined">${escapeHtml(chip.icon)}</span></span>
       <span class="suggestion-card-text">
-        <span class="suggestion-card-title">${chip.title}</span>
-        <span class="suggestion-card-desc">${chip.description}</span>
+        <span class="suggestion-card-title">${escapeHtml(chip.title)}</span>
+        <span class="suggestion-card-desc">${escapeHtml(chip.description)}</span>
       </span>
     `;
     fragment.appendChild(btn);
