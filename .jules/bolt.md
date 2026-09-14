@@ -14,3 +14,6 @@
 ## 2024-11-20 - Prevent redundant layout thrashing in scroll listeners
 **Learning:** High-frequency event handlers like scroll listeners should cache their computed boolean state instead of blindly applying DOM changes (like class additions/removals) on every frame, which dirties the DOM style state and causes redundant layout recalculations.
 **Action:** Add early return logic based on cached state and throttle with `requestAnimationFrame` when responding to scroll events, e.g. for the Header Scroll Shadow.
+## 2024-11-20 - Prevent redundant layout thrashing in DOM state transitions
+**Learning:** When implementing early-return state caching in frontend UI functions to prevent redundant DOM updates, ensure that any asynchronous UI resets (such as a `setTimeout` removing an error class) also reset the cached state variable. Failing to do so will prevent subsequent identical states from re-triggering the necessary DOM updates.
+**Action:** When caching state that controls transient UI (like error states that auto-dismiss), always reset the cached state variable inside the dismissal callback.

@@ -1593,7 +1593,14 @@ function renderSuggestionChips() {
 renderSuggestionChips();
 
 // ── Orb State Management ──
+let _currentOrbState = null;
 function setOrbState(state) {
+  // ⚡ Bolt: Cache orb state
+  // Impact: Prevents unconditional style/classList reassignments on every stream chunk,
+  // avoiding redundant DOM mutations and layout recalculations.
+  if (_currentOrbState === state) return;
+  _currentOrbState = state;
+
   const orb = document.getElementById('aura-state-orb');
   if (!orb) return;
   
@@ -1609,7 +1616,13 @@ function setOrbState(state) {
       break;
     case 'error':
       orb.classList.add('orb-error');
-      setTimeout(() => orb.classList.remove('orb-error'), 1500);
+      setTimeout(() => {
+        orb.classList.remove('orb-error');
+        // Reset cached state so subsequent errors render correctly
+        if (_currentOrbState === 'error') {
+          _currentOrbState = 'idle';
+        }
+      }, 1500);
       break;
     default: // 'idle'
       break;
