@@ -17,3 +17,7 @@
 ## 2024-11-20 - Prevent redundant layout thrashing in DOM state transitions
 **Learning:** When implementing early-return state caching in frontend UI functions to prevent redundant DOM updates, ensure that any asynchronous UI resets (such as a `setTimeout` removing an error class) also reset the cached state variable. Failing to do so will prevent subsequent identical states from re-triggering the necessary DOM updates.
 **Action:** When caching state that controls transient UI (like error states that auto-dismiss), always reset the cached state variable inside the dismissal callback.
+
+## 2024-05-30 - Caching boolean UI states in high-frequency event listeners
+**Learning:** This codebase frequently updates DOM styles directly inside event listeners that fire repeatedly (like `input` or `scroll`). Specifically, in `chat.js`, things like `style.color = ""` or `classList.add('has-draft')` were being called on *every* keystroke regardless of whether the state actually changed. This unconditional assignment dirties the style state and forces the browser to do redundant layout work.
+**Action:** When working on event handlers attached to `input`, `scroll`, or requestAnimationFrame loops, always extract the boolean logic representing the visual state (e.g., `isFull = val.length >= 4000`), cache it in an outer scope variable, and wrap the DOM mutations in an `if (newState !== oldState)` check to early-return and prevent layout thrashing.
