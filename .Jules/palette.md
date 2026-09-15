@@ -20,3 +20,6 @@
 ## 2024-05-17 - Add ARIA alert roles to authentication error banner
 **Learning:** When dynamically showing error messages (like authentication errors) in the frontend, they need `role="alert"` and `aria-live="assertive"` so that screen readers announce the newly injected error text immediately. Without these, the text updates silently and visually impaired users are not notified of login failures.
 **Action:** Always verify that dynamic error message containers, such as toast notifications or inline error blocks, are equipped with appropriate ARIA live region attributes to ensure equitable feedback.
+## 2024-05-18 - Add ARIA alert roles to dynamic toast notifications
+**Learning:** When dynamically showing error messages (like toast notifications) in the frontend, they need `role="alert"` and `aria-live="assertive"` so that screen readers announce the newly injected error text immediately. Success and info toasts need `role="status"` and `aria-live="polite"`. Without these, the text updates silently and visually impaired users are not notified of UI feedback.
+**Action:** Always verify that dynamic error message containers, such as toast notifications or inline error blocks, are equipped with appropriate ARIA live region attributes to ensure equitable feedback.
