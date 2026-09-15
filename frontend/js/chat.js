@@ -2505,33 +2505,59 @@ document.addEventListener("DOMContentLoaded", () => {
     const charLimitArcSvg = document.querySelector('.char-limit-arc');
     const charLimitArc = document.querySelector('.char-limit-arc .arc-value');
 
+    // ⚡ Bolt: Cache UI State
+    // Impact: Prevents unconditional DOM assignments on every keystroke, avoiding
+    // redundant style updates and layout thrashing.
+    let _charLimitHasText = false;
+    let _charLimitIsFull = false;
+    let _chatInputHasDraft = false;
+
     chatInput.addEventListener('input', () => {
       const val = chatInput.value;
+      const isFull = val.length >= 4000;
+      const hasText = val.length > 0;
       
       // Update character counter
       if (charCounter) {
         charCounter.textContent = `${val.length} / 4000`;
-        if (val.length >= 4000) charCounter.style.color = '#ffb4ab';
-        else charCounter.style.color = '';
-      }
-      if (charLimitArc && charLimitArcSvg) {
-        if (val.length > 0) {
-          charLimitArcSvg.style.opacity = '1';
-          const percent = Math.min(val.length / 4000, 1);
-          const offset = 125.6 - (percent * 125.6);
-          charLimitArc.style.strokeDashoffset = offset;
-          charLimitArc.style.stroke = val.length >= 4000 ? '#ffb4ab' : 'var(--accent)';
-        } else {
-          charLimitArcSvg.style.opacity = '0';
+        if (isFull !== _charLimitIsFull) {
+          charCounter.style.color = isFull ? '#ffb4ab' : '';
         }
       }
 
+      if (charLimitArc && charLimitArcSvg) {
+        if (hasText) {
+          if (!charLimitArcSvg._cachedVisible) {
+            charLimitArcSvg.style.opacity = '1';
+            charLimitArcSvg._cachedVisible = true;
+          }
+          const percent = Math.min(val.length / 4000, 1);
+          const offset = 125.6 - (percent * 125.6);
+          charLimitArc.style.strokeDashoffset = offset;
+
+          if (isFull !== _charLimitIsFull) {
+            charLimitArc.style.stroke = isFull ? '#ffb4ab' : 'var(--accent)';
+          }
+        } else {
+           if (charLimitArcSvg._cachedVisible !== false) {
+             charLimitArcSvg.style.opacity = '0';
+             charLimitArcSvg._cachedVisible = false;
+           }
+        }
+      }
+      _charLimitIsFull = isFull;
+
       // Handle draft persistence
       saveDraftDebounced(val, draftKey);
-      if (val.trim()) {
-        chatInput.classList.add('has-draft');
-      } else {
-        chatInput.classList.remove('has-draft');
+
+      const hasDraft = val.trim().length > 0;
+      if (hasDraft !== _chatInputHasDraft) {
+        _chatInputHasDraft = hasDraft;
+        if (hasDraft) {
+          chatInput.classList.add('has-draft');
+        } else {
+          chatInput.classList.remove('has-draft');
+        }
       }
     });
   }
