@@ -3017,6 +3017,15 @@ function showToast(message, type = 'default', duration = 2500) {
   // error strings), and the toast is injected via innerHTML — escape it.
   toast.innerHTML = iconHtml + `<span>${escapeHtml(message)}</span>`;
   toast.className = `synapse-toast ${type}`;
+
+  if (type === 'error') {
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+  } else {
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+  }
+
   requestAnimationFrame(() => {
     toast.classList.add('show');
   });
