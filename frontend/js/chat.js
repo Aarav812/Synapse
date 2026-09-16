@@ -2052,9 +2052,13 @@ function appendActionBar(rowEl, content) {
     navigator.clipboard.writeText(content).then(() => {
       copyBtn.innerHTML = '<span aria-hidden="true" class="material-symbols-outlined">check</span>';
       copyBtn.style.color = "#4ade80";
+      copyBtn.title = "Copied response";
+      copyBtn.setAttribute("aria-label", "Copied response");
       setTimeout(() => {
         copyBtn.innerHTML = '<span aria-hidden="true" class="material-symbols-outlined">content_copy</span>';
         copyBtn.style.color = "";
+        copyBtn.title = "Copy response";
+        copyBtn.setAttribute("aria-label", "Copy response");
       }, 2000);
     });
   };
@@ -2064,10 +2068,13 @@ function appendActionBar(rowEl, content) {
   thumbUpBtn.className = "action-btn";
   thumbUpBtn.title = "Good response";
   thumbUpBtn.setAttribute("aria-label", "Good response");
+  thumbUpBtn.setAttribute("aria-pressed", "false");
   thumbUpBtn.innerHTML = '<span aria-hidden="true" class="material-symbols-outlined">thumb_up</span>';
   thumbUpBtn.onclick = () => {
     thumbUpBtn.style.color = "#5ea2ff";
     thumbDownBtn.style.color = "";
+    thumbUpBtn.setAttribute("aria-pressed", "true");
+    thumbDownBtn.setAttribute("aria-pressed", "false");
     thumbUpBtn.querySelector("span").style.fontVariationSettings = "'FILL' 1";
     thumbDownBtn.querySelector("span").style.fontVariationSettings = "'FILL' 0";
   };
@@ -2077,10 +2084,13 @@ function appendActionBar(rowEl, content) {
   thumbDownBtn.className = "action-btn";
   thumbDownBtn.title = "Bad response";
   thumbDownBtn.setAttribute("aria-label", "Bad response");
+  thumbDownBtn.setAttribute("aria-pressed", "false");
   thumbDownBtn.innerHTML = '<span aria-hidden="true" class="material-symbols-outlined">thumb_down</span>';
   thumbDownBtn.onclick = () => {
     thumbDownBtn.style.color = "#ffb4ab";
     thumbUpBtn.style.color = "";
+    thumbDownBtn.setAttribute("aria-pressed", "true");
+    thumbUpBtn.setAttribute("aria-pressed", "false");
     thumbDownBtn.querySelector("span").style.fontVariationSettings = "'FILL' 1";
     thumbUpBtn.querySelector("span").style.fontVariationSettings = "'FILL' 0";
   };
