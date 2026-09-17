@@ -74,7 +74,7 @@
       </div>
 
       <nav class="sidebar-primary" aria-label="Primary navigation">
-        <button id="nav-new-chat-btn" class="sidebar-action sidebar-action--new" type="button">
+        <button id="nav-new-chat-btn" class="sidebar-action sidebar-action--new" type="button" aria-label="Start a new chat">
           <span aria-hidden="true" class="material-symbols-outlined">edit_square</span>
           <span>New Chat</span>
         </button>
@@ -103,7 +103,7 @@
 
       <div class="sidebar-bottom">
 
-        <button id="logout-btn" class="sidebar-action sidebar-action--logout" type="button">
+        <button id="logout-btn" class="sidebar-action sidebar-action--logout" type="button" aria-label="Log out">
           <span aria-hidden="true" class="material-symbols-outlined">logout</span>
           <span>Log out</span>
         </button>
@@ -191,8 +191,8 @@
               </div>
             </div>
             <div id="aura1-mode-toggle" aria-label="Aura AI response mode" role="group">
-              <button id="mode-deep-think-btn" type="button" data-active="true" aria-pressed="true">Think</button>
-              <button id="mode-fast-btn" type="button" aria-pressed="false">Fast</button>
+              <button id="mode-deep-think-btn" type="button" data-active="true" aria-pressed="true" aria-label="Think mode">Think</button>
+              <button id="mode-fast-btn" type="button" aria-pressed="false" aria-label="Fast mode">Fast</button>
             </div>
           </div>
           <div id="chat-footer">
@@ -244,7 +244,7 @@
             <span aria-hidden="true" class="material-symbols-outlined history-search-icon">search</span>
             <input id="history-search-input" class="history-search-input" type="search" autocomplete="off" placeholder="Search conversations" aria-label="Search conversations" />
           </label>
-          <button id="delete-all-history-btn" class="modal-text-button" type="button">Clear all</button>
+          <button id="delete-all-history-btn" class="modal-text-button" type="button" aria-label="Clear all history">Clear all</button>
         </div>
         <div id="history-list-container" class="chat-history-list"></div>
       </div>
@@ -257,8 +257,8 @@
         <h2 class="modal-title">Clear all chat history?</h2>
         <p class="confirm-copy">This permanently removes every saved conversation from this browser.</p>
         <div class="confirm-actions">
-          <button id="cancel-delete-history-btn" class="modal-button" type="button">Cancel</button>
-          <button id="confirm-delete-history-btn" class="modal-button modal-button--danger" type="button">Clear history</button>
+          <button id="cancel-delete-history-btn" class="modal-button" type="button" aria-label="Cancel clear history">Cancel</button>
+          <button id="confirm-delete-history-btn" class="modal-button modal-button--danger" type="button" aria-label="Confirm clear history">Clear history</button>
         </div>
       </div>
     </section>
@@ -270,8 +270,8 @@
         <h2 class="modal-title">Delete chat?</h2>
         <p class="confirm-copy">This permanently removes this conversation.</p>
         <div class="confirm-actions">
-          <button id="cancel-delete-chat-btn" class="modal-button" type="button">Cancel</button>
-          <button id="confirm-delete-chat-btn" class="modal-button modal-button--danger" type="button">Delete</button>
+          <button id="cancel-delete-chat-btn" class="modal-button" type="button" aria-label="Cancel delete chat">Cancel</button>
+          <button id="confirm-delete-chat-btn" class="modal-button modal-button--danger" type="button" aria-label="Confirm delete chat">Delete</button>
         </div>
       </div>
     </section>
@@ -282,7 +282,7 @@
       <div class="lightbox-content-wrapper">
         <img id="lightbox-img" src="" alt="Expanded generated image" class="lightbox-image" onclick="event.stopPropagation(); closeLightbox(event)" />
         <div class="lightbox-actions" onclick="event.stopPropagation()">
-          <button id="download-lightbox-btn" class="modal-button" type="button" onclick="downloadLightboxImage()"><span aria-hidden="true" class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">download</span> Download</button>
+          <button id="download-lightbox-btn" class="modal-button" type="button" onclick="downloadLightboxImage()" aria-label="Download image"><span aria-hidden="true" class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">download</span> Download</button>
           <button class="modal-close" style="background:#1b1b1b" type="button" onclick="closeLightbox(event)" aria-label="Close image" title="Close image"><span aria-hidden="true" class="material-symbols-outlined">close</span></button>
         </div>
       </div>
