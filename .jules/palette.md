@@ -4,3 +4,6 @@
 ## 2026-09-16 - Dynamic ARIA Feedback on Action Buttons
 **Learning:** Action buttons with transient states (like "Copy" temporarily indicating "Copied") or mutually exclusive toggles (like Thumbs Up/Down) need their `aria-label`, `title`, and `aria-pressed` attributes dynamically updated in JavaScript alongside visual changes to ensure screen readers announce the state change properly. If the state is reverted (e.g., via `setTimeout`), the ARIA attributes must also be explicitly reset.
 **Action:** When implementing or fixing interactive buttons that change state without a full page reload, always ensure ARIA attributes are programmatically tied to the visual state changes.
+## 2024-09-17 - Redundant ARIA Labels
+**Learning:** Applying an `aria-label` to a button that already contains the visible text (e.g. `aria-label="Log out"` on `<button><span>Log out</span></button>`) is redundant and goes against ARIA best practices. Native HTML semantics are preferred.
+**Action:** Only add `aria-label` to icon-only buttons or when providing additional, necessary context (like distinguishing multiple "Cancel" buttons) without duplicating the visible text.
