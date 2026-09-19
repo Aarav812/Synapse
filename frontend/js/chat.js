@@ -1258,6 +1258,7 @@ function renderSidebarHistory(index) {
       button.type = 'button';
       button.className = `sidebar-recent-item${chat.id === currentChatId ? ' active' : ''}`;
       button.title = chat.title;
+      button.setAttribute('aria-label', `Open chat: ${chat.title}`);
       const timeLabel = chat.updatedAt ? formatRelativeTime(chat.updatedAt) : '';
       button.innerHTML =
         `<span aria-hidden="true" class="material-symbols-outlined history-icon">chat_bubble</span>` +
