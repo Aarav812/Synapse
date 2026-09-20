@@ -2072,12 +2072,24 @@ function appendActionBar(rowEl, content) {
   thumbUpBtn.setAttribute("aria-pressed", "false");
   thumbUpBtn.innerHTML = '<span aria-hidden="true" class="material-symbols-outlined">thumb_up</span>';
   thumbUpBtn.onclick = () => {
-    thumbUpBtn.style.color = "#5ea2ff";
-    thumbDownBtn.style.color = "";
-    thumbUpBtn.setAttribute("aria-pressed", "true");
-    thumbDownBtn.setAttribute("aria-pressed", "false");
-    thumbUpBtn.querySelector("span").style.fontVariationSettings = "'FILL' 1";
-    thumbDownBtn.querySelector("span").style.fontVariationSettings = "'FILL' 0";
+    if (thumbUpBtn.getAttribute("aria-pressed") === "true") {
+      thumbUpBtn.style.color = "";
+      thumbUpBtn.setAttribute("aria-pressed", "false");
+      thumbUpBtn.title = "Good response";
+      thumbUpBtn.setAttribute("aria-label", "Good response");
+      thumbUpBtn.querySelector("span").style.fontVariationSettings = "'FILL' 0";
+    } else {
+      thumbUpBtn.style.color = "#5ea2ff";
+      thumbDownBtn.style.color = "";
+      thumbUpBtn.setAttribute("aria-pressed", "true");
+      thumbUpBtn.title = "Remove good response";
+      thumbUpBtn.setAttribute("aria-label", "Remove good response");
+      thumbDownBtn.setAttribute("aria-pressed", "false");
+      thumbDownBtn.title = "Bad response";
+      thumbDownBtn.setAttribute("aria-label", "Bad response");
+      thumbUpBtn.querySelector("span").style.fontVariationSettings = "'FILL' 1";
+      thumbDownBtn.querySelector("span").style.fontVariationSettings = "'FILL' 0";
+    }
   };
 
   // Thumbs Down
@@ -2088,12 +2100,24 @@ function appendActionBar(rowEl, content) {
   thumbDownBtn.setAttribute("aria-pressed", "false");
   thumbDownBtn.innerHTML = '<span aria-hidden="true" class="material-symbols-outlined">thumb_down</span>';
   thumbDownBtn.onclick = () => {
-    thumbDownBtn.style.color = "#ffb4ab";
-    thumbUpBtn.style.color = "";
-    thumbDownBtn.setAttribute("aria-pressed", "true");
-    thumbUpBtn.setAttribute("aria-pressed", "false");
-    thumbDownBtn.querySelector("span").style.fontVariationSettings = "'FILL' 1";
-    thumbUpBtn.querySelector("span").style.fontVariationSettings = "'FILL' 0";
+    if (thumbDownBtn.getAttribute("aria-pressed") === "true") {
+      thumbDownBtn.style.color = "";
+      thumbDownBtn.setAttribute("aria-pressed", "false");
+      thumbDownBtn.title = "Bad response";
+      thumbDownBtn.setAttribute("aria-label", "Bad response");
+      thumbDownBtn.querySelector("span").style.fontVariationSettings = "'FILL' 0";
+    } else {
+      thumbDownBtn.style.color = "#ffb4ab";
+      thumbUpBtn.style.color = "";
+      thumbDownBtn.setAttribute("aria-pressed", "true");
+      thumbDownBtn.title = "Remove bad response";
+      thumbDownBtn.setAttribute("aria-label", "Remove bad response");
+      thumbUpBtn.setAttribute("aria-pressed", "false");
+      thumbUpBtn.title = "Good response";
+      thumbUpBtn.setAttribute("aria-label", "Good response");
+      thumbDownBtn.querySelector("span").style.fontVariationSettings = "'FILL' 1";
+      thumbUpBtn.querySelector("span").style.fontVariationSettings = "'FILL' 0";
+    }
   };
 
   // Retry
@@ -2329,9 +2353,13 @@ function copyCode(btn) {
   navigator.clipboard.writeText(text).then(() => {
     btn.classList.add("copied");
     btn.innerHTML = `<span aria-hidden="true" class="material-symbols-outlined" style="font-size:14px;">check</span> Copied!`;
+    btn.title = "Copied code";
+    btn.setAttribute("aria-label", "Copied code");
     setTimeout(() => {
       btn.classList.remove("copied");
       btn.innerHTML = `<span aria-hidden="true" class="material-symbols-outlined" style="font-size:14px;">content_copy</span> Copy`;
+      btn.title = "Copy code";
+      btn.setAttribute("aria-label", "Copy code");
     }, 2000);
   }).catch(() => {
     // Fallback for older browsers
@@ -2344,9 +2372,13 @@ function copyCode(btn) {
     document.body.removeChild(textarea);
     btn.classList.add("copied");
     btn.innerHTML = `<span aria-hidden="true" class="material-symbols-outlined" style="font-size:14px;">check</span> Copied!`;
+    btn.title = "Copied code";
+    btn.setAttribute("aria-label", "Copied code");
     setTimeout(() => {
       btn.classList.remove("copied");
       btn.innerHTML = `<span aria-hidden="true" class="material-symbols-outlined" style="font-size:14px;">content_copy</span> Copy`;
+      btn.title = "Copy code";
+      btn.setAttribute("aria-label", "Copy code");
     }, 2000);
   });
 }
