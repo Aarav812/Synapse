@@ -95,12 +95,10 @@ function debounce(func, wait) {
 // during AI response streaming when `renderMarkdown` is called frequently.
 let cachedMarkedRenderer = null;
 let cachedDOMPurifyConfig = {
-  ADD_ATTR: ["target"],
-  // Allow data: URIs so AI-generated images (base64 responses from the image
-  // generation endpoint) survive DOMPurify's default sanitization. Without this,
-  // DOMPurify strips the `src` attribute from <img src="data:image/jpeg;base64,...">
-  // and every generated image appears as a broken placeholder.
-  ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|data):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
+  ADD_ATTR: ["target"]
+  // Note: DOMPurify natively allows data: URIs for safe attributes like <img src>,
+  // so we do not override ALLOWED_URI_REGEXP. Overriding it would allow unsafe
+  // data: HTML injection in <a href="data:text/html...">.
 };
 
 // Hook to prevent reverse tabnabbing by adding rel="noopener noreferrer" when target is used
