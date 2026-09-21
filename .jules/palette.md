@@ -7,3 +7,6 @@
 ## 2024-09-17 - Redundant ARIA Labels
 **Learning:** Applying an `aria-label` to a button that already contains the visible text (e.g. `aria-label="Log out"` on `<button><span>Log out</span></button>`) is redundant and goes against ARIA best practices. Native HTML semantics are preferred.
 **Action:** Only add `aria-label` to icon-only buttons or when providing additional, necessary context (like distinguishing multiple "Cancel" buttons) without duplicating the visible text.
+## 2023-10-27 - Contextual ARIA labels and inner text
+**Learning:** Adding an `aria-label` to a container element (like a button) completely overrides the accessible text of its child elements. If child elements contain important contextual information (such as a time label in a chat list), the `aria-label` must explicitly include that information to prevent it from being hidden from screen reader users. Also, interactive elements dynamically added to lists must receive appropriate `role="button"`, `tabindex="0"`, and keyboard event listeners (Enter/Space) to be accessible.
+**Action:** When adding or updating ARIA labels on elements containing multiple pieces of information (like a title and a date), ensure the ARIA label concatenates all necessary context. Ensure dynamically injected interactive list items include `role`, `tabindex`, and keyboard handlers.

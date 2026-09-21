@@ -1258,8 +1258,8 @@ function renderSidebarHistory(index) {
       button.type = 'button';
       button.className = `sidebar-recent-item${chat.id === currentChatId ? ' active' : ''}`;
       button.title = chat.title;
-      button.setAttribute('aria-label', `Open chat: ${chat.title}`);
       const timeLabel = chat.updatedAt ? formatRelativeTime(chat.updatedAt) : '';
+      button.setAttribute('aria-label', `Open chat: ${chat.title}, ${timeLabel}`);
       button.innerHTML =
         `<span aria-hidden="true" class="material-symbols-outlined history-icon">chat_bubble</span>` +
         `<span class="history-title">${escapeHtml(chat.title)}</span>` +
@@ -1347,11 +1347,11 @@ function loadHistoryIndex(searchQuery = '') {
       item.className = "history-item";
       const date = formatRelativeTime(chat.updatedAt);
       item.innerHTML = `
-        <div class="history-modal-item-body" onclick="loadSession('${chat.id}')">
+        <div class="history-modal-item-body" onclick="loadSession('${chat.id}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();loadSession('${chat.id}');}" aria-label="${escapeHtml(chat.title)}, ${date}">
           <p class="history-modal-item-title">${escapeHtml(chat.title)}</p>
           <p class="history-modal-item-date">${date}</p>
         </div>
-        <button type="button" onclick="event.stopPropagation(); confirmDeleteSession('${chat.id}')" class="history-modal-item-delete" aria-label="Delete chat">
+        <button type="button" onclick="event.stopPropagation(); confirmDeleteSession('${chat.id}')" class="history-modal-item-delete" aria-label="Delete chat: ${escapeHtml(chat.title)}">
           <span aria-hidden="true" class="material-symbols-outlined" style="font-size: 18px;">delete</span>
         </button>
       `;
