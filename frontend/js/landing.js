@@ -278,10 +278,20 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('pointermove', (e) => {
     tx = e.clientX / window.innerWidth;
     ty = e.clientY / window.innerHeight;
+    if (!raf) {
+      raf = requestAnimationFrame(tick);
+    }
   }, { passive: true });
 
   let raf = null;
   function tick() {
+    // ⚡ Bolt: Pause animation loop when settled
+    // Impact: Prevents 60fps layout thrashing when mouse is stationary
+    if (Math.abs(tx - cx) < 0.001 && Math.abs(ty - cy) < 0.001) {
+      raf = null;
+      return;
+    }
+
     // Ease toward target — the "slightly delayed" spring feel
     cx += (tx - cx) * 0.08;
     cy += (ty - cy) * 0.08;
@@ -314,6 +324,9 @@ document.addEventListener('DOMContentLoaded', () => {
     requestAnimationFrame(() => {
       glassEls.forEach((el) => { el.__rect = el.getBoundingClientRect(); });
       geoTick = false;
+      if (!raf) {
+        raf = requestAnimationFrame(tick);
+      }
     });
   }
   window.addEventListener('scroll', invalidateGeo, { passive: true });
@@ -330,7 +343,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.feature-card, .model-card').forEach((card) => {
     let rafId = null;
     card.addEventListener('pointermove', (e) => {
-      const r = card.getBoundingClientRect();
+      // ⚡ Bolt: Use cached rect from Liquid Glass effect if available
+      // Impact: Prevents synchronous layout recalculations on pointermove when styles are dirtied
+      const r = card.__rect || card.getBoundingClientRect();
       const dx = (e.clientX - (r.left + r.width / 2)) / r.width;   // -0.5..0.5
       const dy = (e.clientY - (r.top + r.height / 2)) / r.height;
       if (rafId) return;
