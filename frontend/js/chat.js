@@ -1073,7 +1073,7 @@ function showUndoSnackbar() {
     snackbar = document.createElement('div');
     snackbar.id = 'undo-snackbar';
     snackbar.className = 'undo-snackbar';
-    snackbar.innerHTML = '<span>New chat started</span><button class="undo-snackbar-btn" id="undo-new-chat-btn">Undo</button>';
+    snackbar.innerHTML = '<span>New chat started</span><button class="undo-snackbar-btn" id="undo-new-chat-btn" aria-label="Undo new chat">Undo</button>';
     document.body.appendChild(snackbar);
     document.getElementById('undo-new-chat-btn').addEventListener('click', undoNewChat);
   }
@@ -2429,8 +2429,8 @@ function openEditMode(rowEl, index) {
   bubble.innerHTML = `
     <textarea class="edit-textarea" aria-label="Edit your message"></textarea>
     <div class="edit-actions">
-      <button class="edit-btn cancel">Cancel</button>
-      <button class="edit-btn save">Save & Resubmit</button>
+      <button class="edit-btn cancel" aria-label="Cancel editing">Cancel</button>
+      <button class="edit-btn save" aria-label="Save and resubmit message">Save & Resubmit</button>
     </div>
   `;
 
@@ -2918,7 +2918,7 @@ function showModelWarning(originalModel) {
   banner.innerHTML = `
     <span aria-hidden="true" class="material-symbols-outlined">info</span>
     <span>This chat was with <strong>${escapeHtml(originalModel)}</strong></span>
-    <button type="button" class="model-warning-switch">Switch back</button>
+    <button type="button" class="model-warning-switch" aria-label="Switch back to original model">Switch back</button>
     <button type="button" class="model-warning-dismiss" aria-label="Dismiss warning" style="background:none;border:none;color:rgba(255,200,100,0.5);padding:2px;cursor:pointer;"><span aria-hidden="true" class="material-symbols-outlined" style="font-size:16px;">close</span></button>
   `;
   const switchBtn = banner.querySelector('.model-warning-switch');
