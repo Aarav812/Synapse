@@ -9,6 +9,32 @@ const cors = require("cors");
 const OpenAI = require("openai");
 const admin = require("firebase-admin");
 
+// ── DuckDuckGo Search Helper ──
+let ddgSearch = null;
+try {
+  const dds = require("duck-duck-scrape");
+  // duck-duck-scrape may export .search directly or as a named export
+  ddgSearch = dds.search || (typeof dds === 'function' ? dds : null);
+} catch (e) {
+  console.warn("[search] duck-duck-scrape not installed. Web search disabled.", e.message);
+}
+
+async function searchDuckDuckGo(query) {
+  if (!ddgSearch) throw new Error("duck-duck-scrape not available");
+  try {
+    const results = await ddgSearch(query, { safeSearch: "OFF" });
+    const hits = (results.results || []).slice(0, 4);
+    return hits.map(r => ({
+      title: r.title || "(no title)",
+      snippet: r.description || r.snippet || "",
+      url: r.url || r.link || "",
+    }));
+  } catch (err) {
+    console.error("[search] DuckDuckGo error:", err.message);
+    return [];
+  }
+}
+
 const app = express();
 app.set('trust proxy', 1);
 // Render provides the port through its PORT environment variable. Keep 3000
@@ -78,16 +104,16 @@ initFirebaseAdmin();
 // ── Helper: find the longest suffix of `str` that is a prefix of any tag ──
 // Used by the <think> tag streaming parser to avoid emitting partial tags.
 function partialTagHoldback(str, tags) {
-  let hold = 0;
-  for (const tag of tags) {
-    for (let len = Math.min(tag.length - 1, str.length); len >= 1; len--) {
-      if (str.endsWith(tag.slice(0, len))) {
-        hold = Math.max(hold, len);
-        break;
+  for (let i = 0; i < str.length; i++) {
+    const suffix = str.slice(i);
+    for (const tag of tags) {
+      // If the suffix is a true prefix of the tag (and not the whole tag)
+      if (tag.startsWith(suffix) && suffix.length < tag.length) {
+        return suffix.length; // return length of the longest matching suffix
       }
     }
   }
-  return hold;
+  return 0;
 }
 
 // ── API Clients are now initialized dynamically per request ──
@@ -98,6 +124,9 @@ function partialTagHoldback(str, tags) {
 const corsOptions = process.env.FRONTEND_ORIGIN
   ? { origin: process.env.FRONTEND_ORIGIN.split(",").map((o) => o.trim()) }
   : {};
+if (!process.env.FRONTEND_ORIGIN) {
+  console.warn("[CORS] FRONTEND_ORIGIN not set — all origins allowed. Set it in production.");
+}
 app.use(cors(corsOptions));
 
 // Security Headers Middleware
@@ -195,6 +224,25 @@ const AURA_BHAI_SYSTEM_PROMPT = `Be a friendly, expressive conversational AI wit
 
 // ── Model Configuration ──
 
+// ── DuckDuckGo Tool Schema (OpenAI function calling format) ──
+const SEARCH_TOOL = {
+  type: "function",
+  function: {
+    name: "searchDuckDuckGo",
+    description: "Search the web using DuckDuckGo for real-time information about recent events, current facts, news, prices, or anything that may have changed recently. Only call this when the question clearly requires up-to-date information.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "The search query to look up"
+        }
+      },
+      required: ["query"]
+    }
+  }
+};
+
 // ── Chat Endpoint (SSE Streaming) ──
 app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
   const { messages, model, persona } = req.body;
@@ -256,7 +304,8 @@ app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
     targetModel = "nvidia/nemotron-3-super-120b-a12b";
     console.log(`[ALLROUNDER-FAST] Routing to ${targetModel}`);
   } else if (targetModel === "nvidia/nemotron-3.5-lightning-30b-a3b") {
-    // Aura Bhai
+    // Aura Bhai — route to Nemotron 3 Super for better quality
+    targetModel = "nvidia/nemotron-3-super-120b-a12b";
     console.log(`[BHAI] Routing to ${targetModel}`);
   } else {
     // Unknown model name — fall back to Allrounder Deep Think
@@ -266,13 +315,44 @@ app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
 
   // ── Easter Egg: Chatbot Override ──
   const lcText = lastUserText.trim().toLowerCase();
-  if (lcText === "who made you?" || lcText === "who created you?" || lcText === "who made you" || lcText === "who created you" || lcText === "/creator") {
+  const cleanQuery = lcText.replace(/[?!.,]+$/, "").trim();
+
+  const isCreatorQuestion = (
+    cleanQuery === "who made you" || 
+    cleanQuery === "who created you" || 
+    cleanQuery === "/creator"
+  );
+
+  const isAaravQuestion = (
+    cleanQuery === "who is aarav" ||
+    cleanQuery === "who's aarav" ||
+    cleanQuery === "who is aarav ?" ||
+    cleanQuery === "tell me about aarav" ||
+    cleanQuery === "who is your boss" ||
+    cleanQuery === "who is your creator" ||
+    cleanQuery === "who is the creator" ||
+    cleanQuery === "/aarav" ||
+    cleanQuery === "aarav"
+  );
+
+  if (isCreatorQuestion || isAaravQuestion) {
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
     res.setHeader("X-Accel-Buffering", "no");
     
-    const secretMessage = "I am Aura, and I was proudly created by the brilliant Aarav!";
+    let secretMessage = "";
+    if (isCreatorQuestion) {
+      secretMessage = "I am Aura, and I was proudly created by Aarav!";
+    } else {
+      const isBhai = (targetModel === "nvidia/nemotron-3-super-120b-a12b" || targetModel === "nvidia/nemotron-3.5-lightning-30b-a3b");
+      if (isBhai) {
+        secretMessage = "Arrey bhai! Aarav to apne creator aur master architect hain! Synapse AI ka poora dimaag aur system unhone hi build kiya hai. Full respect! 🫡🔥";
+      } else {
+        secretMessage = "Aarav is the visionary creator and master architect behind Synapse AI! 🚀 A brilliant developer, builder of intelligent systems, and the reason I exist today. In short: The Boss! 👑";
+      }
+    }
+
     res.write(`data: ${JSON.stringify({ content: secretMessage })}\n\n`);
     res.write(`data: [DONE]\n\n`);
     res.end();
@@ -325,9 +405,12 @@ app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
         else if (Array.isArray(imgLastMsg.content)) promptText = imgLastMsg.content.find(c => c.type === "text")?.text || promptText;
       }
 
-      console.log(`[IMAGE] Generating image for prompt: "${promptText}"`);
+      console.log(`[IMAGE] Generating image for prompt: "${promptText}" using ${targetModel}`);
       
-      const nvImgResponse = await fetch("https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.1-schnell", {
+      // Use the configured NVIDIA base URL with the qwen-image model
+      const imageApiUrl = `${baseURL.replace(/\/v1$/, '')}/v1/genai/nvidia/qwen-image`;
+      
+      const nvImgResponse = await fetch(imageApiUrl, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${activeApiKey}`,
@@ -367,7 +450,7 @@ app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
     let systemPromptText = persona || AURA_SYSTEM_PROMPT;
 
     // Aura Bhai uses its own casual, Hinglish "friend" personality prompt.
-    if (model === "nvidia/nemotron-3.5-lightning-30b-a3b") {
+    if (model === "nvidia/nemotron-3.5-lightning-30b-a3b" || model === "nvidia/nemotron-3-super-120b-a12b") {
       systemPromptText = AURA_BHAI_SYSTEM_PROMPT;
     }
     
@@ -397,6 +480,111 @@ app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
 
     // Map pseudo-models back to real models
     let finalApiModel = targetModel;
+
+    // ── Tool Calling: DuckDuckGo Web Search ──
+    // Only run tool-calling for text-only requests on non-image/audio/video models
+    // and only when the duck-duck-scrape package is available.
+    let searchSources = null; // Will hold [{title,snippet,url}] if search was performed
+    const canUseTools = !hasImage && !hasAudioVideo && !isImageRequest && ddgSearch !== null;
+
+    if (canUseTools) {
+      // First pass: non-streaming call WITH tool definitions so the model can decide
+      // if a web search is needed. We deliberately do NOT stream here so we can
+      // inspect the tool_calls field of the response before proceeding.
+      const toolCheckMessages = [
+        { role: "system", content: systemPromptText },
+        ...apiMessages,
+      ];
+      // Trim to context limit for tool-check call too
+      if (toolCheckMessages.length > 22) {
+        toolCheckMessages.splice(1, toolCheckMessages.length - 22);
+      }
+
+      try {
+        const toolCheckParams = {
+          model: finalApiModel,
+          messages: toolCheckMessages,
+          stream: false,
+          temperature: 0.7,
+          top_p: 0.7,
+          max_tokens: 1024, // enough budget for reasoning + function call emission
+          tools: [SEARCH_TOOL],
+          tool_choice: "auto",
+        };
+        // Nemotron Omni specialized params
+        if (targetModel === "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning") {
+          toolCheckParams.reasoning_budget = 0;
+          toolCheckParams.chat_template_kwargs = { enable_thinking: false, clear_thinking: true };
+        }
+        if (model === "nvidia/nemotron-3.5-lightning-30b-a3b" || model === "nvidia/nemotron-3-super-120b-a12b") {
+          toolCheckParams.top_p = 0.9;
+        }
+
+        const toolCheckResp = await activeAiClient.chat.completions.create(toolCheckParams, { signal: upstreamAbort.signal });
+        const toolChoice = toolCheckResp.choices?.[0];
+        const toolCalls = toolChoice?.message?.tool_calls;
+
+        if (toolCalls && toolCalls.length > 0) {
+          const call = toolCalls[0];
+          if (call.function?.name === "searchDuckDuckGo") {
+            let searchQuery = "";
+            try {
+              searchQuery = JSON.parse(call.function.arguments).query || "";
+            } catch (_) { searchQuery = lastUserText.slice(0, 150); }
+
+            console.log(`[search] Web search triggered: "${searchQuery}"`);
+
+            // Notify frontend that search is happening
+            res.write(`data: ${JSON.stringify({ searching: true, query: searchQuery })}\n\n`);
+
+            searchSources = await searchDuckDuckGo(searchQuery);
+            console.log(`[search] Got ${searchSources.length} results for: "${searchQuery}"`);
+
+            if (searchSources.length === 0) {
+              // DDG returned nothing — tell the frontend so it can show a notice
+              if (!res.writableEnded) {
+                res.write(`data: ${JSON.stringify({ searchError: "No results found for that query." })}\n\n`);
+              }
+            }
+
+            // Append tool result to messages for the streaming pass
+            const toolResultContent = searchSources.length > 0
+              ? searchSources.map((r, i) => `[${i + 1}] ${r.title}\n${r.snippet}\nURL: ${r.url}`).join("\n\n")
+              : "No results found.";
+
+            apiMessages = [
+              ...apiMessages,
+              { role: "assistant", content: null, tool_calls: [call] },
+              {
+                role: "tool",
+                tool_call_id: call.id,
+                name: "searchDuckDuckGo",
+                content: toolResultContent,
+              },
+            ];
+
+            // Send sources to frontend — only if client is still connected
+            if (searchSources.length > 0 && !res.writableEnded) {
+              res.write(`data: ${JSON.stringify({ sources: searchSources })}\n\n`);
+            }
+          }
+        }
+      } catch (toolErr) {
+        // Tool calling failed (model may not support it) — fall through to normal streaming
+        console.warn("[search] Tool calling step failed, falling back to direct answer:", toolErr.message);
+      }
+    }
+
+    // 90-second upstream timeout: if NVIDIA API hangs and never sends [DONE],
+    // the timer fires and aborts via the same upstreamAbort signal so cleanup
+    // runs correctly. Cleared as soon as the stream loop finishes normally.
+    const upstreamTimeoutMs = 90_000;
+    const upstreamTimeoutId = setTimeout(() => {
+      if (!res.writableEnded) {
+        console.warn(`[TIMEOUT] Upstream API did not complete within ${upstreamTimeoutMs / 1000}s — aborting.`);
+        upstreamAbort.abort();
+      }
+    }, upstreamTimeoutMs);
 
     const params = {
       model: finalApiModel,
@@ -435,7 +623,7 @@ app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
     }
 
     // Specialized Parameters for Aura Bhai
-    if (model === "nvidia/nemotron-3.5-lightning-30b-a3b") {
+    if (model === "nvidia/nemotron-3.5-lightning-30b-a3b" || model === "nvidia/nemotron-3-super-120b-a12b") {
       params.top_p = 0.9;
     }
 
@@ -544,9 +732,11 @@ app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
       res.write(`data: ${JSON.stringify({ content: thinkBuffer })}\n\n`);
     }
     // Send done AFTER the loop finishes to ensure all chunks are processed
+    clearTimeout(upstreamTimeoutId); // stream finished normally — cancel the hung-request guard
     res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
     res.end();
   } catch (err) {
+    clearTimeout(upstreamTimeoutId); // cancel hang guard on any error path
     console.error("AI API error:", err?.message, err?.response?.data);
     // Safe serialization: OpenAI/Axios error objects are circular, so
     // JSON.stringify can throw. Use the stack or util.inspect instead.

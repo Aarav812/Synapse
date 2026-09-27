@@ -529,3 +529,6 @@ document.querySelectorAll('.logo').forEach(logo => {
     }
   });
 });
+
+console.log("%cMade with ❤️ by Aarav", "color: #7c5cff; font-size: 24px; font-weight: bold; background: #0a0a0a; padding: 10px; border-radius: 5px; border: 1px solid #7c5cff;");
+console.log('Synapse AI Landing — Liquid Glass loaded.');

@@ -43,6 +43,7 @@ let isStreaming = false;
 let currentChatId = generateId();
 let attachedFiles = []; // Array of { filename, mimeType, data, isImage, size }
 let currentModel = localStorage.getItem("selected_model") || "minimax/minimax-m2.7";
+let lastSearchSources = null; // Holds [{title,snippet,url}] from last web search
 // Migration: If user has old Kimi or Mistral model in local storage, force update it to Minimax
 if (currentModel === "moonshotai/kimi-k2.6" || currentModel === "mistralai/mistral-small-4-119b-2603") {
   currentModel = "minimax/minimax-m2.7";
@@ -99,17 +100,43 @@ function stripBase64(content) {
 // Build the messages array sent to /api/chat. Restores the raw (full base64)
 // payload for the most recent user turn so the backend can process the image,
 // while keeping earlier turns stripped to avoid oversized requests.
-function getMessagesForRequest() {
+async function getMessagesForRequest() {
   // Send only {role, content} upstream — strip client-only fields such as `ts`
   // (message timestamp) that the chat API should never receive.
   const msgs = conversationHistory.map(m => ({ role: m.role, content: m.content }));
-  if (!lastRawUserMessage) return msgs;
+  
+  if (lastRawUserMessage) {
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].role === "user") {
+        msgs[i] = { role: "user", content: lastRawUserMessage };
+        return msgs;
+      }
+    }
+  }
+
+  // If lastRawUserMessage is missing (e.g., after an edit), reconstruct base64
+  // images from IndexedDB if any exist in the most recent user message.
   for (let i = msgs.length - 1; i >= 0; i--) {
     if (msgs[i].role === "user") {
-      msgs[i] = { role: "user", content: lastRawUserMessage };
+      if (Array.isArray(msgs[i].content)) {
+        const reconstructed = await Promise.all(msgs[i].content.map(async (block) => {
+          if (block.type === 'image_url' && block.image_url?.url?.startsWith('db:')) {
+            const dbId = block.image_url.url.slice(3); // strip "db:"
+            try {
+              const base64 = await getFromDB("attachments", dbId);
+              if (base64) return { type: 'image_url', image_url: { url: base64 } };
+            } catch (e) {
+              console.warn("Failed to recover image from DB:", e);
+            }
+          }
+          return block;
+        }));
+        msgs[i] = { role: "user", content: reconstructed };
+      }
       break;
     }
   }
+
   return msgs;
 }
 
@@ -143,7 +170,7 @@ function updateAura1ToggleUI() {
       modeFastBtn.setAttribute("aria-pressed", "true");
       modeDeepThinkBtn.removeAttribute("data-active");
       modeDeepThinkBtn.setAttribute("aria-pressed", "false");
-      // Backend maps laguna-xs-2.1 → openai/gpt-oss-120b for the fast path.
+      // Backend maps laguna-xs-2.1 → nvidia/nemotron-3-super-120b-a12b for the fast path.
       currentModel = "laguna-xs-2.1";
     }
     localStorage.setItem("selected_model", currentModel);
@@ -1371,9 +1398,130 @@ const MODEL_CAPABILITIES = {
   "Aura Bhai": { image: true, audio: true, video: true, canvas: false }
 };
 
+// ── Easter Egg: Creator God-Mode (Aarav) ──
+function activateCreatorMode(isUserTriggered = false) {
+  localStorage.setItem('synapse-creator-mode', 'true');
+  document.body.classList.add('creator-mode-active');
+
+  let badge = document.getElementById("creator-badge");
+  if (!badge) {
+    badge = document.createElement("div");
+    badge.id = "creator-badge";
+    badge.className = "creator-badge";
+    badge.title = "Creator: Aarav (Click to toggle)";
+    badge.setAttribute("role", "button");
+    badge.setAttribute("tabindex", "0");
+    badge.innerHTML = `<span class="crown-icon">👑</span> <span>Creator: Aarav</span>`;
+    badge.addEventListener("click", () => {
+      if (document.body.classList.contains("creator-mode-active")) {
+        deactivateCreatorMode(true);
+      } else {
+        activateCreatorMode(true);
+      }
+    });
+    const rightSide = document.querySelector(".header-side-right");
+    const userAvatar = document.getElementById("user-avatar");
+    if (rightSide && userAvatar) {
+      rightSide.insertBefore(badge, userAvatar);
+    } else if (rightSide) {
+      rightSide.appendChild(badge);
+    }
+  }
+  badge.style.display = "inline-flex";
+
+  if (isUserTriggered) {
+    // Confetti burst
+    if (!window.confetti) {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js";
+      script.onload = () => {
+        if (window.confetti) {
+          window.confetti({
+            particleCount: 120,
+            spread: 80,
+            origin: { y: 0.6 },
+            colors: ['#ffd700', '#7c5cff', '#5ea2ff', '#ffffff']
+          });
+        }
+      };
+      document.body.appendChild(script);
+    } else {
+      window.confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ['#ffd700', '#7c5cff', '#5ea2ff', '#ffffff']
+      });
+    }
+
+    if (typeof showToast === "function") {
+      showToast("👑 Welcome back, Creator Aarav! Full permissions granted.", "success", 4000);
+    }
+
+    if (typeof heroSection !== "undefined" && heroSection) heroSection.style.display = "none";
+    if (typeof emptyState !== "undefined" && emptyState) emptyState.style.display = "none";
+
+    appendMessage("user", "sudo aarav");
+    const creatorMsg = "👑 **Creator Mode Activated**\n\nWelcome back, **Aarav**! Root access recognized. All Synapse core systems, neural pathways, and creator overrides are active. ⚡\n\n*(Type `sudo exit` or click your badge anytime to return to standard mode)*";
+    appendMessage("ai", creatorMsg);
+    conversationHistory.push({ role: "user", content: "sudo aarav", ts: Date.now() });
+    conversationHistory.push({ role: "assistant", content: creatorMsg, ts: Date.now() });
+    saveSession();
+    scrollToBottom(true);
+  }
+}
+
+function deactivateCreatorMode(isUserTriggered = false) {
+  localStorage.removeItem('synapse-creator-mode');
+  document.body.classList.remove('creator-mode-active');
+
+  const badge = document.getElementById("creator-badge");
+  if (badge) {
+    badge.style.display = "none";
+  }
+
+  if (typeof showToast === "function") {
+    showToast("Creator Mode deactivated.", "info", 3000);
+  }
+
+  if (isUserTriggered) {
+    appendMessage("user", "sudo exit");
+    const exitMsg = "⚡ **Creator Mode Deactivated**\nStandard user session restored.";
+    appendMessage("ai", exitMsg);
+    conversationHistory.push({ role: "user", content: "sudo exit", ts: Date.now() });
+    conversationHistory.push({ role: "assistant", content: exitMsg, ts: Date.now() });
+    saveSession();
+    scrollToBottom(true);
+  }
+}
+
+function handleCreatorEasterEgg(text) {
+  const cmd = text.trim().toLowerCase();
+  if (cmd === "sudo aarav" || cmd === "/aarav:godmode") {
+    chatInput.value = "";
+    chatInput.style.height = "auto";
+    if (typeof animateSendButton === "function") animateSendButton();
+    activateCreatorMode(true);
+    return true;
+  }
+  if (cmd === "sudo exit" || cmd === "sudo logout") {
+    chatInput.value = "";
+    chatInput.style.height = "auto";
+    if (typeof animateSendButton === "function") animateSendButton();
+    deactivateCreatorMode(true);
+    return true;
+  }
+  return false;
+}
+
 function sendMessage() {
   const text = chatInput.value.trim();
   if ((!text && attachedFiles.length === 0) || isStreaming) return;
+
+  // ── Easter Egg: Creator God-Mode Command (sudo aarav / sudo exit) ──
+  if (handleCreatorEasterEgg(text)) {
+    return;
+  }
 
   // Enforce character limit
   if (text.length > 4000) {
@@ -1868,7 +2016,7 @@ async function getAuraResponse(multimodalState = {}) {
       method: "POST",
       headers,
       body: JSON.stringify({
-        messages: getMessagesForRequest(),
+        messages: await getMessagesForRequest(),
         model: currentModel,
         persona: currentModelName === "Aura Summary" 
           ? "You are Aura Summary. Explain any topic in exactly TWO paragraphs (2-3 lines each). You MUST format your response exactly like this:\\n\\n**English:**\\n[Your English paragraph here with an example]\\n\\n**Hinglish:**\\n[Your Hinglish paragraph here with an example]\\n\\nDo NOT use bullet points or numbered lists, write only in continuous paragraph format."
@@ -1889,6 +2037,7 @@ async function getAuraResponse(multimodalState = {}) {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
+    let currentSearchSources = null; // sources received in this response
 
     while (true) {
       const { done, value } = await reader.read();
@@ -1905,6 +2054,44 @@ async function getAuraResponse(multimodalState = {}) {
 
         try {
           const data = JSON.parse(jsonStr);
+
+          // ── Web search status events ──
+          if (data.searching) {
+            // Show the search badge in the typing indicator
+            const badge = document.getElementById("search-status-badge");
+            if (badge) {
+              badge.classList.remove("hidden");
+              badge.innerHTML = `<span class="search-badge-icon">&#x1F50D;</span><span>Searching the web… <em class="search-query-text">${escapeHtml(data.query || "")}</em></span><span class="search-badge-spinner"></span>`;
+              badge.classList.add("searching");
+            }
+            continue;
+          }
+
+          if (data.sources) {
+            currentSearchSources = data.sources;
+            lastSearchSources = data.sources;
+            // Update badge to show results found
+            const badge = document.getElementById("search-status-badge");
+            if (badge) {
+              badge.classList.remove("searching");
+              badge.innerHTML = `<span class="search-badge-icon">&#x2705;</span><span>Found ${data.sources.length} sources</span>`;
+              badge.classList.add("done");
+            }
+            continue;
+          }
+
+          if (data.searchError) {
+            // DDG returned no results — update badge to warn user, don't break streaming
+            const badge = document.getElementById("search-status-badge");
+            if (badge) {
+              badge.classList.remove("searching", "done", "hidden");
+              badge.innerHTML = `<span class="search-badge-icon">&#x26A0;&#xFE0F;</span><span>${escapeHtml(data.searchError)}</span>`;
+              badge.style.borderColor = "rgba(230, 138, 134, 0.3)";
+              badge.style.background = "rgba(230, 138, 134, 0.07)";
+              badge.style.color = "var(--danger)";
+            }
+            continue;
+          }
 
           if (data.error) {
             fullContent += `\n\n⚠️ ${data.error}`;
@@ -2008,6 +2195,10 @@ async function getAuraResponse(multimodalState = {}) {
       }
       if (rowEl) appendActionBar(rowEl, fullContent);
 
+      // Render source chips if search was used
+      if (currentSearchSources && currentSearchSources.length > 0 && bubbleEl) {
+        appendSourceChips(bubbleEl, currentSearchSources);
+      }
 
       // (#6) Apply syntax highlighting to code blocks
       if (window.hljs && bubbleEl) {
@@ -2026,7 +2217,13 @@ async function getAuraResponse(multimodalState = {}) {
     
     // Don't show error for intentional abort
     if (err.name === "AbortError") {
-      // User stopped generation — finalize whatever was streamed
+      // User stopped generation — clear the reasoning timer FIRST to avoid
+      // continued interval callbacks on a detached DOM element (memory leak).
+      if (reasoningEl?._timer) {
+        clearInterval(reasoningEl._timer);
+        reasoningEl._timer = null;
+      }
+      // Finalize whatever was streamed
       if (fullContent && fullContent.trim()) {
         const answerEl = bubbleEl?.querySelector(".answer-content");
         if (answerEl) answerEl.innerHTML = renderMarkdown(fullContent);
@@ -2188,6 +2385,63 @@ function appendActionBar(rowEl, content) {
   bubbleEl.appendChild(bar);
 }
 
+// ── Append Web Search Source Chips to AI Bubble ──
+function appendSourceChips(bubbleEl, sources) {
+  if (!bubbleEl || !sources || sources.length === 0) return;
+  // Remove any existing source chips section (e.g. on retry)
+  const old = bubbleEl.querySelector('.search-sources-section');
+  if (old) old.remove();
+
+  const section = document.createElement('div');
+  section.className = 'search-sources-section';
+
+  const label = document.createElement('div');
+  label.className = 'search-sources-label';
+  label.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;margin-right:4px;">travel_explore</span>Sources';
+  section.appendChild(label);
+
+  const chips = document.createElement('div');
+  chips.className = 'search-source-chips';
+
+  sources.forEach(source => {
+    if (!source.url) return;
+    const chip = document.createElement('a');
+    chip.href = source.url;
+    chip.target = '_blank';
+    chip.rel = 'noopener noreferrer';
+    chip.className = 'search-source-chip';
+    chip.title = source.snippet || source.title;
+
+    let hostname = '';
+    try { hostname = new URL(source.url).hostname.replace(/^www\./, ''); } catch (_) { hostname = source.url; }
+
+    const favicon = document.createElement('img');
+    favicon.className = 'source-favicon';
+    favicon.src = `https://www.google.com/s2/favicons?sz=16&domain_url=${encodeURIComponent(source.url)}`;
+    favicon.alt = '';
+    favicon.onerror = () => { favicon.style.display = 'none'; };
+
+    const textSpan = document.createElement('span');
+    textSpan.className = 'source-chip-text';
+    const titleEl = document.createElement('span');
+    titleEl.className = 'source-chip-title';
+    titleEl.textContent = source.title.length > 40 ? source.title.slice(0, 40) + '…' : source.title;
+    const domainEl = document.createElement('span');
+    domainEl.className = 'source-chip-domain';
+    domainEl.textContent = hostname;
+    textSpan.appendChild(titleEl);
+    textSpan.appendChild(domainEl);
+
+    chip.appendChild(favicon);
+    chip.appendChild(textSpan);
+    chips.appendChild(chip);
+  });
+
+  section.appendChild(chips);
+  bubbleEl.appendChild(section);
+}
+
+
 // ⚡ Bolt: Cache Intl.DateTimeFormat
 // Impact: ~23x faster date formatting. `toLocaleTimeString` instantiates a new formatter
 // on every call, causing layout jank when rendering long chat histories.
@@ -2330,6 +2584,7 @@ function showTypingIndicator(multimodalState = {}) {
       <span class="skeleton-dot"></span>
       <span class="typing-label-text">${typingText}</span>
     </div>
+    <div id="search-status-badge" class="search-status-badge hidden"></div>
     <div class="skeleton-line"></div>
     <div class="skeleton-line"></div>
     <div class="skeleton-line"></div>
@@ -2543,6 +2798,11 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => chatInput.focus(), 500);
   }
 
+  // ── Creator Mode Persistence ──
+  if (localStorage.getItem('synapse-creator-mode') === 'true') {
+    activateCreatorMode(false);
+  }
+
   // ── Page Transition Fade-in ──
   const overlay = document.getElementById('page-overlay');
   if (overlay) {
@@ -2721,6 +2981,10 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ── Model Accent Colors in selector button ──
+  // Accent colours are applied via CSS variables and class names set in
+  // updateActiveModelIndicator(); this function is kept as a no-op stub so
+  // any legacy call-sites don't throw a ReferenceError.
+  function updateModelAccentColor() {}
   updateModelAccentColor();
   updateActiveModelIndicator(currentModelName);
   
@@ -3320,3 +3584,178 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+
+// ============================================================
+// MOBILE OPTIMIZATIONS — Synapse AI Chat
+// ============================================================
+
+(function initMobileOptimizations() {
+  if (typeof window === 'undefined') return;
+
+  // ── 1. Swipe-to-close sidebar ──
+  // Users can swipe left on the open drawer to dismiss it.
+  (function initSwipeClose() {
+    const drawer = document.getElementById('drawer');
+    const toggle = document.getElementById('drawer-toggle');
+    if (!drawer || !toggle) return;
+
+    let startX = 0;
+    let startY = 0;
+    let isDragging = false;
+
+    drawer.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      isDragging = false;
+    }, { passive: true });
+
+    drawer.addEventListener('touchmove', (e) => {
+      const dx = e.touches[0].clientX - startX;
+      const dy = Math.abs(e.touches[0].clientY - startY);
+      // Only track horizontal swipes more than 8px and not vertical scrolls
+      if (!isDragging && Math.abs(dx) > 8 && dy < 40) {
+        isDragging = true;
+      }
+    }, { passive: true });
+
+    drawer.addEventListener('touchend', (e) => {
+      if (!isDragging) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      // Swipe left ≥ 60px = close drawer
+      if (dx < -60 && toggle.checked) {
+        toggle.checked = false;
+      }
+      isDragging = false;
+    }, { passive: true });
+  })();
+
+  // ── 2. Model dropdown: open upward on mobile ──
+  // Overrides the JS positioning so it appears above the composer,
+  // not below where it gets hidden by the keyboard.
+  (function patchModelDropdownPosition() {
+    if (window.innerWidth > 767) return;
+    const btn = document.getElementById('model-selector-btn');
+    const dropdown = document.getElementById('model-dropdown');
+    if (!btn || !dropdown) return;
+
+    // Re-observe viewport resize
+    const applyMobilePosition = () => {
+      if (window.innerWidth <= 767) {
+        dropdown.style.bottom = 'calc(100% + 8px)';
+        dropdown.style.top = 'auto';
+        dropdown.style.left = '0';
+        dropdown.style.right = 'auto';
+        dropdown.style.minWidth = '230px';
+        dropdown.style.maxWidth = `${Math.min(300, window.innerWidth - 24)}px`;
+      } else {
+        dropdown.style.bottom = '';
+        dropdown.style.top = '';
+        dropdown.style.left = '';
+        dropdown.style.right = '';
+        dropdown.style.minWidth = '';
+        dropdown.style.maxWidth = '';
+      }
+    };
+
+    btn.addEventListener('click', applyMobilePosition);
+    window.addEventListener('resize', applyMobilePosition, { passive: true });
+  })();
+
+  // ── 3. Keyboard-aware composer ──
+  // Scroll to latest message when virtual keyboard shows/hides on mobile.
+  (function initKeyboardAwareScroll() {
+    if (window.innerWidth > 767) return;
+    const chatInput = document.getElementById('chat-input');
+    if (!chatInput) return;
+
+    let prevHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+
+    const onViewportChange = () => {
+      const currentH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      // Keyboard appeared (viewport shrank) → scroll to bottom
+      if (currentH < prevHeight - 80) {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: document.documentElement.scrollHeight });
+        });
+      }
+      prevHeight = currentH;
+    };
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', onViewportChange, { passive: true });
+    } else {
+      window.addEventListener('resize', onViewportChange, { passive: true });
+    }
+  })();
+
+  // ── 4. Prevent double-tap zoom on buttons ──
+  // Already handled by touch-action: manipulation in CSS, but add a belt-and-braces JS guard.
+  (function preventDoubleTapZoom() {
+    if (window.innerWidth > 767) return;
+    let lastTap = 0;
+    document.addEventListener('touchend', (e) => {
+      const now = Date.now();
+      if (now - lastTap < 300 && e.target.closest('button, a, label[for]')) {
+        e.preventDefault();
+      }
+      lastTap = now;
+    }, { passive: false });
+  })();
+
+  // ── 5. Scroll-position persistence ──
+  // When the virtual keyboard pushes the page, the composer stays fixed
+  // via CSS, but the chat scroll can jump. Compensate via visual viewport.
+  (function initComposerViewportFix() {
+    if (!window.visualViewport || window.innerWidth > 767) return;
+    const composerArea = document.querySelector('.chat-composer-area');
+    if (!composerArea) return;
+
+    const update = () => {
+      const vv = window.visualViewport;
+      // Keep composer pinned to the visible bottom edge
+      const offsetFromBottom = window.innerHeight - (vv.offsetTop + vv.height);
+      composerArea.style.transform = `translateY(${-offsetFromBottom}px)`;
+    };
+
+    window.visualViewport.addEventListener('scroll', update, { passive: true });
+    window.visualViewport.addEventListener('resize', update, { passive: true });
+  })();
+
+  // ── 6. Active state class for touch ripple ──
+  (function initTouchRipple() {
+    if (window.innerWidth > 767) return;
+    const sendBtn = document.getElementById('send-btn');
+    if (!sendBtn) return;
+
+    sendBtn.addEventListener('touchstart', () => {
+      sendBtn.classList.add('ripple');
+    }, { passive: true });
+
+    sendBtn.addEventListener('touchend', () => {
+      setTimeout(() => sendBtn.classList.remove('ripple'), 500);
+    }, { passive: true });
+  })();
+
+  // ── 7. History modal: swipe down to close ──
+  (function initHistoryModalSwipe() {
+    const modal = document.getElementById('history-modal');
+    const panel = document.getElementById('history-modal-content');
+    if (!modal || !panel) return;
+
+    let startY = 0;
+
+    panel.addEventListener('touchstart', (e) => {
+      startY = e.touches[0].clientY;
+    }, { passive: true });
+
+    panel.addEventListener('touchend', (e) => {
+      const dy = e.changedTouches[0].clientY - startY;
+      // Swipe down ≥ 80px on the panel header = close
+      if (dy > 80) {
+        if (typeof closeHistoryModal === 'function') closeHistoryModal();
+      }
+    }, { passive: true });
+  })();
+
+})();

@@ -284,6 +284,9 @@ function renderMarkdown(text, isStreaming = false) {
         // `artifacts` store can't collide across chats and load the wrong app.
         const artifactId = 'artifact_' + generateId();
         artifactStore.set(artifactId, block.code);
+        if (artifactStore.size > 50) {
+          artifactStore.delete(artifactStore.keys().next().value); // naive LRU eviction
+        }
         // Fire-and-forget persist — never let an IndexedDB failure become an
         // unhandled promise rejection.
         if (typeof saveToDB === "function") Promise.resolve(saveToDB("artifacts", artifactId, block.code)).catch((e) => console.warn("Artifact persist failed:", e));
@@ -359,4 +362,21 @@ function renderMarkdown(text, isStreaming = false) {
   }
 
   return html;
+}
+
+// ── Canvas panel stubs ──
+// The canvas Preview/Code tab buttons (chat-tail.html) call these functions.
+// Full implementations are loaded separately; these stubs prevent ReferenceErrors
+// if the canvas panel is rendered before the canvas script initialises.
+if (typeof window !== "undefined") {
+  if (typeof window.switchCanvasTab !== "function") {
+    window.switchCanvasTab = function switchCanvasTab(tab) {
+      console.debug("[canvas] switchCanvasTab stub called with:", tab);
+    };
+  }
+  if (typeof window.closeCodePreview !== "function") {
+    window.closeCodePreview = function closeCodePreview() {
+      console.debug("[canvas] closeCodePreview stub called");
+    };
+  }
 }
