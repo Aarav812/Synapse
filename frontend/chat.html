@@ -17,8 +17,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/atom-one-dark.min.css" />
-    <link rel="stylesheet" href="/css/styles.css?v=19" />
-    <link rel="stylesheet" href="/css/chat.css?v=19" />
+    <link rel="stylesheet" href="/css/styles.css?v=20" />
+    <link rel="stylesheet" href="/css/chat.css?v=20" />
 
 
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
@@ -75,11 +75,11 @@
 
       <nav class="sidebar-primary" aria-label="Primary navigation">
         <button id="nav-new-chat-btn" class="sidebar-action sidebar-action--new" type="button">
-          <span class="material-symbols-outlined">edit_square</span>
+          <span aria-hidden="true" class="material-symbols-outlined">edit_square</span>
           <span>New Chat</span>
         </button>
         <button id="nav-history-btn" class="sidebar-action" type="button" aria-label="Search chats">
-          <span class="material-symbols-outlined">search</span>
+          <span aria-hidden="true" class="material-symbols-outlined">search</span>
           <span>Search chats</span>
           <kbd class="sidebar-action-kbd">⌘K</kbd>
         </button>
@@ -103,8 +103,8 @@
 
       <div class="sidebar-bottom">
 
-        <button id="logout-btn" class="sidebar-action sidebar-action--logout" type="button">
-          <span class="material-symbols-outlined">logout</span>
+        <button id="logout-btn" class="sidebar-action sidebar-action--logout" type="button" aria-label="Log out">
+          <span aria-hidden="true" class="material-symbols-outlined">logout</span>
           <span>Log out</span>
         </button>
       </div>
@@ -119,7 +119,7 @@
           <button class="sidebar-reveal-btn" type="button" data-sidebar-toggle aria-label="Show sidebar" title="Show sidebar">
             <span class="hamburger-lines" aria-hidden="true"><i></i><i></i><i></i></span>
           </button>
-          <button id="header-logo" type="button" aria-label="Start a new chat" title="Start a new chat">
+          <button id="header-logo" type="button" aria-label="Synapse AI - Start a new chat" title="Start a new chat">
             <span class="brand-mark" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none">
                 <path d="M12 5.6v5.1M12 13.3v5.1M6.7 17.5 12 13.3M17.3 17.5 12 13.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
@@ -132,11 +132,11 @@
         </div>
         <div class="header-side header-side-right" style="gap: 4px;">
           <button id="header-new-chat-btn" class="header-new-chat-btn" type="button" aria-label="New chat" title="New chat">
-            <span class="material-symbols-outlined">edit_square</span>
+            <span aria-hidden="true" class="material-symbols-outlined">edit_square</span>
             <span>New chat</span>
           </button>
           <button class="header-icon-button header-icon-button--bell" id="header-notifications-btn" type="button" aria-label="Notifications" title="Notifications">
-            <span class="material-symbols-outlined">notifications</span>
+            <span aria-hidden="true" class="material-symbols-outlined">notifications</span>
             <span class="notification-dot" aria-hidden="true"></span>
           </button>
           <span class="header-rule" aria-hidden="true"></span>
@@ -168,31 +168,31 @@
           <div class="composer-controls">
             <div class="model-selector-wrap" id="model-selector-container">
               <button id="model-selector-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
-                <span class="material-symbols-outlined" style="font-size:16px;color:var(--accent-soft)">auto_awesome</span>
+                <span aria-hidden="true" class="material-symbols-outlined" style="font-size:16px;color:var(--accent-soft)">auto_awesome</span>
                 <span id="current-model-name">Aura AI</span>
-                <span class="material-symbols-outlined" style="font-size:15px">expand_more</span>
+                <span aria-hidden="true" class="material-symbols-outlined" style="font-size:15px">expand_more</span>
               </button>
               <div id="model-dropdown" class="hidden opacity-0 translate-y-2 pointer-events-none" role="listbox" aria-label="Choose an AI model">
                 <button class="model-option" type="button" data-model="minimax/minimax-m2.7" data-name="Aura AI" role="option">
-                  <span class="material-symbols-outlined">auto_awesome</span>
+                  <span aria-hidden="true" class="material-symbols-outlined">auto_awesome</span>
                   <span><span class="model-option-title">Aura AI</span><span class="model-option-description">Thoughtful help for everyday work</span></span>
-                  <span class="material-symbols-outlined model-active-check">check</span>
+                  <span aria-hidden="true" class="material-symbols-outlined model-active-check">check</span>
                 </button>
                 <button class="model-option" type="button" data-model="openai/gpt-oss-120b" data-name="Aura Summary" role="option">
-                  <span class="material-symbols-outlined">short_text</span>
+                  <span aria-hidden="true" class="material-symbols-outlined">short_text</span>
                   <span><span class="model-option-title">Aura Summary</span><span class="model-option-description">Clear explanations, in two languages</span></span>
-                  <span class="material-symbols-outlined model-active-check">check</span>
+                  <span aria-hidden="true" class="material-symbols-outlined model-active-check">check</span>
                 </button>
                 <button class="model-option" type="button" data-model="nvidia/nemotron-3.5-lightning-30b-a3b" data-name="Aura Bhai" role="option">
-                  <span class="material-symbols-outlined">bolt</span>
+                  <span aria-hidden="true" class="material-symbols-outlined">bolt</span>
                   <span><span class="model-option-title">Aura Bhai</span><span class="model-option-description">Fast, casual help in Hinglish</span></span>
-                  <span class="material-symbols-outlined model-active-check">check</span>
+                  <span aria-hidden="true" class="material-symbols-outlined model-active-check">check</span>
                 </button>
               </div>
             </div>
             <div id="aura1-mode-toggle" aria-label="Aura AI response mode" role="group">
-              <button id="mode-deep-think-btn" type="button" data-active="true" aria-pressed="true">Think</button>
-              <button id="mode-fast-btn" type="button" aria-pressed="false">Fast</button>
+              <button id="mode-deep-think-btn" type="button" data-active="true" aria-pressed="true" aria-label="Think mode">Think</button>
+              <button id="mode-fast-btn" type="button" aria-pressed="false" aria-label="Fast mode">Fast</button>
             </div>
           </div>
           <div id="chat-footer">
@@ -201,11 +201,11 @@
               <span class="composer-prism" aria-hidden="true"></span>
               <input id="file-input" type="file" multiple accept=".txt,.json,.md,.csv,image/*,audio/*,video/*" hidden />
               <button id="attach-btn" class="composer-button" type="button" aria-label="Attach files" title="Attach files">
-                <span class="material-symbols-outlined">attach_file</span>
+                <span aria-hidden="true" class="material-symbols-outlined">attach_file</span>
               </button>
               <textarea id="chat-input" rows="1" maxlength="4000" placeholder="Ask Aura anything..." aria-label="Ask Aura anything..."></textarea>
               <button id="mic-btn" class="composer-button" type="button" aria-label="Use voice input" title="Use voice input">
-                <span class="material-symbols-outlined">mic</span>
+                <span aria-hidden="true" class="material-symbols-outlined">mic</span>
               </button>
               <div class="send-btn-wrapper" style="position:relative; display:flex; align-items:center; justify-content:center; width:44px; height:44px;">
                 <svg class="char-limit-arc" viewBox="0 0 44 44" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; transform:rotate(-90deg); opacity:0; transition:opacity 0.2s ease;">
@@ -213,10 +213,10 @@
                   <circle class="arc-value" cx="22" cy="22" r="20" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="125.6" stroke-dashoffset="125.6" stroke-linecap="round" style="transition: stroke-dashoffset 0.1s ease, stroke 0.3s ease;" />
                 </svg>
                 <button id="stop-btn" class="hidden" type="button" aria-label="Stop generating" title="Stop generating">
-                  <span class="material-symbols-outlined">stop</span>
+                  <span aria-hidden="true" class="material-symbols-outlined">stop</span>
                 </button>
                 <button id="send-btn" type="button" aria-label="Send message" title="Send message">
-                  <span class="material-symbols-outlined">arrow_upward</span>
+                  <span aria-hidden="true" class="material-symbols-outlined">arrow_upward</span>
                 </button>
               </div>
             </div>
@@ -229,7 +229,7 @@
       </div>
 
       <button id="scroll-to-bottom-btn" type="button" aria-label="Scroll to latest message" title="Scroll to latest message">
-        <span class="material-symbols-outlined" style="font-size:18px">arrow_downward</span>
+        <span aria-hidden="true" class="material-symbols-outlined" style="font-size:18px">arrow_downward</span>
       </button>
     </main>
     <!-- History dialog -->
@@ -237,14 +237,14 @@
       <div id="history-modal-content" class="chat-modal-panel scale-95">
         <header class="modal-header">
           <div><h2 class="modal-title">Chat history</h2><p class="modal-subtitle">Open or manage previous conversations.</p></div>
-          <button id="close-history-btn" class="modal-close" type="button" aria-label="Close history" title="Close history"><span class="material-symbols-outlined">close</span></button>
+          <button id="close-history-btn" class="modal-close" type="button" aria-label="Close history" title="Close history"><span aria-hidden="true" class="material-symbols-outlined">close</span></button>
         </header>
         <div class="history-toolbar">
           <label class="history-search-wrap">
-            <span class="material-symbols-outlined history-search-icon">search</span>
+            <span aria-hidden="true" class="material-symbols-outlined history-search-icon">search</span>
             <input id="history-search-input" class="history-search-input" type="search" autocomplete="off" placeholder="Search conversations" aria-label="Search conversations" />
           </label>
-          <button id="delete-all-history-btn" class="modal-text-button" type="button">Clear all</button>
+          <button id="delete-all-history-btn" class="modal-text-button" type="button" aria-label="Clear all history">Clear all</button>
         </div>
         <div id="history-list-container" class="chat-history-list"></div>
       </div>
@@ -253,12 +253,12 @@
     <!-- Clear history dialog -->
     <section id="delete-history-modal" class="chat-modal hidden opacity-0" role="dialog" aria-modal="true" aria-label="Clear history confirmation">
       <div id="delete-history-modal-content" class="chat-modal-panel confirm-panel scale-95">
-        <div class="confirm-icon"><span class="material-symbols-outlined">delete_forever</span></div>
+        <div class="confirm-icon"><span aria-hidden="true" class="material-symbols-outlined">delete_forever</span></div>
         <h2 class="modal-title">Clear all chat history?</h2>
         <p class="confirm-copy">This permanently removes every saved conversation from this browser.</p>
         <div class="confirm-actions">
-          <button id="cancel-delete-history-btn" class="modal-button" type="button">Cancel</button>
-          <button id="confirm-delete-history-btn" class="modal-button modal-button--danger" type="button">Clear history</button>
+          <button id="cancel-delete-history-btn" class="modal-button" type="button" aria-label="Cancel clear history">Cancel</button>
+          <button id="confirm-delete-history-btn" class="modal-button modal-button--danger" type="button" aria-label="Confirm clear history">Clear history</button>
         </div>
       </div>
     </section>
@@ -266,12 +266,12 @@
     <!-- Delete single chat dialog -->
     <section id="delete-chat-modal" class="chat-modal hidden opacity-0" role="dialog" aria-modal="true" aria-label="Delete chat confirmation">
       <div id="delete-chat-modal-content" class="chat-modal-panel confirm-panel scale-95">
-        <div class="confirm-icon"><span class="material-symbols-outlined">delete</span></div>
+        <div class="confirm-icon"><span aria-hidden="true" class="material-symbols-outlined">delete</span></div>
         <h2 class="modal-title">Delete chat?</h2>
         <p class="confirm-copy">This permanently removes this conversation.</p>
         <div class="confirm-actions">
-          <button id="cancel-delete-chat-btn" class="modal-button" type="button">Cancel</button>
-          <button id="confirm-delete-chat-btn" class="modal-button modal-button--danger" type="button">Delete</button>
+          <button id="cancel-delete-chat-btn" class="modal-button" type="button" aria-label="Cancel delete chat">Cancel</button>
+          <button id="confirm-delete-chat-btn" class="modal-button modal-button--danger" type="button" aria-label="Confirm delete chat">Delete</button>
         </div>
       </div>
     </section>
@@ -282,8 +282,8 @@
       <div class="lightbox-content-wrapper">
         <img id="lightbox-img" src="" alt="Expanded generated image" class="lightbox-image" onclick="event.stopPropagation(); closeLightbox(event)" />
         <div class="lightbox-actions" onclick="event.stopPropagation()">
-          <button id="download-lightbox-btn" class="modal-button" type="button" onclick="downloadLightboxImage()"><span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">download</span> Download</button>
-          <button class="modal-close" style="background:#1b1b1b" type="button" onclick="closeLightbox(event)" aria-label="Close image" title="Close image"><span class="material-symbols-outlined">close</span></button>
+          <button id="download-lightbox-btn" class="modal-button" type="button" onclick="downloadLightboxImage()" aria-label="Download image"><span aria-hidden="true" class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">download</span> Download</button>
+          <button class="modal-close" style="background:#1b1b1b" type="button" onclick="closeLightbox(event)" aria-label="Close image" title="Close image"><span aria-hidden="true" class="material-symbols-outlined">close</span></button>
         </div>
       </div>
     </div>
@@ -292,9 +292,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 
-    <script src="/js/firebase-config.js?v=19"></script>
-    <script src="/js/auth.js?v=19"></script>
-    <script src="/js/utils.js?v=19"></script>
-    <script src="/js/chat.js?v=19"></script>
+    <script src="/js/firebase-config.js?v=20"></script>
+    <script src="/js/auth.js?v=20"></script>
+    <script src="/js/utils.js?v=20"></script>
+    <script src="/js/chat.js?v=20"></script>
   </body>
 </html>

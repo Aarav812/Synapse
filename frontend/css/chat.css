@@ -1690,3 +1690,963 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
   line-height: 1.6 !important;
 }
 
+
+/* =====================================================================
+   Web Search Badge & Source Chips
+   ===================================================================== */
+
+/* -- Search Status Badge (shown inside typing indicator) -- */
+.search-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 6px 0 4px;
+  padding: 5px 11px 5px 9px;
+  border-radius: 99px;
+  border: 1px solid rgba(94, 162, 255, 0.25);
+  background: rgba(94, 139, 255, 0.08);
+  color: var(--accent-azure);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: background 300ms ease, border-color 300ms ease, opacity 300ms ease;
+  animation: badge-appear 0.3s var(--ease-out) both;
+}
+.search-status-badge.hidden { display: none; }
+.search-status-badge.searching {
+  border-color: rgba(94, 162, 255, 0.38);
+  background: rgba(94, 139, 255, 0.13);
+}
+.search-status-badge.done {
+  border-color: rgba(52, 211, 153, 0.35);
+  background: rgba(52, 211, 153, 0.08);
+  color: #34d399;
+}
+@keyframes badge-appear {
+  from { opacity: 0; transform: translateY(-4px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+.search-badge-icon { font-size: 14px; line-height: 1; }
+.search-query-text {
+  font-style: normal;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 11.5px;
+  font-weight: 400;
+}
+.search-badge-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(94, 162, 255, 0.25);
+  border-top-color: var(--accent-azure);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* -- Source Chips Section -- */
+.search-sources-section {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+  animation: badge-appear 0.35s var(--ease-out) both;
+}
+.search-sources-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.search-source-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.search-source-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px 6px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  text-decoration: none;
+  color: var(--ink-2);
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease, color 160ms ease;
+  cursor: pointer;
+  max-width: 220px;
+}
+.search-source-chip:hover {
+  background: rgba(124, 107, 255, 0.12);
+  border-color: rgba(124, 107, 255, 0.32);
+  color: var(--ink);
+  transform: translateY(-1px);
+}
+.source-favicon {
+  width: 15px;
+  height: 15px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.source-chip-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+.source-chip-title {
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink);
+  line-height: 1.3;
+}
+.source-chip-domain {
+  font-size: 10px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+/* =====================================================================
+   Mobile Optimizations
+   ===================================================================== */
+
+@media (max-width: 767px) {
+  .search-source-chips { gap: 6px; }
+  .search-source-chip { max-width: 180px; padding: 6px 10px 6px 7px; border-radius: 9px; }
+  .source-chip-title { font-size: 11px; }
+  .source-chip-domain { font-size: 9.5px; }
+  .search-status-badge { font-size: 11.5px; padding: 4px 10px 4px 8px; }
+  .search-sources-section { margin-top: 12px; padding-top: 10px; }
+
+  /* Prevent iOS rubber-band within messages */
+  #scroll-container { -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+
+  /* Compact typing indicator on phones */
+  .typing-indicator-skeleton { padding: 10px 13px !important; }
+
+  /* AI bubble fills available width without overflow */
+  .ai-bubble { width: 100%; box-sizing: border-box; overflow-wrap: anywhere; }
+
+  /* Better tap targets */
+  #send-btn, #stop-btn { min-width: 40px; min-height: 40px; }
+  .composer-button { min-width: 38px; min-height: 38px; }
+
+  /* Model selector truncates gracefully */
+  #model-selector-btn { min-width: 0; flex-shrink: 1; }
+
+  /* Suggestion cards: 2-column grid on small screens */
+  .suggestion-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+/* Extra small phones */
+@media (max-width: 360px) {
+  .chat-header { margin: 6px 6px 0; padding: 0 6px 0 8px; }
+  .chat-content { padding: 0 10px; }
+  .suggestion-grid { grid-template-columns: 1fr !important; }
+}
+
+/* Landscape mobile: extra safe area padding */
+@media (max-width: 767px) and (orientation: landscape) {
+  .chat-composer-area {
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+  }
+  #empty-state { min-height: auto !important; padding: 40px 0 20px !important; }
+}
+
+/* Safe area bottom for notched phones */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .chat-composer-area {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
+
+
+/* =====================================================================
+   COMPREHENSIVE MOBILE OPTIMIZATION — Synapse AI Chat
+   Covers: layout, typography, touch targets, safe areas, composer,
+   history, modals, sidebar, messages, and micro-interactions.
+   All rules use specificity appropriate to override base styles.
+   ===================================================================== */
+
+/* ── 1. CSS Custom Properties for mobile ── */
+@media (max-width: 767px) {
+  :root {
+    --mobile-header-h: 56px;
+    --mobile-composer-h: 72px;
+    --mobile-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --mobile-safe-left: env(safe-area-inset-left, 0px);
+    --mobile-safe-right: env(safe-area-inset-right, 0px);
+  }
+}
+
+/* ── 2. Global body/html mobile resets ── */
+@media (max-width: 767px) {
+  html {
+    /* Prevent layout shift from scrollbar gutter */
+    scrollbar-gutter: stable;
+  }
+  body.chat-page {
+    /* Prevent iOS rubber-band on the root */
+    overscroll-behavior: none;
+    /* Prevent text size inflation in landscape */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+}
+
+/* ── 3. Sidebar — slide-in drawer ── */
+@media (max-width: 767px) {
+  /* Wider drawer on larger phones */
+  #drawer {
+    width: min(300px, 88vw) !important;
+    /* Hardware-accelerated transform */
+    will-change: transform;
+  }
+
+  /* Sidebar top area: tighter */
+  .sidebar-top {
+    padding: 14px 14px 10px;
+  }
+
+  /* Sidebar items: bigger tap targets */
+  .sidebar-action {
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 12px;
+  }
+
+  /* Recent item tap target */
+  .sidebar-recent-item {
+    min-height: 42px;
+    padding: 9px 10px;
+    border-radius: 10px;
+    font-size: 13px;
+  }
+
+  /* Delete button: always visible on touch */
+  .sidebar-recent-delete {
+    opacity: 1 !important;
+    transform: none !important;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+  }
+
+  /* Section labels */
+  .sidebar-section-label {
+    font-size: 11px;
+    padding: 10px 12px 4px;
+    letter-spacing: 0.07em;
+  }
+}
+
+/* ── 4. Header — floating pill ── */
+@media (max-width: 767px) {
+  .chat-header {
+    /* Slightly taller for better thumb reach */
+    height: var(--mobile-header-h, 56px) !important;
+    /* Stay within safe area on notched devices */
+    padding-left: max(10px, var(--mobile-safe-left)) !important;
+    padding-right: max(8px, var(--mobile-safe-right)) !important;
+    /* Stronger blur for contrast against content */
+    backdrop-filter: blur(24px) saturate(1.4) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(1.4) !important;
+  }
+
+  /* Brand name: hide on very narrow to save room */
+  @media (max-width: 380px) {
+    .brand-name { display: none !important; }
+  }
+
+  /* Model selector: always show, truncate cleanly */
+  #model-selector-btn {
+    max-width: min(140px, 38vw) !important;
+    font-size: 12px !important;
+  }
+
+  /* Aura1 mode toggle: scale down */
+  #aura1-mode-toggle {
+    transform: scale(0.82) !important;
+    transform-origin: left center !important;
+  }
+}
+
+/* ── 5. Chat content area ── */
+@media (max-width: 767px) {
+  .chat-content {
+    /* Account for floating header + bottom composer */
+    padding-top: calc(var(--mobile-header-h, 56px) + 12px) !important;
+    padding-left: max(14px, var(--mobile-safe-left)) !important;
+    padding-right: max(14px, var(--mobile-safe-right)) !important;
+    /* Ensure nothing slides under the composer */
+    padding-bottom: max(160px, calc(140px + var(--mobile-safe-bottom))) !important;
+  }
+
+  /* Scroll container: smooth momentum on iOS */
+  #scroll-container {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+}
+
+/* ── 6. Empty state / Welcome screen ── */
+@media (max-width: 767px) {
+  #empty-state {
+    min-height: calc(100dvh - 200px) !important;
+    padding: calc(var(--mobile-header-h, 56px) + 16px) 0 24px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .welcome-question {
+    font-size: clamp(28px, 9vw, 42px) !important;
+    line-height: 1.15 !important;
+    text-align: center;
+  }
+
+  .welcome-hello {
+    display: block;
+  }
+
+  .welcome-overline {
+    font-size: 12px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .empty-subtitle {
+    font-size: 13px !important;
+    max-width: 90vw !important;
+    text-align: center;
+  }
+
+  /* Suggestion grid: 2 cols on phones */
+  .suggestion-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  /* Suggestion card: compact & tappable */
+  .category-chip.suggestion-card {
+    min-height: 100px !important;
+    padding: 14px 13px !important;
+    border-radius: 18px !important;
+    gap: 9px !important;
+    align-items: flex-start !important;
+    /* Scale feedback on tap */
+    transition: transform 0.12s ease, box-shadow 0.12s ease !important;
+  }
+  .category-chip.suggestion-card:active {
+    transform: scale(0.96) !important;
+  }
+
+  .suggestion-card-icon {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 10px !important;
+    flex-shrink: 0;
+  }
+
+  .suggestion-card-title {
+    font-size: 12px !important;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .suggestion-card-desc {
+    font-size: 10.5px !important;
+    line-height: 1.4;
+    opacity: 0.75;
+    /* Show 2 lines max */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* Extra-small phones: single column */
+@media (max-width: 360px) {
+  .suggestion-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .category-chip.suggestion-card {
+    min-height: 0 !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 12px !important;
+  }
+  .suggestion-card-desc {
+    display: none !important;
+  }
+}
+
+/* ── 7. Chat messages ── */
+@media (max-width: 767px) {
+  #chat-messages {
+    padding-top: 16px !important;
+  }
+
+  /* Message rows */
+  .message-row {
+    gap: 8px !important;
+    margin-bottom: 28px !important;
+    min-width: 0;
+  }
+
+  /* AI messages: full-width */
+  .message-row.ai {
+    max-width: 100% !important;
+  }
+
+  /* User messages: most of the screen */
+  .message-row.user {
+    max-width: 86% !important;
+    margin-left: auto;
+  }
+
+  /* Avatars: smaller */
+  .message-avatar {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 12px !important;
+    border-radius: 9px !important;
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+
+  /* AI bubble: comfortable reading */
+  .ai-bubble {
+    padding: 12px 14px !important;
+    font-size: 14px !important;
+    line-height: 1.75 !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* User bubble: slightly smaller text */
+  .user-bubble {
+    padding: 10px 14px !important;
+    font-size: 13.5px !important;
+    max-width: 100% !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  /* Code blocks: scroll horizontally instead of overflowing */
+  .ai-bubble pre,
+  .code-block-wrapper {
+    max-width: calc(100vw - 60px) !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .ai-bubble pre code,
+  .code-block-wrapper code {
+    font-size: 12px !important;
+    white-space: pre !important;
+  }
+
+  /* KaTeX math: scroll horizontally */
+  .ai-bubble .katex-display {
+    overflow-x: auto !important;
+    max-width: calc(100vw - 60px) !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Tables: scroll horizontally */
+  .ai-bubble table,
+  .ai-bubble .table-wrapper {
+    display: block !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    max-width: calc(100vw - 60px) !important;
+    font-size: 12.5px !important;
+  }
+
+  /* Message timestamp */
+  .message-timestamp {
+    font-size: 10px !important;
+    opacity: 0.45;
+    margin-top: 4px;
+  }
+}
+
+/* ── 8. Action bar ── */
+@media (max-width: 767px) {
+  .ai-action-bar {
+    /* Always visible (no hover on touch) */
+    opacity: 1 !important;
+    padding-top: 8px !important;
+    margin-top: 6px !important;
+    gap: 4px !important;
+    left: 0 !important;
+    bottom: -36px !important;
+    flex-wrap: wrap;
+  }
+
+  .action-btn {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    font-size: 15px !important;
+    /* Bigger invisible tap area */
+    padding: 0 !important;
+    position: relative;
+  }
+  /* Extend tap area without changing visual size */
+  .action-btn::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+  }
+}
+
+/* ── 9. Thinking / reasoning block ── */
+@media (max-width: 767px) {
+  .thinking-block {
+    margin-bottom: 10px !important;
+    border-radius: 12px !important;
+  }
+  .thinking-block summary {
+    font-size: 12px !important;
+    padding: 8px 12px !important;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+  }
+  .thinking-content {
+    font-size: 12px !important;
+    padding: 8px 12px 10px !important;
+  }
+}
+
+/* ── 10. Composer area ── */
+@media (max-width: 767px) {
+  .chat-composer-area {
+    left: 0 !important;
+    right: 0 !important;
+    padding: 10px max(12px, var(--mobile-safe-right)) max(10px, var(--mobile-safe-bottom)) max(12px, var(--mobile-safe-left)) !important;
+  }
+
+  .composer-wrap {
+    gap: 6px;
+  }
+
+  /* Controls row: model selector + mode toggle */
+  .composer-controls {
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  /* Input bar pill */
+  #text-input-bar {
+    min-height: 52px !important;
+    border-radius: 20px !important;
+    gap: 4px !important;
+    padding: 8px 8px 8px 14px !important;
+    /* Prevent shrink on keyboard push */
+    flex-shrink: 0;
+  }
+
+  /* Text area inside bar */
+  #chat-input {
+    /* CRITICAL: prevent iOS auto-zoom (must be ≥ 16px) */
+    font-size: 16px !important;
+    line-height: 1.45 !important;
+    /* Max 5 lines before scrolling */
+    max-height: 120px !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 !important;
+  }
+
+  /* Composer buttons */
+  #attach-btn, #mic-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    flex-shrink: 0;
+  }
+
+  /* Send / stop buttons */
+  #send-btn, #stop-btn {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    flex-shrink: 0;
+  }
+
+  /* Char counter / disclaimer row */
+  .composer-help {
+    padding: 5px 6px 0 !important;
+    font-size: 10px !important;
+    gap: 4px;
+  }
+  /* Hide char counter on small screens to save vertical space */
+  #char-counter {
+    display: none !important;
+  }
+
+  /* Attachment preview chips */
+  #attachment-preview-container {
+    padding: 6px 2px 0 !important;
+    gap: 6px !important;
+  }
+
+  .attachment-chip {
+    width: 52px !important;
+    height: 52px !important;
+    border-radius: 10px !important;
+  }
+}
+
+/* ── 11. Scroll-to-bottom button ── */
+@media (max-width: 767px) {
+  #scroll-to-bottom-btn {
+    right: 14px !important;
+    bottom: max(110px, calc(100px + var(--mobile-safe-bottom))) !important;
+    width: 38px !important;
+    height: 38px !important;
+  }
+}
+
+/* ── 12. Modals — bottom-sheet treatment ── */
+@media (max-width: 767px) {
+  /* All modals slide up from bottom */
+  .chat-modal {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  .chat-modal-panel {
+    width: 100% !important;
+    max-height: 90dvh !important;
+    border-radius: 24px 24px 0 0 !important;
+    border-bottom: 0 !important;
+    /* Account for home indicator */
+    padding-bottom: max(16px, var(--mobile-safe-bottom)) !important;
+  }
+
+  /* Modal inner scroll */
+  .chat-modal-panel .modal-body,
+  .chat-history-list {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain;
+  }
+
+  /* Modal header */
+  .modal-header {
+    padding: 16px 18px 12px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .modal-title {
+    font-size: 17px !important;
+  }
+
+  /* Drag handle hint on bottom sheets */
+  .chat-modal-panel::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.15);
+    margin: 10px auto 4px;
+    flex-shrink: 0;
+  }
+
+  /* History modal: larger search bar */
+  .history-search-input {
+    font-size: 16px !important; /* prevent iOS zoom */
+    min-height: 44px !important;
+    border-radius: 12px !important;
+  }
+
+  /* History items: bigger tap targets */
+  .history-item {
+    min-height: 56px !important;
+    padding: 10px 14px !important;
+  }
+
+  .history-modal-item-title {
+    font-size: 13.5px !important;
+    font-weight: 500;
+  }
+
+  .history-modal-item-date {
+    font-size: 11px !important;
+  }
+
+  .history-modal-item-delete {
+    min-width: 40px !important;
+    min-height: 40px !important;
+    opacity: 1 !important;
+  }
+
+  /* Confirm dialog: stays centred, not bottom sheet */
+  #delete-history-modal,
+  #delete-chat-modal {
+    align-items: center !important;
+    padding: 16px !important;
+  }
+
+  #delete-history-modal .chat-modal-panel,
+  #delete-chat-modal .chat-modal-panel {
+    border-radius: 20px !important;
+    max-width: 340px !important;
+    padding-bottom: 18px !important;
+    margin: auto !important;
+    width: 100% !important;
+  }
+
+  /* Disable the drag handle on confirm dialogs */
+  #delete-history-modal .chat-modal-panel::before,
+  #delete-chat-modal .chat-modal-panel::before {
+    display: none !important;
+  }
+}
+
+/* ── 13. Image lightbox ── */
+@media (max-width: 767px) {
+  .lightbox-image {
+    max-width: 95vw !important;
+    max-height: 75dvh !important;
+    border-radius: 12px !important;
+  }
+
+  .lightbox-actions {
+    gap: 8px !important;
+    padding: 12px 0 0 !important;
+  }
+}
+
+/* ── 14. Touch press feedback ── */
+@media (hover: none) {
+  /* All buttons: subtle scale on press */
+  button:not(#send-btn):not(#stop-btn):active {
+    transform: scale(0.94) !important;
+    opacity: 0.85 !important;
+    transition: transform 0.08s ease, opacity 0.08s ease !important;
+  }
+
+  /* Send button: bigger press scale */
+  #send-btn:active {
+    transform: scale(0.88) !important;
+    transition: transform 0.08s ease !important;
+  }
+
+  /* Suggestion cards: visible feedback */
+  .category-chip.suggestion-card:active {
+    transform: scale(0.96) !important;
+    box-shadow: none !important;
+    transition: transform 0.1s ease !important;
+  }
+
+  /* Sidebar items */
+  .sidebar-action:active,
+  .sidebar-recent-item:active {
+    background: rgba(255,255,255,0.08) !important;
+  }
+
+  /* Source chips */
+  .search-source-chip:active {
+    background: rgba(124, 107, 255, 0.18) !important;
+    transform: scale(0.97) !important;
+  }
+
+  /* Remove hover underline on links (touch has no hover) */
+  .ai-bubble a:hover {
+    background-size: 0% 1px !important;
+  }
+}
+
+/* ── 15. Landscape mobile ── */
+@media (max-width: 767px) and (orientation: landscape) {
+  /* Tighten the composer height */
+  .chat-composer-area {
+    padding-top: 8px !important;
+  }
+
+  #text-input-bar {
+    min-height: 46px !important;
+  }
+
+  /* Hide the welcome orb animation in landscape to save space */
+  #aura-greeting.welcome-question {
+    font-size: clamp(24px, 6vh, 36px) !important;
+  }
+
+  #empty-state {
+    padding-top: 12px !important;
+    padding-bottom: 16px !important;
+  }
+
+  /* Two column suggestion grid in landscape */
+  .suggestion-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* Horizontal safe areas (notch phones in landscape) */
+  .chat-composer-area {
+    padding-left: max(14px, var(--mobile-safe-left)) !important;
+    padding-right: max(14px, var(--mobile-safe-right)) !important;
+  }
+}
+
+/* ── 16. iOS PWA / standalone mode ── */
+@media (display-mode: standalone) {
+  .chat-header {
+    /* Standalone: no status bar offset needed */
+    top: 0 !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    height: calc(var(--mobile-header-h, 56px) + env(safe-area-inset-top, 0px)) !important;
+  }
+
+  .chat-composer-area {
+    padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* ── 17. Notch / Dynamic Island support ── */
+@supports (padding: env(safe-area-inset-top)) {
+  @media (max-width: 767px) {
+    .chat-header {
+      /* Extra top padding for Dynamic Island / notch */
+      padding-top: max(0px, env(safe-area-inset-top)) !important;
+    }
+  }
+}
+
+/* ── 18. Performance: use GPU compositing on animating elements ── */
+@media (max-width: 767px) {
+  #drawer,
+  .chat-modal-panel,
+  .typing-indicator-skeleton,
+  .message-row {
+    will-change: transform;
+    transform: translateZ(0); /* promote to own layer */
+  }
+}
+
+/* ── 19. Font rendering for mobile ── */
+@media (max-width: 767px) {
+  body.chat-page {
+    -webkit-font-smoothing: subpixel-antialiased;
+  }
+
+  /* Slightly tighter letter-spacing on small text */
+  .ai-bubble,
+  .user-bubble {
+    letter-spacing: -0.008em;
+  }
+}
+
+/* ── 20. Model dropdown position ── */
+@media (max-width: 767px) {
+  #model-dropdown {
+    /* Open upward above the composer */
+    bottom: calc(100% + 8px) !important;
+    top: auto !important;
+    left: 0 !important;
+    right: auto !important;
+    min-width: 220px !important;
+    max-width: calc(100vw - 24px) !important;
+    border-radius: 16px !important;
+  }
+}
+
+/* ── 21. Creator God-Mode Easter Egg (Aarav) ── */
+.creator-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.18), rgba(124, 92, 255, 0.22));
+  border: 1px solid rgba(255, 215, 0, 0.5);
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.25);
+  color: #ffd700;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  animation: pulseCreatorGlow 3s ease-in-out infinite;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+.creator-badge:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 24px rgba(255, 215, 0, 0.5);
+}
+@keyframes pulseCreatorGlow {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.25), inset 0 0 6px rgba(255, 215, 0, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(255, 215, 0, 0.55), inset 0 0 12px rgba(255, 215, 0, 0.3);
+  }
+}
+
+body.creator-mode-active .chat-header {
+  border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+  box-shadow: 0 4px 25px -5px rgba(255, 215, 0, 0.18);
+}
+
+body.creator-mode-active .composer-wrap {
+  border-color: rgba(255, 215, 0, 0.35) !important;
+  box-shadow: 0 0 28px rgba(255, 215, 0, 0.15) !important;
+}
+
+body.creator-mode-active #user-avatar {
+  border: 1.5px solid #ffd700 !important;
+  box-shadow: 0 0 14px rgba(255, 215, 0, 0.45) !important;
+  position: relative;
+}
+
+body.creator-mode-active #user-avatar::after {
+  content: "👑";
+  position: absolute;
+  top: -9px;
+  right: -7px;
+  font-size: 13px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+  pointer-events: none;
+}
+
+.creator-card-callout {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.08), rgba(124, 92, 255, 0.12));
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin: 8px 0;
+  box-shadow: 0 8px 32px rgba(255, 215, 0, 0.1);
+}
+

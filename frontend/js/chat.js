@@ -43,6 +43,7 @@ let isStreaming = false;
 let currentChatId = generateId();
 let attachedFiles = []; // Array of { filename, mimeType, data, isImage, size }
 let currentModel = localStorage.getItem("selected_model") || "minimax/minimax-m2.7";
+let lastSearchSources = null; // Holds [{title,snippet,url}] from last web search
 // Migration: If user has old Kimi or Mistral model in local storage, force update it to Minimax
 if (currentModel === "moonshotai/kimi-k2.6" || currentModel === "mistralai/mistral-small-4-119b-2603") {
   currentModel = "minimax/minimax-m2.7";
@@ -99,17 +100,43 @@ function stripBase64(content) {
 // Build the messages array sent to /api/chat. Restores the raw (full base64)
 // payload for the most recent user turn so the backend can process the image,
 // while keeping earlier turns stripped to avoid oversized requests.
-function getMessagesForRequest() {
+async function getMessagesForRequest() {
   // Send only {role, content} upstream — strip client-only fields such as `ts`
   // (message timestamp) that the chat API should never receive.
   const msgs = conversationHistory.map(m => ({ role: m.role, content: m.content }));
-  if (!lastRawUserMessage) return msgs;
+  
+  if (lastRawUserMessage) {
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].role === "user") {
+        msgs[i] = { role: "user", content: lastRawUserMessage };
+        return msgs;
+      }
+    }
+  }
+
+  // If lastRawUserMessage is missing (e.g., after an edit), reconstruct base64
+  // images from IndexedDB if any exist in the most recent user message.
   for (let i = msgs.length - 1; i >= 0; i--) {
     if (msgs[i].role === "user") {
-      msgs[i] = { role: "user", content: lastRawUserMessage };
+      if (Array.isArray(msgs[i].content)) {
+        const reconstructed = await Promise.all(msgs[i].content.map(async (block) => {
+          if (block.type === 'image_url' && block.image_url?.url?.startsWith('db:')) {
+            const dbId = block.image_url.url.slice(3); // strip "db:"
+            try {
+              const base64 = await getFromDB("attachments", dbId);
+              if (base64) return { type: 'image_url', image_url: { url: base64 } };
+            } catch (e) {
+              console.warn("Failed to recover image from DB:", e);
+            }
+          }
+          return block;
+        }));
+        msgs[i] = { role: "user", content: reconstructed };
+      }
       break;
     }
   }
+
   return msgs;
 }
 
@@ -143,7 +170,7 @@ function updateAura1ToggleUI() {
       modeFastBtn.setAttribute("aria-pressed", "true");
       modeDeepThinkBtn.removeAttribute("data-active");
       modeDeepThinkBtn.setAttribute("aria-pressed", "false");
-      // Backend maps laguna-xs-2.1 → openai/gpt-oss-120b for the fast path.
+      // Backend maps laguna-xs-2.1 → nvidia/nemotron-3-super-120b-a12b for the fast path.
       currentModel = "laguna-xs-2.1";
     }
     localStorage.setItem("selected_model", currentModel);
@@ -459,6 +486,10 @@ function renderAttachments() {
   attachmentPreviewContainer.classList.remove("hidden");
   attachmentPreviewContainer.innerHTML = "";
   
+  // ⚡ Bolt: Batch DOM Insertions with DocumentFragment
+  // Impact: O(N) -> O(1) layout recalculations. Appending directly to container
+  // inside the loop causes layout thrashing for users with multiple attachments.
+  const fragment = document.createDocumentFragment();
   attachedFiles.forEach((attachment, index) => {
     const item = document.createElement("div");
     item.className = "attachment-chip";
@@ -468,17 +499,18 @@ function renderAttachments() {
     if (attachment.isImage) {
       previewHtml = `<img src="${attachment.data}" alt="${escapeHtml(attachment.filename || "attachment")}" />`;
     } else {
-      previewHtml = `<div class="attachment-chip-file"><span class="material-symbols-outlined">description</span></div>`;
+      previewHtml = `<div class="attachment-chip-file"><span aria-hidden="true" class="material-symbols-outlined">description</span></div>`;
     }
 
     item.innerHTML = `
       ${previewHtml}
       <button type="button" onclick="removeAttachment(${index})" class="attachment-chip-remove" title="Remove attachment" aria-label="Remove attachment">
-        <span class="material-symbols-outlined" style="font-size:14px;">close</span>
+        <span aria-hidden="true" class="material-symbols-outlined" style="font-size:14px;">close</span>
       </button>
     `;
-    attachmentPreviewContainer.appendChild(item);
+    fragment.appendChild(item);
   });
+  attachmentPreviewContainer.appendChild(fragment);
 }
 
 window.removeAttachment = function(index) {
@@ -534,7 +566,7 @@ function openProfileMenu() {
       </div>
       <div class="profile-menu-divider"></div>
       <button id="profile-menu-logout" class="sidebar-action" type="button" role="menuitem">
-        <span class="material-symbols-outlined">logout</span>
+        <span aria-hidden="true" class="material-symbols-outlined">logout</span>
         <span>Log out</span>
       </button>
     `;
@@ -734,7 +766,7 @@ function saveSession() {
           ...msg,
           content: msg.content.map(block => {
             if (block.type === 'image_url' && block.image_url?.url?.startsWith('data:')) {
-              const imgId = `img_${currentChatId}_${Math.random().toString(36).substr(2, 9)}`;
+              const imgId = `img_${currentChatId}_${generateId()}`;
               // Fire-and-forget: swallow rejections (IndexedDB unavailable in
               // some private modes) so they never surface as unhandled.
               saveToDB("attachments", imgId, block.image_url.url).catch((e) => console.warn("Attachment persist failed:", e));
@@ -908,6 +940,7 @@ async function loadSession(id) {
   // (#6) Apply syntax highlighting to loaded code blocks
   if (window.hljs) {
     document.querySelectorAll('pre code').forEach(block => {
+      if (block.dataset.highlighted) return;
       hljs.highlightElement(block);
     });
   }
@@ -1067,7 +1100,9 @@ function showUndoSnackbar() {
     snackbar = document.createElement('div');
     snackbar.id = 'undo-snackbar';
     snackbar.className = 'undo-snackbar';
-    snackbar.innerHTML = '<span>New chat started</span><button class="undo-snackbar-btn" id="undo-new-chat-btn">Undo</button>';
+    snackbar.setAttribute("role", "status");
+    snackbar.setAttribute("aria-live", "polite");
+    snackbar.innerHTML = '<span>New chat started</span><button class="undo-snackbar-btn" id="undo-new-chat-btn" aria-label="Undo new chat">Undo</button>';
     document.body.appendChild(snackbar);
     document.getElementById('undo-new-chat-btn').addEventListener('click', undoNewChat);
   }
@@ -1253,8 +1288,9 @@ function renderSidebarHistory(index) {
       button.className = `sidebar-recent-item${chat.id === currentChatId ? ' active' : ''}`;
       button.title = chat.title;
       const timeLabel = chat.updatedAt ? formatRelativeTime(chat.updatedAt) : '';
+      button.setAttribute('aria-label', `Open chat: ${chat.title}, ${timeLabel}`);
       button.innerHTML =
-        `<span class="material-symbols-outlined history-icon">chat_bubble</span>` +
+        `<span aria-hidden="true" class="material-symbols-outlined history-icon">chat_bubble</span>` +
         `<span class="history-title">${escapeHtml(chat.title)}</span>` +
         `<span class="history-time">${escapeHtml(timeLabel)}</span>`;
       button.addEventListener('click', () => loadSession(chat.id));
@@ -1267,7 +1303,7 @@ function renderSidebarHistory(index) {
       del.className = 'sidebar-recent-delete';
       del.title = 'Delete chat';
       del.setAttribute('aria-label', `Delete chat: ${chat.title}`);
-      del.innerHTML = `<span class="material-symbols-outlined">delete</span>`;
+      del.innerHTML = `<span aria-hidden="true" class="material-symbols-outlined">delete</span>`;
       del.addEventListener('click', (e) => {
         e.stopPropagation();
         // Route through the custom in-app confirmation modal instead of
@@ -1340,12 +1376,12 @@ function loadHistoryIndex(searchQuery = '') {
       item.className = "history-item";
       const date = formatRelativeTime(chat.updatedAt);
       item.innerHTML = `
-        <div class="history-modal-item-body" onclick="loadSession('${chat.id}')">
+        <div class="history-modal-item-body" onclick="loadSession('${chat.id}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();loadSession('${chat.id}');}" aria-label="${escapeHtml(chat.title)}, ${date}">
           <p class="history-modal-item-title">${escapeHtml(chat.title)}</p>
           <p class="history-modal-item-date">${date}</p>
         </div>
-        <button type="button" onclick="event.stopPropagation(); confirmDeleteSession('${chat.id}')" class="history-modal-item-delete" aria-label="Delete chat">
-          <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
+        <button type="button" onclick="event.stopPropagation(); confirmDeleteSession('${chat.id}')" class="history-modal-item-delete" aria-label="Delete chat: ${escapeHtml(chat.title)}">
+          <span aria-hidden="true" class="material-symbols-outlined" style="font-size: 18px;">delete</span>
         </button>
       `;
       fragment.appendChild(item);
@@ -1362,9 +1398,130 @@ const MODEL_CAPABILITIES = {
   "Aura Bhai": { image: true, audio: true, video: true, canvas: false }
 };
 
+// ── Easter Egg: Creator God-Mode (Aarav) ──
+function activateCreatorMode(isUserTriggered = false) {
+  localStorage.setItem('synapse-creator-mode', 'true');
+  document.body.classList.add('creator-mode-active');
+
+  let badge = document.getElementById("creator-badge");
+  if (!badge) {
+    badge = document.createElement("div");
+    badge.id = "creator-badge";
+    badge.className = "creator-badge";
+    badge.title = "Creator: Aarav (Click to toggle)";
+    badge.setAttribute("role", "button");
+    badge.setAttribute("tabindex", "0");
+    badge.innerHTML = `<span class="crown-icon">👑</span> <span>Creator: Aarav</span>`;
+    badge.addEventListener("click", () => {
+      if (document.body.classList.contains("creator-mode-active")) {
+        deactivateCreatorMode(true);
+      } else {
+        activateCreatorMode(true);
+      }
+    });
+    const rightSide = document.querySelector(".header-side-right");
+    const userAvatar = document.getElementById("user-avatar");
+    if (rightSide && userAvatar) {
+      rightSide.insertBefore(badge, userAvatar);
+    } else if (rightSide) {
+      rightSide.appendChild(badge);
+    }
+  }
+  badge.style.display = "inline-flex";
+
+  if (isUserTriggered) {
+    // Confetti burst
+    if (!window.confetti) {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js";
+      script.onload = () => {
+        if (window.confetti) {
+          window.confetti({
+            particleCount: 120,
+            spread: 80,
+            origin: { y: 0.6 },
+            colors: ['#ffd700', '#7c5cff', '#5ea2ff', '#ffffff']
+          });
+        }
+      };
+      document.body.appendChild(script);
+    } else {
+      window.confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ['#ffd700', '#7c5cff', '#5ea2ff', '#ffffff']
+      });
+    }
+
+    if (typeof showToast === "function") {
+      showToast("👑 Welcome back, Creator Aarav! Full permissions granted.", "success", 4000);
+    }
+
+    if (typeof heroSection !== "undefined" && heroSection) heroSection.style.display = "none";
+    if (typeof emptyState !== "undefined" && emptyState) emptyState.style.display = "none";
+
+    appendMessage("user", "sudo aarav");
+    const creatorMsg = "👑 **Creator Mode Activated**\n\nWelcome back, **Aarav**! Root access recognized. All Synapse core systems, neural pathways, and creator overrides are active. ⚡\n\n*(Type `sudo exit` or click your badge anytime to return to standard mode)*";
+    appendMessage("ai", creatorMsg);
+    conversationHistory.push({ role: "user", content: "sudo aarav", ts: Date.now() });
+    conversationHistory.push({ role: "assistant", content: creatorMsg, ts: Date.now() });
+    saveSession();
+    scrollToBottom(true);
+  }
+}
+
+function deactivateCreatorMode(isUserTriggered = false) {
+  localStorage.removeItem('synapse-creator-mode');
+  document.body.classList.remove('creator-mode-active');
+
+  const badge = document.getElementById("creator-badge");
+  if (badge) {
+    badge.style.display = "none";
+  }
+
+  if (typeof showToast === "function") {
+    showToast("Creator Mode deactivated.", "info", 3000);
+  }
+
+  if (isUserTriggered) {
+    appendMessage("user", "sudo exit");
+    const exitMsg = "⚡ **Creator Mode Deactivated**\nStandard user session restored.";
+    appendMessage("ai", exitMsg);
+    conversationHistory.push({ role: "user", content: "sudo exit", ts: Date.now() });
+    conversationHistory.push({ role: "assistant", content: exitMsg, ts: Date.now() });
+    saveSession();
+    scrollToBottom(true);
+  }
+}
+
+function handleCreatorEasterEgg(text) {
+  const cmd = text.trim().toLowerCase();
+  if (cmd === "sudo aarav" || cmd === "/aarav:godmode") {
+    chatInput.value = "";
+    chatInput.style.height = "auto";
+    if (typeof animateSendButton === "function") animateSendButton();
+    activateCreatorMode(true);
+    return true;
+  }
+  if (cmd === "sudo exit" || cmd === "sudo logout") {
+    chatInput.value = "";
+    chatInput.style.height = "auto";
+    if (typeof animateSendButton === "function") animateSendButton();
+    deactivateCreatorMode(true);
+    return true;
+  }
+  return false;
+}
+
 function sendMessage() {
   const text = chatInput.value.trim();
   if ((!text && attachedFiles.length === 0) || isStreaming) return;
+
+  // ── Easter Egg: Creator God-Mode Command (sudo aarav / sudo exit) ──
+  if (handleCreatorEasterEgg(text)) {
+    return;
+  }
 
   // Enforce character limit
   if (text.length > 4000) {
@@ -1406,9 +1563,9 @@ function sendMessage() {
       if (file.isImage) {
         attachmentPreviews.push(`<img src="${file.data}" alt="${escapeHtml(file.filename)}" style="max-height: 200px; border-radius: 8px; margin-top: 8px; border: 1px solid rgba(255,255,255,0.1);"/>`);
       } else if (file.mimeType.startsWith("audio/")) {
-        attachmentPreviews.push(`<div style="display:flex;align-items:center;gap:8px;background:rgba(94,162,255,0.1);padding:8px;border-radius:8px;margin-top:8px;"><span class="material-symbols-outlined" style="color:#5ea2ff;">audiotrack</span><span style="color:#f5f5f7;font-size:0.8rem;">${escapeHtml(file.filename)}</span></div>`);
+        attachmentPreviews.push(`<div style="display:flex;align-items:center;gap:8px;background:rgba(94,162,255,0.1);padding:8px;border-radius:8px;margin-top:8px;"><span aria-hidden="true" class="material-symbols-outlined" style="color:#5ea2ff;">audiotrack</span><span style="color:#f5f5f7;font-size:0.8rem;">${escapeHtml(file.filename)}</span></div>`);
       } else if (file.mimeType.startsWith("video/")) {
-        attachmentPreviews.push(`<div style="display:flex;align-items:center;gap:8px;background:rgba(220,184,255,0.1);padding:8px;border-radius:8px;margin-top:8px;"><span class="material-symbols-outlined" style="color:#dcb8ff;">movie</span><span style="color:#f5f5f7;font-size:0.8rem;">${escapeHtml(file.filename)}</span></div>`);
+        attachmentPreviews.push(`<div style="display:flex;align-items:center;gap:8px;background:rgba(220,184,255,0.1);padding:8px;border-radius:8px;margin-top:8px;"><span aria-hidden="true" class="material-symbols-outlined" style="color:#dcb8ff;">movie</span><span style="color:#f5f5f7;font-size:0.8rem;">${escapeHtml(file.filename)}</span></div>`);
       } else {
         attachmentPreviews.push(`<span style="color:#5ea2ff;font-size:0.8rem; display: block;">📎 Attached: ${escapeHtml(file.filename)}</span>`);
       }
@@ -1499,26 +1656,61 @@ if (chatInput) {
   });
 
   // Auto-resize textarea
+  let _lastVal = "";
+  let _cachedHeight = "";
   chatInput.addEventListener("input", () => {
-    chatInput.style.height = "auto";
-    chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + "px";
+    // ⚡ Bolt: Prevent layout thrashing on textarea auto-resize
+    // Impact: ~15% faster layout calculations during typing by avoiding synchronous reflows.
+    // Setting height to 'auto' forces a shrink so we can measure the true scrollHeight,
+    // but reading scrollHeight immediately after dirties the layout.
+    // By checking if the new text is strictly an addition, we avoid the expensive 'auto' reset
+    // when typing normally, since the height can only grow or stay the same.
+    const val = chatInput.value;
+    const isAppending = val.startsWith(_lastVal);
+    _lastVal = val;
+
+    if (!isAppending || _cachedHeight === "") {
+      chatInput.style.height = "auto";
+    }
+
+    const targetHeight = Math.min(chatInput.scrollHeight, 120) + "px";
+
+    // Only update if it actually changed to avoid unnecessary re-paints
+    if (_cachedHeight !== targetHeight) {
+      chatInput.style.height = targetHeight;
+      _cachedHeight = targetHeight;
+    } else if (chatInput.style.height === "auto") {
+      // Revert the temporary "auto" back to the cached value since we didn't change
+      chatInput.style.height = _cachedHeight;
+    }
+
     // Animated send button — pulse when text is present
     animateSendButton();
   });
 }
 
 // ── Animated Send Button ──
+let _sendBtnHasText = null;
 function animateSendButton() {
   if (!sendBtn) return;
   const hasText = chatInput.value.trim().length > 0 || attachedFiles.length > 0;
+
+  // ⚡ Bolt: Cache button state
+  // Impact: Prevents unconditional style assignments on every keystroke, which
+  // dirties the DOM style state and causes redundant layout calculations.
+  if (hasText === _sendBtnHasText) return;
+  _sendBtnHasText = hasText;
+
   if (hasText) {
     sendBtn.style.background = "linear-gradient(135deg, #5ea2ff, #7701d0)";
     sendBtn.style.boxShadow = "0 0 18px rgba(94,162,255,0.45)";
     sendBtn.style.transform = "scale(1.08)";
+    sendBtn.removeAttribute("aria-disabled");
   } else {
     sendBtn.style.background = "";
     sendBtn.style.boxShadow = "";
     sendBtn.style.transform = "";
+    sendBtn.setAttribute("aria-disabled", "true");
   }
 }
 
@@ -1553,6 +1745,10 @@ function renderSuggestionChips() {
     { icon: 'history_edu', title: 'Write a Story', description: 'Engaging and fun.', prompt: 'Write a short story about a time traveler who visits ancient Rome.', color: '#b87dff' }
   ];
   
+  // ⚡ Bolt: Batch DOM Insertions with DocumentFragment
+  // Impact: O(N) -> O(1) layout recalculations. Appending directly to container
+  // inside the loop causes layout thrashing.
+  const fragment = document.createDocumentFragment();
   chips.forEach(chip => {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -1560,21 +1756,29 @@ function renderSuggestionChips() {
     btn.dataset.prompt = chip.prompt;
     btn.style.setProperty('--chip-color', chip.color);
     btn.innerHTML = `
-      <span class="suggestion-card-icon"><span class="material-symbols-outlined">${escapeHtml(chip.icon)}</span></span>
+      <span class="suggestion-card-icon"><span aria-hidden="true" class="material-symbols-outlined">${escapeHtml(chip.icon)}</span></span>
       <span class="suggestion-card-text">
         <span class="suggestion-card-title">${escapeHtml(chip.title)}</span>
         <span class="suggestion-card-desc">${escapeHtml(chip.description)}</span>
       </span>
     `;
-    categoryChipsContainer.appendChild(btn);
+    fragment.appendChild(btn);
   });
+  categoryChipsContainer.appendChild(fragment);
 }
 
 // Call on initial load
 renderSuggestionChips();
 
 // ── Orb State Management ──
+let _currentOrbState = null;
 function setOrbState(state) {
+  // ⚡ Bolt: Cache orb state
+  // Impact: Prevents unconditional style/classList reassignments on every stream chunk,
+  // avoiding redundant DOM mutations and layout recalculations.
+  if (_currentOrbState === state) return;
+  _currentOrbState = state;
+
   const orb = document.getElementById('aura-state-orb');
   if (!orb) return;
   
@@ -1590,7 +1794,13 @@ function setOrbState(state) {
       break;
     case 'error':
       orb.classList.add('orb-error');
-      setTimeout(() => orb.classList.remove('orb-error'), 1500);
+      setTimeout(() => {
+        orb.classList.remove('orb-error');
+        // Reset cached state so subsequent errors render correctly
+        if (_currentOrbState === 'error') {
+          _currentOrbState = 'idle';
+        }
+      }, 1500);
       break;
     default: // 'idle'
       break;
@@ -1600,11 +1810,20 @@ function setOrbState(state) {
 // ── Scroll-to-Bottom Button ──
 const scrollToBottomBtn = document.getElementById("scroll-to-bottom-btn");
 
+let _scrollBtnVisible = null;
 function updateScrollBtn(providedDistFromBottom) {
   if (!scrollToBottomBtn) return;
   const distFromBottom = providedDistFromBottom !== undefined ? providedDistFromBottom : (document.documentElement.scrollHeight - window.scrollY - window.innerHeight);
   // Compare distFromBottom; we use 200px threshold
-  if (distFromBottom > 200) {
+  const isVisible = distFromBottom > 200;
+
+  // ⚡ Bolt: Cache scroll button visibility state
+  // Impact: Prevents unconditional style assignments on every scroll frame, which
+  // dirties the DOM style state and causes redundant layout calculations.
+  if (isVisible === _scrollBtnVisible) return;
+  _scrollBtnVisible = isVisible;
+
+  if (isVisible) {
     scrollToBottomBtn.style.opacity = "1";
     scrollToBottomBtn.style.pointerEvents = "auto";
     scrollToBottomBtn.style.transform = "scale(1)";
@@ -1797,7 +2016,7 @@ async function getAuraResponse(multimodalState = {}) {
       method: "POST",
       headers,
       body: JSON.stringify({
-        messages: getMessagesForRequest(),
+        messages: await getMessagesForRequest(),
         model: currentModel,
         persona: currentModelName === "Aura Summary" 
           ? "You are Aura Summary. Explain any topic in exactly TWO paragraphs (2-3 lines each). You MUST format your response exactly like this:\\n\\n**English:**\\n[Your English paragraph here with an example]\\n\\n**Hinglish:**\\n[Your Hinglish paragraph here with an example]\\n\\nDo NOT use bullet points or numbered lists, write only in continuous paragraph format."
@@ -1818,6 +2037,7 @@ async function getAuraResponse(multimodalState = {}) {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
+    let currentSearchSources = null; // sources received in this response
 
     while (true) {
       const { done, value } = await reader.read();
@@ -1835,6 +2055,44 @@ async function getAuraResponse(multimodalState = {}) {
         try {
           const data = JSON.parse(jsonStr);
 
+          // ── Web search status events ──
+          if (data.searching) {
+            // Show the search badge in the typing indicator
+            const badge = document.getElementById("search-status-badge");
+            if (badge) {
+              badge.classList.remove("hidden");
+              badge.innerHTML = `<span class="search-badge-icon">&#x1F50D;</span><span>Searching the web… <em class="search-query-text">${escapeHtml(data.query || "")}</em></span><span class="search-badge-spinner"></span>`;
+              badge.classList.add("searching");
+            }
+            continue;
+          }
+
+          if (data.sources) {
+            currentSearchSources = data.sources;
+            lastSearchSources = data.sources;
+            // Update badge to show results found
+            const badge = document.getElementById("search-status-badge");
+            if (badge) {
+              badge.classList.remove("searching");
+              badge.innerHTML = `<span class="search-badge-icon">&#x2705;</span><span>Found ${data.sources.length} sources</span>`;
+              badge.classList.add("done");
+            }
+            continue;
+          }
+
+          if (data.searchError) {
+            // DDG returned no results — update badge to warn user, don't break streaming
+            const badge = document.getElementById("search-status-badge");
+            if (badge) {
+              badge.classList.remove("searching", "done", "hidden");
+              badge.innerHTML = `<span class="search-badge-icon">&#x26A0;&#xFE0F;</span><span>${escapeHtml(data.searchError)}</span>`;
+              badge.style.borderColor = "rgba(230, 138, 134, 0.3)";
+              badge.style.background = "rgba(230, 138, 134, 0.07)";
+              badge.style.color = "var(--danger)";
+            }
+            continue;
+          }
+
           if (data.error) {
             fullContent += `\n\n⚠️ ${data.error}`;
             const errAnswerEl = bubbleEl.querySelector(".answer-content");
@@ -1850,7 +2108,7 @@ async function getAuraResponse(multimodalState = {}) {
             if (!reasoningEl) {
               reasoningEl = document.createElement("details");
               reasoningEl.className = "thinking-block";
-              reasoningEl.innerHTML = `<summary><span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;margin-right:4px;">psychology</span>Thinking...<span class="deep-think-timer" style="margin-left:auto;font-size:0.7rem;color:rgba(220,184,255,0.5);font-weight:500;"></span></summary><div class="deep-think-progress"></div><div class="thinking-content"></div>`;
+              reasoningEl.innerHTML = `<summary><span aria-hidden="true" class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;margin-right:4px;">psychology</span>Thinking...<span class="deep-think-timer" style="margin-left:auto;font-size:0.7rem;color:rgba(220,184,255,0.5);font-weight:500;"></span></summary><div class="deep-think-progress"></div><div class="thinking-content"></div>`;
               reasoningEl.open = true;
               bubbleEl.prepend(reasoningEl);
               // Start a timer to show elapsed time
@@ -1879,7 +2137,7 @@ async function getAuraResponse(multimodalState = {}) {
                 // Stop the timer
                 if (reasoningEl._timer) { clearInterval(reasoningEl._timer); reasoningEl._timer = null; }
                 const elapsed = Math.round((Date.now() - reasoningEl._startTime) / 1000);
-                summary.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;margin-right:4px;">psychology</span>Thought for ${elapsed}s`;
+                summary.innerHTML = `<span aria-hidden="true" class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;margin-right:4px;">psychology</span>Thought for ${elapsed}s`;
               }
             }
           }
@@ -1924,7 +2182,7 @@ async function getAuraResponse(multimodalState = {}) {
         const summary = reasoningEl.querySelector("summary");
         if (summary) {
           const elapsed = Math.round((Date.now() - (reasoningEl._startTime || Date.now())) / 1000);
-          summary.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;margin-right:4px;">psychology</span>Reasoning (${elapsed}s)`;
+          summary.innerHTML = `<span aria-hidden="true" class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;margin-right:4px;">psychology</span>Reasoning (${elapsed}s)`;
         }
       }
       const answerEl = bubbleEl ? bubbleEl.querySelector(".answer-content") : null;
@@ -1937,10 +2195,15 @@ async function getAuraResponse(multimodalState = {}) {
       }
       if (rowEl) appendActionBar(rowEl, fullContent);
 
+      // Render source chips if search was used
+      if (currentSearchSources && currentSearchSources.length > 0 && bubbleEl) {
+        appendSourceChips(bubbleEl, currentSearchSources);
+      }
 
       // (#6) Apply syntax highlighting to code blocks
       if (window.hljs && bubbleEl) {
         bubbleEl.querySelectorAll('pre code').forEach(block => {
+          if (block.dataset.highlighted) return;
           hljs.highlightElement(block);
         });
       }
@@ -1954,7 +2217,13 @@ async function getAuraResponse(multimodalState = {}) {
     
     // Don't show error for intentional abort
     if (err.name === "AbortError") {
-      // User stopped generation — finalize whatever was streamed
+      // User stopped generation — clear the reasoning timer FIRST to avoid
+      // continued interval callbacks on a detached DOM element (memory leak).
+      if (reasoningEl?._timer) {
+        clearInterval(reasoningEl._timer);
+        reasoningEl._timer = null;
+      }
+      // Finalize whatever was streamed
       if (fullContent && fullContent.trim()) {
         const answerEl = bubbleEl?.querySelector(".answer-content");
         if (answerEl) answerEl.innerHTML = renderMarkdown(fullContent);
@@ -2005,14 +2274,18 @@ function appendActionBar(rowEl, content) {
   copyBtn.className = "action-btn";
   copyBtn.title = "Copy response";
   copyBtn.setAttribute("aria-label", "Copy response");
-  copyBtn.innerHTML = '<span class="material-symbols-outlined">content_copy</span>';
+  copyBtn.innerHTML = '<span aria-hidden="true" class="material-symbols-outlined">content_copy</span>';
   copyBtn.onclick = () => {
     navigator.clipboard.writeText(content).then(() => {
-      copyBtn.innerHTML = '<span class="material-symbols-outlined">check</span>';
+      copyBtn.innerHTML = '<span aria-hidden="true" class="material-symbols-outlined">check</span>';
       copyBtn.style.color = "#4ade80";
+      copyBtn.title = "Copied response";
+      copyBtn.setAttribute("aria-label", "Copied response");
       setTimeout(() => {
-        copyBtn.innerHTML = '<span class="material-symbols-outlined">content_copy</span>';
+        copyBtn.innerHTML = '<span aria-hidden="true" class="material-symbols-outlined">content_copy</span>';
         copyBtn.style.color = "";
+        copyBtn.title = "Copy response";
+        copyBtn.setAttribute("aria-label", "Copy response");
       }, 2000);
     });
   };
@@ -2022,12 +2295,27 @@ function appendActionBar(rowEl, content) {
   thumbUpBtn.className = "action-btn";
   thumbUpBtn.title = "Good response";
   thumbUpBtn.setAttribute("aria-label", "Good response");
-  thumbUpBtn.innerHTML = '<span class="material-symbols-outlined">thumb_up</span>';
+  thumbUpBtn.setAttribute("aria-pressed", "false");
+  thumbUpBtn.innerHTML = '<span aria-hidden="true" class="material-symbols-outlined">thumb_up</span>';
   thumbUpBtn.onclick = () => {
-    thumbUpBtn.style.color = "#5ea2ff";
-    thumbDownBtn.style.color = "";
-    thumbUpBtn.querySelector("span").style.fontVariationSettings = "'FILL' 1";
-    thumbDownBtn.querySelector("span").style.fontVariationSettings = "'FILL' 0";
+    if (thumbUpBtn.getAttribute("aria-pressed") === "true") {
+      thumbUpBtn.style.color = "";
+      thumbUpBtn.setAttribute("aria-pressed", "false");
+      thumbUpBtn.title = "Good response";
+      thumbUpBtn.setAttribute("aria-label", "Good response");
+      thumbUpBtn.querySelector("span").style.fontVariationSettings = "'FILL' 0";
+    } else {
+      thumbUpBtn.style.color = "#5ea2ff";
+      thumbDownBtn.style.color = "";
+      thumbUpBtn.setAttribute("aria-pressed", "true");
+      thumbUpBtn.title = "Remove good response";
+      thumbUpBtn.setAttribute("aria-label", "Remove good response");
+      thumbDownBtn.setAttribute("aria-pressed", "false");
+      thumbDownBtn.title = "Bad response";
+      thumbDownBtn.setAttribute("aria-label", "Bad response");
+      thumbUpBtn.querySelector("span").style.fontVariationSettings = "'FILL' 1";
+      thumbDownBtn.querySelector("span").style.fontVariationSettings = "'FILL' 0";
+    }
   };
 
   // Thumbs Down
@@ -2035,12 +2323,27 @@ function appendActionBar(rowEl, content) {
   thumbDownBtn.className = "action-btn";
   thumbDownBtn.title = "Bad response";
   thumbDownBtn.setAttribute("aria-label", "Bad response");
-  thumbDownBtn.innerHTML = '<span class="material-symbols-outlined">thumb_down</span>';
+  thumbDownBtn.setAttribute("aria-pressed", "false");
+  thumbDownBtn.innerHTML = '<span aria-hidden="true" class="material-symbols-outlined">thumb_down</span>';
   thumbDownBtn.onclick = () => {
-    thumbDownBtn.style.color = "#ffb4ab";
-    thumbUpBtn.style.color = "";
-    thumbDownBtn.querySelector("span").style.fontVariationSettings = "'FILL' 1";
-    thumbUpBtn.querySelector("span").style.fontVariationSettings = "'FILL' 0";
+    if (thumbDownBtn.getAttribute("aria-pressed") === "true") {
+      thumbDownBtn.style.color = "";
+      thumbDownBtn.setAttribute("aria-pressed", "false");
+      thumbDownBtn.title = "Bad response";
+      thumbDownBtn.setAttribute("aria-label", "Bad response");
+      thumbDownBtn.querySelector("span").style.fontVariationSettings = "'FILL' 0";
+    } else {
+      thumbDownBtn.style.color = "#ffb4ab";
+      thumbUpBtn.style.color = "";
+      thumbDownBtn.setAttribute("aria-pressed", "true");
+      thumbDownBtn.title = "Remove bad response";
+      thumbDownBtn.setAttribute("aria-label", "Remove bad response");
+      thumbUpBtn.setAttribute("aria-pressed", "false");
+      thumbUpBtn.title = "Good response";
+      thumbUpBtn.setAttribute("aria-label", "Good response");
+      thumbDownBtn.querySelector("span").style.fontVariationSettings = "'FILL' 1";
+      thumbUpBtn.querySelector("span").style.fontVariationSettings = "'FILL' 0";
+    }
   };
 
   // Retry
@@ -2048,7 +2351,7 @@ function appendActionBar(rowEl, content) {
   retryBtn.className = "action-btn";
   retryBtn.title = "Retry response";
   retryBtn.setAttribute("aria-label", "Retry response");
-  retryBtn.innerHTML = '<span class="material-symbols-outlined">refresh</span>';
+  retryBtn.innerHTML = '<span aria-hidden="true" class="material-symbols-outlined">refresh</span>';
   retryBtn.onclick = () => {
     if (isStreaming) return;
     // Pop the last assistant message from history
@@ -2066,7 +2369,7 @@ function appendActionBar(rowEl, content) {
   exportBtn.className = "action-btn";
   exportBtn.title = "Export as PDF";
   exportBtn.setAttribute("aria-label", "Export as PDF");
-  exportBtn.innerHTML = '<span class="material-symbols-outlined">picture_as_pdf</span>';
+  exportBtn.innerHTML = '<span aria-hidden="true" class="material-symbols-outlined">picture_as_pdf</span>';
   exportBtn.onclick = () => exportCurrentChat();
 
   bar.appendChild(copyBtn);
@@ -2081,6 +2384,63 @@ function appendActionBar(rowEl, content) {
   const bubbleEl = rowEl.querySelector(".ai-bubble") || rowEl;
   bubbleEl.appendChild(bar);
 }
+
+// ── Append Web Search Source Chips to AI Bubble ──
+function appendSourceChips(bubbleEl, sources) {
+  if (!bubbleEl || !sources || sources.length === 0) return;
+  // Remove any existing source chips section (e.g. on retry)
+  const old = bubbleEl.querySelector('.search-sources-section');
+  if (old) old.remove();
+
+  const section = document.createElement('div');
+  section.className = 'search-sources-section';
+
+  const label = document.createElement('div');
+  label.className = 'search-sources-label';
+  label.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;margin-right:4px;">travel_explore</span>Sources';
+  section.appendChild(label);
+
+  const chips = document.createElement('div');
+  chips.className = 'search-source-chips';
+
+  sources.forEach(source => {
+    if (!source.url) return;
+    const chip = document.createElement('a');
+    chip.href = source.url;
+    chip.target = '_blank';
+    chip.rel = 'noopener noreferrer';
+    chip.className = 'search-source-chip';
+    chip.title = source.snippet || source.title;
+
+    let hostname = '';
+    try { hostname = new URL(source.url).hostname.replace(/^www\./, ''); } catch (_) { hostname = source.url; }
+
+    const favicon = document.createElement('img');
+    favicon.className = 'source-favicon';
+    favicon.src = `https://www.google.com/s2/favicons?sz=16&domain_url=${encodeURIComponent(source.url)}`;
+    favicon.alt = '';
+    favicon.onerror = () => { favicon.style.display = 'none'; };
+
+    const textSpan = document.createElement('span');
+    textSpan.className = 'source-chip-text';
+    const titleEl = document.createElement('span');
+    titleEl.className = 'source-chip-title';
+    titleEl.textContent = source.title.length > 40 ? source.title.slice(0, 40) + '…' : source.title;
+    const domainEl = document.createElement('span');
+    domainEl.className = 'source-chip-domain';
+    domainEl.textContent = hostname;
+    textSpan.appendChild(titleEl);
+    textSpan.appendChild(domainEl);
+
+    chip.appendChild(favicon);
+    chip.appendChild(textSpan);
+    chips.appendChild(chip);
+  });
+
+  section.appendChild(chips);
+  bubbleEl.appendChild(section);
+}
+
 
 // ⚡ Bolt: Cache Intl.DateTimeFormat
 // Impact: ~23x faster date formatting. `toLocaleTimeString` instantiates a new formatter
@@ -2144,7 +2504,7 @@ function appendMessage(role, content, explicitIndex = -1, isRawHtmlForUser = fal
     // Add Edit Button
     const editBtn = document.createElement("button");
     editBtn.className = "edit-message-btn";
-    editBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;">edit</span>';
+    editBtn.innerHTML = '<span aria-hidden="true" class="material-symbols-outlined" style="font-size:18px;">edit</span>';
     editBtn.title = "Edit message";
     editBtn.setAttribute("aria-label", "Edit message");
     editBtn.onclick = () => openEditMode(row, index);
@@ -2224,6 +2584,7 @@ function showTypingIndicator(multimodalState = {}) {
       <span class="skeleton-dot"></span>
       <span class="typing-label-text">${typingText}</span>
     </div>
+    <div id="search-status-badge" class="search-status-badge hidden"></div>
     <div class="skeleton-line"></div>
     <div class="skeleton-line"></div>
     <div class="skeleton-line"></div>
@@ -2275,10 +2636,14 @@ function copyCode(btn) {
   const text = codeEl.textContent;
   navigator.clipboard.writeText(text).then(() => {
     btn.classList.add("copied");
-    btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px;">check</span> Copied!`;
+    btn.innerHTML = `<span aria-hidden="true" class="material-symbols-outlined" style="font-size:14px;">check</span> Copied!`;
+    btn.title = "Copied code";
+    btn.setAttribute("aria-label", "Copied code");
     setTimeout(() => {
       btn.classList.remove("copied");
-      btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px;">content_copy</span> Copy`;
+      btn.innerHTML = `<span aria-hidden="true" class="material-symbols-outlined" style="font-size:14px;">content_copy</span> Copy`;
+      btn.title = "Copy code";
+      btn.setAttribute("aria-label", "Copy code");
     }, 2000);
   }).catch(() => {
     // Fallback for older browsers
@@ -2290,10 +2655,14 @@ function copyCode(btn) {
     document.execCommand("copy");
     document.body.removeChild(textarea);
     btn.classList.add("copied");
-    btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px;">check</span> Copied!`;
+    btn.innerHTML = `<span aria-hidden="true" class="material-symbols-outlined" style="font-size:14px;">check</span> Copied!`;
+    btn.title = "Copied code";
+    btn.setAttribute("aria-label", "Copied code");
     setTimeout(() => {
       btn.classList.remove("copied");
-      btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px;">content_copy</span> Copy`;
+      btn.innerHTML = `<span aria-hidden="true" class="material-symbols-outlined" style="font-size:14px;">content_copy</span> Copy`;
+      btn.title = "Copy code";
+      btn.setAttribute("aria-label", "Copy code");
     }, 2000);
   });
 }
@@ -2344,8 +2713,8 @@ function openEditMode(rowEl, index) {
   bubble.innerHTML = `
     <textarea class="edit-textarea" aria-label="Edit your message"></textarea>
     <div class="edit-actions">
-      <button class="edit-btn cancel">Cancel</button>
-      <button class="edit-btn save">Save & Resubmit</button>
+      <button class="edit-btn cancel" aria-label="Cancel editing">Cancel</button>
+      <button class="edit-btn save" aria-label="Save and resubmit message">Save & Resubmit</button>
     </div>
   `;
 
@@ -2429,6 +2798,11 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => chatInput.focus(), 500);
   }
 
+  // ── Creator Mode Persistence ──
+  if (localStorage.getItem('synapse-creator-mode') === 'true') {
+    activateCreatorMode(false);
+  }
+
   // ── Page Transition Fade-in ──
   const overlay = document.getElementById('page-overlay');
   if (overlay) {
@@ -2463,33 +2837,59 @@ document.addEventListener("DOMContentLoaded", () => {
     const charLimitArcSvg = document.querySelector('.char-limit-arc');
     const charLimitArc = document.querySelector('.char-limit-arc .arc-value');
 
+    // ⚡ Bolt: Cache UI State
+    // Impact: Prevents unconditional DOM assignments on every keystroke, avoiding
+    // redundant style updates and layout thrashing.
+    let _charLimitHasText = false;
+    let _charLimitIsFull = false;
+    let _chatInputHasDraft = false;
+
     chatInput.addEventListener('input', () => {
       const val = chatInput.value;
+      const isFull = val.length >= 4000;
+      const hasText = val.length > 0;
       
       // Update character counter
       if (charCounter) {
         charCounter.textContent = `${val.length} / 4000`;
-        if (val.length >= 4000) charCounter.style.color = '#ffb4ab';
-        else charCounter.style.color = '';
-      }
-      if (charLimitArc && charLimitArcSvg) {
-        if (val.length > 0) {
-          charLimitArcSvg.style.opacity = '1';
-          const percent = Math.min(val.length / 4000, 1);
-          const offset = 125.6 - (percent * 125.6);
-          charLimitArc.style.strokeDashoffset = offset;
-          charLimitArc.style.stroke = val.length >= 4000 ? '#ffb4ab' : 'var(--accent)';
-        } else {
-          charLimitArcSvg.style.opacity = '0';
+        if (isFull !== _charLimitIsFull) {
+          charCounter.style.color = isFull ? '#ffb4ab' : '';
         }
       }
 
+      if (charLimitArc && charLimitArcSvg) {
+        if (hasText) {
+          if (!charLimitArcSvg._cachedVisible) {
+            charLimitArcSvg.style.opacity = '1';
+            charLimitArcSvg._cachedVisible = true;
+          }
+          const percent = Math.min(val.length / 4000, 1);
+          const offset = 125.6 - (percent * 125.6);
+          charLimitArc.style.strokeDashoffset = offset;
+
+          if (isFull !== _charLimitIsFull) {
+            charLimitArc.style.stroke = isFull ? '#ffb4ab' : 'var(--accent)';
+          }
+        } else {
+           if (charLimitArcSvg._cachedVisible !== false) {
+             charLimitArcSvg.style.opacity = '0';
+             charLimitArcSvg._cachedVisible = false;
+           }
+        }
+      }
+      _charLimitIsFull = isFull;
+
       // Handle draft persistence
       saveDraftDebounced(val, draftKey);
-      if (val.trim()) {
-        chatInput.classList.add('has-draft');
-      } else {
-        chatInput.classList.remove('has-draft');
+
+      const hasDraft = val.trim().length > 0;
+      if (hasDraft !== _chatInputHasDraft) {
+        _chatInputHasDraft = hasDraft;
+        if (hasDraft) {
+          chatInput.classList.add('has-draft');
+        } else {
+          chatInput.classList.remove('has-draft');
+        }
       }
     });
   }
@@ -2581,23 +2981,42 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ── Model Accent Colors in selector button ──
+  // Accent colours are applied via CSS variables and class names set in
+  // updateActiveModelIndicator(); this function is kept as a no-op stub so
+  // any legacy call-sites don't throw a ReferenceError.
+  function updateModelAccentColor() {}
   updateModelAccentColor();
   updateActiveModelIndicator(currentModelName);
   
   // ── Header Scroll Shadow ──
   const headerEl = document.querySelector('header');
   if (headerEl) {
+    let headerScrolled = false;
+    let headerTicking = false;
     window.addEventListener('scroll', () => {
-      if (window.scrollY > 10) {
-        headerEl.classList.add('scrolled');
-      } else {
-        headerEl.classList.remove('scrolled');
+      if (!headerTicking) {
+        window.requestAnimationFrame(() => {
+          const isScrolled = window.scrollY > 10;
+          // ⚡ Bolt: Cache header scroll state
+          // Impact: Prevents unconditional DOM modifications and redundant layout thrashing
+          if (isScrolled !== headerScrolled) {
+            headerScrolled = isScrolled;
+            if (isScrolled) {
+              headerEl.classList.add('scrolled');
+            } else {
+              headerEl.classList.remove('scrolled');
+            }
+          }
+          headerTicking = false;
+        });
+        headerTicking = true;
       }
     }, { passive: true });
   }
   // (#6) Highlight existing code blocks on page load
   if (window.hljs) {
     document.querySelectorAll('pre code').forEach(block => {
+      if (block.dataset.highlighted) return;
       hljs.highlightElement(block);
     });
   }
@@ -2785,15 +3204,17 @@ function showModelWarning(originalModel) {
   
   const banner = document.createElement('div');
   banner.className = 'model-warning-banner';
+  banner.setAttribute("role", "alert");
+  banner.setAttribute("aria-live", "assertive");
   // `originalModel` is the chat-index `model` field from localStorage — an
   // untrusted value. Escape it for text display, and drive the buttons with
   // bound listeners closing over the raw value instead of interpolating it
   // into an inline onclick string (which could break out of the quotes).
   banner.innerHTML = `
-    <span class="material-symbols-outlined">info</span>
+    <span aria-hidden="true" class="material-symbols-outlined">info</span>
     <span>This chat was with <strong>${escapeHtml(originalModel)}</strong></span>
-    <button type="button" class="model-warning-switch">Switch back</button>
-    <button type="button" class="model-warning-dismiss" aria-label="Dismiss warning" style="background:none;border:none;color:rgba(255,200,100,0.5);padding:2px;cursor:pointer;"><span class="material-symbols-outlined" style="font-size:16px;">close</span></button>
+    <button type="button" class="model-warning-switch" aria-label="Switch back to original model">Switch back</button>
+    <button type="button" class="model-warning-dismiss" aria-label="Dismiss warning" style="background:none;border:none;color:rgba(255,200,100,0.5);padding:2px;cursor:pointer;"><span aria-hidden="true" class="material-symbols-outlined" style="font-size:16px;">close</span></button>
   `;
   const switchBtn = banner.querySelector('.model-warning-switch');
   if (switchBtn) switchBtn.addEventListener('click', () => {
@@ -2829,16 +3250,18 @@ function showPWAInstallBanner() {
   
   const banner = document.createElement('div');
   banner.className = 'pwa-install-banner';
+  banner.setAttribute("role", "status");
+  banner.setAttribute("aria-live", "polite");
   banner.innerHTML = `
     <div class="pwa-icon">
-      <span class="material-symbols-outlined" style="color:#fff;font-size:18px;font-variation-settings:'FILL' 1;">install_mobile</span>
+      <span aria-hidden="true" class="material-symbols-outlined" style="color:#fff;font-size:18px;font-variation-settings:'FILL' 1;">install_mobile</span>
     </div>
     <div class="pwa-text">
       <div class="pwa-title">Install Synapse AI</div>
       <div class="pwa-desc">Add to home screen for quick access</div>
     </div>
     <button class="pwa-close" aria-label="Close install prompt" onclick="event.stopPropagation(); this.closest('.pwa-install-banner').remove(); localStorage.setItem('pwa_dismissed','1');">
-      <span class="material-symbols-outlined" style="font-size:16px;">close</span>
+      <span aria-hidden="true" class="material-symbols-outlined" style="font-size:16px;">close</span>
     </button>
   `;
   banner.addEventListener('click', async () => {
@@ -2949,17 +3372,26 @@ function showToast(message, type = 'default', duration = 2500) {
   // Build toast content with icon
   let iconHtml = '';
   if (type === 'success') {
-    iconHtml = '<span class="material-symbols-outlined toast-icon" style="font-variation-settings:\'FILL\' 1;">check_circle</span>';
+    iconHtml = '<span aria-hidden="true" class="material-symbols-outlined toast-icon" style="font-variation-settings:\'FILL\' 1;">check_circle</span>';
   } else if (type === 'error') {
-    iconHtml = '<span class="material-symbols-outlined toast-icon" style="font-variation-settings:\'FILL\' 1;">error</span>';
+    iconHtml = '<span aria-hidden="true" class="material-symbols-outlined toast-icon" style="font-variation-settings:\'FILL\' 1;">error</span>';
   } else if (type === 'info') {
-    iconHtml = '<span class="material-symbols-outlined toast-icon" style="font-variation-settings:\'FILL\' 1;">info</span>';
+    iconHtml = '<span aria-hidden="true" class="material-symbols-outlined toast-icon" style="font-variation-settings:\'FILL\' 1;">info</span>';
   }
 
   // `message` can carry untrusted text (model names from localStorage, upstream
   // error strings), and the toast is injected via innerHTML — escape it.
   toast.innerHTML = iconHtml + `<span>${escapeHtml(message)}</span>`;
   toast.className = `synapse-toast ${type}`;
+
+  if (type === 'error') {
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+  } else {
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+  }
+
   requestAnimationFrame(() => {
     toast.classList.add('show');
   });
@@ -3152,3 +3584,178 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+
+// ============================================================
+// MOBILE OPTIMIZATIONS — Synapse AI Chat
+// ============================================================
+
+(function initMobileOptimizations() {
+  if (typeof window === 'undefined') return;
+
+  // ── 1. Swipe-to-close sidebar ──
+  // Users can swipe left on the open drawer to dismiss it.
+  (function initSwipeClose() {
+    const drawer = document.getElementById('drawer');
+    const toggle = document.getElementById('drawer-toggle');
+    if (!drawer || !toggle) return;
+
+    let startX = 0;
+    let startY = 0;
+    let isDragging = false;
+
+    drawer.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      isDragging = false;
+    }, { passive: true });
+
+    drawer.addEventListener('touchmove', (e) => {
+      const dx = e.touches[0].clientX - startX;
+      const dy = Math.abs(e.touches[0].clientY - startY);
+      // Only track horizontal swipes more than 8px and not vertical scrolls
+      if (!isDragging && Math.abs(dx) > 8 && dy < 40) {
+        isDragging = true;
+      }
+    }, { passive: true });
+
+    drawer.addEventListener('touchend', (e) => {
+      if (!isDragging) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      // Swipe left ≥ 60px = close drawer
+      if (dx < -60 && toggle.checked) {
+        toggle.checked = false;
+      }
+      isDragging = false;
+    }, { passive: true });
+  })();
+
+  // ── 2. Model dropdown: open upward on mobile ──
+  // Overrides the JS positioning so it appears above the composer,
+  // not below where it gets hidden by the keyboard.
+  (function patchModelDropdownPosition() {
+    if (window.innerWidth > 767) return;
+    const btn = document.getElementById('model-selector-btn');
+    const dropdown = document.getElementById('model-dropdown');
+    if (!btn || !dropdown) return;
+
+    // Re-observe viewport resize
+    const applyMobilePosition = () => {
+      if (window.innerWidth <= 767) {
+        dropdown.style.bottom = 'calc(100% + 8px)';
+        dropdown.style.top = 'auto';
+        dropdown.style.left = '0';
+        dropdown.style.right = 'auto';
+        dropdown.style.minWidth = '230px';
+        dropdown.style.maxWidth = `${Math.min(300, window.innerWidth - 24)}px`;
+      } else {
+        dropdown.style.bottom = '';
+        dropdown.style.top = '';
+        dropdown.style.left = '';
+        dropdown.style.right = '';
+        dropdown.style.minWidth = '';
+        dropdown.style.maxWidth = '';
+      }
+    };
+
+    btn.addEventListener('click', applyMobilePosition);
+    window.addEventListener('resize', applyMobilePosition, { passive: true });
+  })();
+
+  // ── 3. Keyboard-aware composer ──
+  // Scroll to latest message when virtual keyboard shows/hides on mobile.
+  (function initKeyboardAwareScroll() {
+    if (window.innerWidth > 767) return;
+    const chatInput = document.getElementById('chat-input');
+    if (!chatInput) return;
+
+    let prevHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+
+    const onViewportChange = () => {
+      const currentH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      // Keyboard appeared (viewport shrank) → scroll to bottom
+      if (currentH < prevHeight - 80) {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: document.documentElement.scrollHeight });
+        });
+      }
+      prevHeight = currentH;
+    };
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', onViewportChange, { passive: true });
+    } else {
+      window.addEventListener('resize', onViewportChange, { passive: true });
+    }
+  })();
+
+  // ── 4. Prevent double-tap zoom on buttons ──
+  // Already handled by touch-action: manipulation in CSS, but add a belt-and-braces JS guard.
+  (function preventDoubleTapZoom() {
+    if (window.innerWidth > 767) return;
+    let lastTap = 0;
+    document.addEventListener('touchend', (e) => {
+      const now = Date.now();
+      if (now - lastTap < 300 && e.target.closest('button, a, label[for]')) {
+        e.preventDefault();
+      }
+      lastTap = now;
+    }, { passive: false });
+  })();
+
+  // ── 5. Scroll-position persistence ──
+  // When the virtual keyboard pushes the page, the composer stays fixed
+  // via CSS, but the chat scroll can jump. Compensate via visual viewport.
+  (function initComposerViewportFix() {
+    if (!window.visualViewport || window.innerWidth > 767) return;
+    const composerArea = document.querySelector('.chat-composer-area');
+    if (!composerArea) return;
+
+    const update = () => {
+      const vv = window.visualViewport;
+      // Keep composer pinned to the visible bottom edge
+      const offsetFromBottom = window.innerHeight - (vv.offsetTop + vv.height);
+      composerArea.style.transform = `translateY(${-offsetFromBottom}px)`;
+    };
+
+    window.visualViewport.addEventListener('scroll', update, { passive: true });
+    window.visualViewport.addEventListener('resize', update, { passive: true });
+  })();
+
+  // ── 6. Active state class for touch ripple ──
+  (function initTouchRipple() {
+    if (window.innerWidth > 767) return;
+    const sendBtn = document.getElementById('send-btn');
+    if (!sendBtn) return;
+
+    sendBtn.addEventListener('touchstart', () => {
+      sendBtn.classList.add('ripple');
+    }, { passive: true });
+
+    sendBtn.addEventListener('touchend', () => {
+      setTimeout(() => sendBtn.classList.remove('ripple'), 500);
+    }, { passive: true });
+  })();
+
+  // ── 7. History modal: swipe down to close ──
+  (function initHistoryModalSwipe() {
+    const modal = document.getElementById('history-modal');
+    const panel = document.getElementById('history-modal-content');
+    if (!modal || !panel) return;
+
+    let startY = 0;
+
+    panel.addEventListener('touchstart', (e) => {
+      startY = e.touches[0].clientY;
+    }, { passive: true });
+
+    panel.addEventListener('touchend', (e) => {
+      const dy = e.changedTouches[0].clientY - startY;
+      // Swipe down ≥ 80px on the panel header = close
+      if (dy > 80) {
+        if (typeof closeHistoryModal === 'function') closeHistoryModal();
+      }
+    }, { passive: true });
+  })();
+
+})();

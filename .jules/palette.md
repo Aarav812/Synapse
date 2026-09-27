@@ -1,0 +1,12 @@
+## 2024-05-17 - Added aria-hidden to icon elements
+**Learning:** Found that material-symbols-outlined icon elements were missing aria-hidden="true" in index.html, chat.html, and chat.js, which could cause screen readers to announce the ligature text instead of ignoring the decorative icon.
+**Action:** Used python script to add aria-hidden="true" to all <span class="material-symbols-outlined"> elements in the main html and js files.
+## 2026-09-16 - Dynamic ARIA Feedback on Action Buttons
+**Learning:** Action buttons with transient states (like "Copy" temporarily indicating "Copied") or mutually exclusive toggles (like Thumbs Up/Down) need their `aria-label`, `title`, and `aria-pressed` attributes dynamically updated in JavaScript alongside visual changes to ensure screen readers announce the state change properly. If the state is reverted (e.g., via `setTimeout`), the ARIA attributes must also be explicitly reset.
+**Action:** When implementing or fixing interactive buttons that change state without a full page reload, always ensure ARIA attributes are programmatically tied to the visual state changes.
+## 2024-09-17 - Redundant ARIA Labels
+**Learning:** Applying an `aria-label` to a button that already contains the visible text (e.g. `aria-label="Log out"` on `<button><span>Log out</span></button>`) is redundant and goes against ARIA best practices. Native HTML semantics are preferred.
+**Action:** Only add `aria-label` to icon-only buttons or when providing additional, necessary context (like distinguishing multiple "Cancel" buttons) without duplicating the visible text.
+## 2023-10-27 - Contextual ARIA labels and inner text
+**Learning:** Adding an `aria-label` to a container element (like a button) completely overrides the accessible text of its child elements. If child elements contain important contextual information (such as a time label in a chat list), the `aria-label` must explicitly include that information to prevent it from being hidden from screen reader users. Also, interactive elements dynamically added to lists must receive appropriate `role="button"`, `tabindex="0"`, and keyboard event listeners (Enter/Space) to be accessible.
+**Action:** When adding or updating ARIA labels on elements containing multiple pieces of information (like a title and a date), ensure the ARIA label concatenates all necessary context. Ensure dynamically injected interactive list items include `role`, `tabindex`, and keyboard handlers.
