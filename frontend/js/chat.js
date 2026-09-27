@@ -1073,6 +1073,8 @@ function showUndoSnackbar() {
     snackbar = document.createElement('div');
     snackbar.id = 'undo-snackbar';
     snackbar.className = 'undo-snackbar';
+    snackbar.setAttribute("role", "status");
+    snackbar.setAttribute("aria-live", "polite");
     snackbar.innerHTML = '<span>New chat started</span><button class="undo-snackbar-btn" id="undo-new-chat-btn" aria-label="Undo new chat">Undo</button>';
     document.body.appendChild(snackbar);
     document.getElementById('undo-new-chat-btn').addEventListener('click', undoNewChat);
@@ -1530,10 +1532,12 @@ function animateSendButton() {
     sendBtn.style.background = "linear-gradient(135deg, #5ea2ff, #7701d0)";
     sendBtn.style.boxShadow = "0 0 18px rgba(94,162,255,0.45)";
     sendBtn.style.transform = "scale(1.08)";
+    sendBtn.removeAttribute("aria-disabled");
   } else {
     sendBtn.style.background = "";
     sendBtn.style.boxShadow = "";
     sendBtn.style.transform = "";
+    sendBtn.setAttribute("aria-disabled", "true");
   }
 }
 
@@ -2911,6 +2915,8 @@ function showModelWarning(originalModel) {
   
   const banner = document.createElement('div');
   banner.className = 'model-warning-banner';
+  banner.setAttribute("role", "alert");
+  banner.setAttribute("aria-live", "assertive");
   // `originalModel` is the chat-index `model` field from localStorage — an
   // untrusted value. Escape it for text display, and drive the buttons with
   // bound listeners closing over the raw value instead of interpolating it
@@ -2955,6 +2961,8 @@ function showPWAInstallBanner() {
   
   const banner = document.createElement('div');
   banner.className = 'pwa-install-banner';
+  banner.setAttribute("role", "status");
+  banner.setAttribute("aria-live", "polite");
   banner.innerHTML = `
     <div class="pwa-icon">
       <span aria-hidden="true" class="material-symbols-outlined" style="color:#fff;font-size:18px;font-variation-settings:'FILL' 1;">install_mobile</span>
