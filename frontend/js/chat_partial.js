@@ -1266,6 +1266,22 @@ if (historySearchInput) {
 
 // The sidebar mirrors the history modal's time buckets so recent work is easy
 // to scan: Recent (today), Yesterday, and Previous 7 Days.
+// Shared calendar-day bucketing so the sidebar and the all-chats search modal
+// agree on what "Today"/"Yesterday" mean. Uses calendar-day boundaries (midnight),
+// NOT a rolling 24h/48h window — a chat from 11pm yesterday reads as "Yesterday"
+// at 9am today, which is what users expect. Returns:
+// 'today' | 'yesterday' | 'previous7' | 'older'.
+// ⚡ Bolt: Pass pre-calculated todayMs to prevent instantiating new Date objects
+// for every item in the history list (O(n) -> O(1) date creations).
+function getHistoryDayBucket(timestamp, todayMs) {
+  const dayMs = 86400000;
+  const t = timestamp || 0;
+  if (t >= todayMs) return 'today';
+  if (t >= todayMs - dayMs) return 'yesterday';
+  if (t >= todayMs - dayMs * 7) return 'previous7';
+  return 'older';
+}
+
 function renderSidebarHistory(index) {
   if (!sidebarHistoryList) return;
 
@@ -1277,17 +1293,19 @@ function renderSidebarHistory(index) {
   };
   Object.values(lists).forEach((list) => { if (list) list.innerHTML = ''; });
 
-  const startOfToday = new Date();
+  const nowMs = Date.now();
+  const startOfToday = new Date(nowMs);
   startOfToday.setHours(0, 0, 0, 0);
   const todayMs = startOfToday.getTime();
-  const dayMs = 86400000;
 
   const buckets = { recent: [], yesterday: [], previous7: [] };
   index.forEach((chat) => {
-    const updatedAt = chat.updatedAt || 0;
-    if (updatedAt >= todayMs) buckets.recent.push(chat);
-    else if (updatedAt >= todayMs - dayMs) buckets.yesterday.push(chat);
-    else if (updatedAt >= todayMs - dayMs * 7) buckets.previous7.push(chat);
+    switch (getHistoryDayBucket(chat.updatedAt, todayMs)) {
+      case 'today': buckets.recent.push(chat); break;
+      case 'yesterday': buckets.yesterday.push(chat); break;
+      case 'previous7': buckets.previous7.push(chat); break;
+      // 'older' chats are intentionally not shown in the compact sidebar.
+    }
   });
 
   // Keep the sidebar short: cap each bucket, favouring the most recent work.
@@ -1296,6 +1314,11 @@ function renderSidebarHistory(index) {
   Object.entries(buckets).forEach(([key, chats]) => {
     const list = lists[key];
     if (!list) return;
+
+    // ⚡ Bolt: Batch DOM Appends with DocumentFragment
+    // Impact: O(N) -> O(1) layout recalculations. Appending directly to list
+    // inside the loop causes layout thrashing for users with large histories.
+    const fragment = document.createDocumentFragment();
     const visible = chats.slice(0, caps[key]);
     visible.forEach((chat) => {
       const item = document.createElement('li');
@@ -1306,8 +1329,9 @@ function renderSidebarHistory(index) {
       button.innerHTML = `<span class="material-symbols-outlined history-icon">chat_bubble</span><span class="history-title">${escapeHtml(chat.title)}</span>`;
       button.addEventListener('click', () => loadSession(chat.id));
       item.appendChild(button);
-      list.appendChild(item);
+      fragment.appendChild(item);
     });
+    list.appendChild(fragment);
     // "Recent" always stays visible (it owns the empty-state copy); the dated
     // groups only appear once they actually hold a conversation.
     const group = list.closest('.history-group');
@@ -1334,8 +1358,10 @@ function loadHistoryIndex(searchQuery = '') {
   }
 
   // Group by time periods
-  const now = Date.now();
-  const dayMs = 86400000;
+  const nowMs = Date.now();
+  const startOfToday = new Date(nowMs);
+  startOfToday.setHours(0, 0, 0, 0);
+  const todayMs = startOfToday.getTime();
   const groups = {
     'Today': [],
     'Yesterday': [],
@@ -1343,13 +1369,15 @@ function loadHistoryIndex(searchQuery = '') {
     'Older': []
   };
 
+  const bucketToLabel = { today: 'Today', yesterday: 'Yesterday', previous7: 'Last 7 Days', older: 'Older' };
   index.forEach(chat => {
-    const age = now - chat.updatedAt;
-    if (age < dayMs) groups['Today'].push(chat);
-    else if (age < 2 * dayMs) groups['Yesterday'].push(chat);
-    else if (age < 7 * dayMs) groups['Last 7 Days'].push(chat);
-    else groups['Older'].push(chat);
+    groups[bucketToLabel[getHistoryDayBucket(chat.updatedAt, todayMs)]].push(chat);
   });
+
+  // ⚡ Bolt: Batch DOM Appends with DocumentFragment
+  // Impact: O(N) -> O(1) layout recalculations. Appending directly to historyListContainer
+  // inside the loop causes layout thrashing for users with large histories.
+  const fragment = document.createDocumentFragment();
 
   Object.entries(groups).forEach(([label, chats]) => {
     if (chats.length === 0) return;
@@ -1357,7 +1385,7 @@ function loadHistoryIndex(searchQuery = '') {
     const groupLabel = document.createElement('p');
     groupLabel.className = 'text-xs text-on-surface-variant/50 font-bold uppercase tracking-wider mt-3 mb-1.5 px-1';
     groupLabel.textContent = label;
-    historyListContainer.appendChild(groupLabel);
+    fragment.appendChild(groupLabel);
 
     chats.forEach(chat => {
       const item = document.createElement("div");
@@ -1372,9 +1400,11 @@ function loadHistoryIndex(searchQuery = '') {
           <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
         </button>
       `;
-      historyListContainer.appendChild(item);
+      fragment.appendChild(item);
     });
   });
+
+  historyListContainer.appendChild(fragment);
 }
 
 // ── Send Message ──
