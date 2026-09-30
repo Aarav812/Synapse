@@ -212,7 +212,7 @@ function renderMarkdown(text, isStreaming = false) {
   <div class="code-block-header" style="display:flex; justify-content:space-between; align-items:center; padding:8px 15px;">
     <span class="code-block-lang" style="color:var(--ink-3); font-size:12px; font-weight:600; text-transform:uppercase;">${language}</span>
     <button class="copy-code-btn" onclick="copyCode(this)" title="Copy code" aria-label="Copy code">
-      <span class="material-symbols-outlined" style="font-size: 14px;">content_copy</span> Copy
+      <span aria-hidden="true" class="material-symbols-outlined" style="font-size: 14px;">content_copy</span> Copy
     </button>
   </div>
   <pre><code class="hljs language-${language}">${highlighted}</code></pre>
@@ -322,7 +322,7 @@ function renderMarkdown(text, isStreaming = false) {
         `;
       }
     }
-    return `<div class="code-block-wrapper"><div class="code-block-header"><span class="code-lang-label">${langLabel}</span><div style="display:flex;"><button class="copy-code-btn" onclick="copyCode(this)" title="Copy code" aria-label="Copy code"><span class="material-symbols-outlined" style="font-size:14px;">content_copy</span> Copy</button></div></div><pre><code class="hljs language-${block.lang}">${escapedCodeForDisplay}</code></pre></div>`;
+    return `<div class="code-block-wrapper"><div class="code-block-header"><span class="code-lang-label">${langLabel}</span><div style="display:flex;"><button class="copy-code-btn" onclick="copyCode(this)" title="Copy code" aria-label="Copy code"><span aria-hidden="true" class="material-symbols-outlined" style="font-size:14px;">content_copy</span> Copy</button></div></div><pre><code class="hljs language-${block.lang}">${escapedCodeForDisplay}</code></pre></div>`;
     });
   }
 
