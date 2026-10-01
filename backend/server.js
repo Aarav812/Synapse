@@ -104,7 +104,17 @@ initFirebaseAdmin();
 // ── Helper: find the longest suffix of `str` that is a prefix of any tag ──
 // Used by the <think> tag streaming parser to avoid emitting partial tags.
 function partialTagHoldback(str, tags) {
-  for (let i = 0; i < str.length; i++) {
+  // ⚡ Bolt: Fast path for partial tag matching
+  // Impact: O(1) instead of O(N) string slicing. Prevents CPU spikes during
+  // AI response streaming when chunks are large.
+  let maxTagLen = 0;
+  for (const tag of tags) {
+    if (tag.length > maxTagLen) maxTagLen = tag.length;
+  }
+
+  // We only need to check suffixes up to maxTagLen - 1 in length
+  const start = Math.max(0, str.length - maxTagLen + 1);
+  for (let i = start; i < str.length; i++) {
     const suffix = str.slice(i);
     for (const tag of tags) {
       // If the suffix is a true prefix of the tag (and not the whole tag)
