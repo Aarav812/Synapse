@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#090909" media="(prefers-color-scheme: dark)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="description" content="A focused conversation workspace for Synapse Aura." />
+    <title>Synapse AI — Aura</title>
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/atom-one-dark.min.css" />
+    <link rel="stylesheet" href="/css/styles.css?v=19" />
+    <link rel="stylesheet" href="/css/chat.css?v=19" />
+
+
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- marked pinned to 4.x: utils.js's renderer uses the v4 `code(code, lang)`
+         signature, which marked v5 replaced with an object argument. -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+    <!-- DOMPurify sanitizes model-generated HTML before it is injected via
+         innerHTML in renderMarkdown() — without it the sanitize guard is a no-op. -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.11/dist/purify.min.js"></script>
+    <!-- html2pdf powers the "Export chat as PDF" action (exportCurrentChat). -->
+    <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
+  </head>
+
+  <body class="chat-page">
+    <div class="page-transition-overlay" id="page-overlay" aria-hidden="true"></div>
+
+    <!-- Shared with the landing page: a quiet, layered studio backdrop. -->
+    <div class="bg-ambient chat-ambient" aria-hidden="true">
+      <div class="bg-base"></div>
+      <div class="bg-grid-floor"></div>
+      <div class="bg-orb bg-orb-1"></div>
+      <div class="bg-orb bg-orb-2"></div>
+      <div class="bg-prism bg-prism-left"></div>
+      <div class="bg-prism bg-prism-right"></div>
+      <div class="bg-key-light"></div>
+      <div class="bg-noise"></div>
+      <div class="bg-vignette"></div>
+    </div>
+
+    <!-- Two independent switches: `drawer-toggle` opens the drawer on small
+         screens, `sidebar-collapse` hides the docked sidebar on desktop. -->
+    <input id="drawer-toggle" type="checkbox" aria-label="Toggle sidebar" />
+    <input id="sidebar-collapse" type="checkbox" aria-label="Hide sidebar" />
+    <label id="drawer-overlay" for="drawer-toggle" aria-label="Close sidebar"></label>
+
+    <aside id="drawer" aria-label="Chat navigation">
+      <div class="sidebar-top">
+        <a class="sidebar-brand" href="/index.html" aria-label="Synapse AI home">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 5.6v5.1M12 13.3v5.1M6.7 17.5 12 13.3M17.3 17.5 12 13.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              <circle cx="12" cy="4.6" r="1.9" fill="currentColor" /><circle cx="5.4" cy="18.6" r="1.9" fill="currentColor" /><circle cx="18.6" cy="18.6" r="1.9" fill="currentColor" /><circle cx="12" cy="12" r="1.6" fill="currentColor" />
+            </svg>
+          </span>
+          <span class="brand-name">Synapse <em class="brand-ai-badge">AI</em></span>
+        </a>
+        <button class="sidebar-collapse-btn" type="button" data-sidebar-toggle aria-label="Hide sidebar" title="Hide sidebar">
+          <span class="hamburger-lines" aria-hidden="true"><i></i><i></i><i></i></span>
+        </button>
+      </div>
+
+      <nav class="sidebar-primary" aria-label="Primary navigation">
+        <button id="nav-new-chat-btn" class="sidebar-action sidebar-action--new" type="button">
+          <span class="material-symbols-outlined">edit_square</span>
+          <span>New Chat</span>
+        </button>
+        <button id="nav-history-btn" class="sidebar-action" type="button" aria-label="Search chats">
+          <span class="material-symbols-outlined">search</span>
+          <span>Search chats</span>
+          <kbd class="sidebar-action-kbd">⌘K</kbd>
+        </button>
+      </nav>
+
+      <section class="sidebar-history-groups" aria-label="Recent conversations">
+        <div class="history-group" data-group="recent">
+          <span class="sidebar-section-label">Recent</span>
+          <ul id="history-list" class="history-group-list" aria-live="polite"></ul>
+          <p class="sidebar-empty">Your conversations will appear here.</p>
+        </div>
+        <div class="history-group" data-group="yesterday" hidden>
+          <span class="sidebar-section-label">Yesterday</span>
+          <ul id="history-list-yesterday" class="history-group-list"></ul>
+        </div>
+        <div class="history-group" data-group="previous7" hidden>
+          <span class="sidebar-section-label">Previous 7 Days</span>
+          <ul id="history-list-previous7" class="history-group-list"></ul>
+        </div>
+      </section>
+
+      <div class="sidebar-bottom">
+
+        <button id="logout-btn" class="sidebar-action sidebar-action--logout" type="button">
+          <span class="material-symbols-outlined">logout</span>
+          <span>Log out</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="chat-workspace">
+      <header class="chat-header">
+        <div class="header-side header-side-left">
+          <label class="mobile-menu-btn" for="drawer-toggle" aria-label="Open sidebar">
+            <span class="hamburger-lines" aria-hidden="true"><i></i><i></i><i></i></span>
+          </label>
+          <button class="sidebar-reveal-btn" type="button" data-sidebar-toggle aria-label="Show sidebar" title="Show sidebar">
+            <span class="hamburger-lines" aria-hidden="true"><i></i><i></i><i></i></span>
+          </button>
+          <button id="header-logo" type="button" aria-label="Start a new chat" title="Start a new chat">
+            <span class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 5.6v5.1M12 13.3v5.1M6.7 17.5 12 13.3M17.3 17.5 12 13.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                <circle cx="12" cy="4.6" r="1.9" fill="currentColor" /><circle cx="5.4" cy="18.6" r="1.9" fill="currentColor" /><circle cx="12" cy="12" r="1.6" fill="currentColor" />
+              </svg>
+            </span>
+            <span class="brand-name">Synapse <em class="brand-ai-badge">AI</em></span>
+          </button>
+
+        </div>
+        <div class="header-side header-side-right" style="gap: 4px;">
+          <button id="header-new-chat-btn" class="header-new-chat-btn" type="button" aria-label="New chat" title="New chat">
+            <span class="material-symbols-outlined">edit_square</span>
+            <span>New chat</span>
+          </button>
+          <button class="header-icon-button header-icon-button--bell" id="header-notifications-btn" type="button" aria-label="Notifications" title="Notifications">
+            <span class="material-symbols-outlined">notifications</span>
+            <span class="notification-dot" aria-hidden="true"></span>
+          </button>
+          <span class="header-rule" aria-hidden="true"></span>
+          <button id="user-avatar" class="avatar-button" type="button" aria-label="Your profile" title="Your profile"></button>
+        </div>
+      </header>
+
+      <div id="scroll-container">
+        <div class="chat-content">
+          <section id="empty-state" aria-labelledby="aura-greeting">
+            <p class="welcome-overline"><span class="welcome-dot"></span>Aura is ready</p>
+            <div class="welcome-heading-container">
+              <h1 id="aura-greeting" class="welcome-question">
+                <span class="welcome-hello">Hello <span class="welcome-wave" aria-hidden="true">👋</span></span>
+                <span class="welcome-line">How can <span class="serif-aura">Aura</span> help you today?</span>
+              </h1>
+              <p class="empty-subtitle">Ask a question, work through a thought, or begin with one of these starting points.</p>
+            </div>
+            <div id="category-chips" class="suggestion-grid" aria-label="Suggested prompts"></div>
+            <p id="empty-state-cta" class="hidden">Choose a prompt or start with your own question.</p>
+          </section>
+
+          <div id="chat-messages" aria-live="polite" aria-label="Conversation"></div>
+        </div>
+      </div>
+
+      <div class="chat-composer-area">
+        <div class="composer-wrap">
+          <div class="composer-controls">
+            <div class="model-selector-wrap" id="model-selector-container">
+              <button id="model-selector-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+                <span class="material-symbols-outlined" style="font-size:16px;color:var(--accent-soft)">auto_awesome</span>
+                <span id="current-model-name">Aura AI</span>
+                <span class="material-symbols-outlined" style="font-size:15px">expand_more</span>
+              </button>
+              <div id="model-dropdown" class="hidden opacity-0 translate-y-2 pointer-events-none" role="listbox" aria-label="Choose an AI model">
+                <button class="model-option" type="button" data-model="minimax/minimax-m2.7" data-name="Aura AI" role="option">
+                  <span class="material-symbols-outlined">auto_awesome</span>
+                  <span><span class="model-option-title">Aura AI</span><span class="model-option-description">Thoughtful help for everyday work</span></span>
+                  <span class="material-symbols-outlined model-active-check">check</span>
+                </button>
+                <button class="model-option" type="button" data-model="openai/gpt-oss-120b" data-name="Aura Summary" role="option">
+                  <span class="material-symbols-outlined">short_text</span>
+                  <span><span class="model-option-title">Aura Summary</span><span class="model-option-description">Clear explanations, in two languages</span></span>
+                  <span class="material-symbols-outlined model-active-check">check</span>
+                </button>
+                <button class="model-option" type="button" data-model="nvidia/nemotron-3.5-lightning-30b-a3b" data-name="Aura Bhai" role="option">
+                  <span class="material-symbols-outlined">bolt</span>
+                  <span><span class="model-option-title">Aura Bhai</span><span class="model-option-description">Fast, casual help in Hinglish</span></span>
+                  <span class="material-symbols-outlined model-active-check">check</span>
+                </button>
+              </div>
+            </div>
+            <div id="aura1-mode-toggle" aria-label="Aura AI response mode" role="group">
+              <button id="mode-deep-think-btn" type="button" data-active="true" aria-pressed="true">Think</button>
+              <button id="mode-fast-btn" type="button" aria-pressed="false">Fast</button>
+            </div>
+          </div>
+          <div id="chat-footer">
+            <div id="attachment-preview-container" class="hidden" aria-label="Attachments"></div>
+            <div id="text-input-bar">
+              <span class="composer-prism" aria-hidden="true"></span>
+              <input id="file-input" type="file" multiple accept=".txt,.json,.md,.csv,image/*,audio/*,video/*" hidden />
+              <button id="attach-btn" class="composer-button" type="button" aria-label="Attach files" title="Attach files">
+                <span class="material-symbols-outlined">attach_file</span>
+              </button>
+              <textarea id="chat-input" rows="1" maxlength="4000" placeholder="Ask Aura anything..." aria-label="Ask Aura anything..."></textarea>
+              <button id="mic-btn" class="composer-button" type="button" aria-label="Use voice input" title="Use voice input">
+                <span class="material-symbols-outlined">mic</span>
+              </button>
+              <div class="send-btn-wrapper" style="position:relative; display:flex; align-items:center; justify-content:center; width:44px; height:44px;">
+                <svg class="char-limit-arc" viewBox="0 0 44 44" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; transform:rotate(-90deg); opacity:0; transition:opacity 0.2s ease;">
+                  <circle cx="22" cy="22" r="20" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2" />
+                  <circle class="arc-value" cx="22" cy="22" r="20" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="125.6" stroke-dashoffset="125.6" stroke-linecap="round" style="transition: stroke-dashoffset 0.1s ease, stroke 0.3s ease;" />
+                </svg>
+                <button id="stop-btn" class="hidden" type="button" aria-label="Stop generating" title="Stop generating">
+                  <span class="material-symbols-outlined">stop</span>
+                </button>
+                <button id="send-btn" type="button" aria-label="Send message" title="Send message">
+                  <span class="material-symbols-outlined">arrow_upward</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="composer-help">
+            <span>Aura can make mistakes. Check important information.</span>
+            <span id="char-counter">0 / 4000</span>
+          </div>
+        </div>
+      </div>
+
+      <button id="scroll-to-bottom-btn" type="button" aria-label="Scroll to latest message" title="Scroll to latest message">
+        <span class="material-symbols-outlined" style="font-size:18px">arrow_downward</span>
+      </button>
+    </main>
+    <!-- History dialog -->
+    <section id="history-modal" class="chat-modal hidden opacity-0" role="dialog" aria-modal="true" aria-label="Chat history">
+      <div id="history-modal-content" class="chat-modal-panel scale-95">
+        <header class="modal-header">
+          <div><h2 class="modal-title">Chat history</h2><p class="modal-subtitle">Open or manage previous conversations.</p></div>
+          <button id="close-history-btn" class="modal-close" type="button" aria-label="Close history" title="Close history"><span class="material-symbols-outlined">close</span></button>
+        </header>
+        <div class="history-toolbar">
+          <label class="history-search-wrap">
+            <span class="material-symbols-outlined history-search-icon">search</span>
+            <input id="history-search-input" class="history-search-input" type="search" autocomplete="off" placeholder="Search conversations" aria-label="Search conversations" />
+          </label>
+          <button id="delete-all-history-btn" class="modal-text-button" type="button">Clear all</button>
+        </div>
+        <div id="history-list-container" class="chat-history-list"></div>
+      </div>
+    </section>
+
+    <!-- Clear history dialog -->
+    <section id="delete-history-modal" class="chat-modal hidden opacity-0" role="dialog" aria-modal="true" aria-label="Clear history confirmation">
+      <div id="delete-history-modal-content" class="chat-modal-panel confirm-panel scale-95">
+        <div class="confirm-icon"><span class="material-symbols-outlined">delete_forever</span></div>
+        <h2 class="modal-title">Clear all chat history?</h2>
+        <p class="confirm-copy">This permanently removes every saved conversation from this browser.</p>
+        <div class="confirm-actions">
+          <button id="cancel-delete-history-btn" class="modal-button" type="button">Cancel</button>
+          <button id="confirm-delete-history-btn" class="modal-button modal-button--danger" type="button">Clear history</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Delete single chat dialog -->
+    <section id="delete-chat-modal" class="chat-modal hidden opacity-0" role="dialog" aria-modal="true" aria-label="Delete chat confirmation">
+      <div id="delete-chat-modal-content" class="chat-modal-panel confirm-panel scale-95">
+        <div class="confirm-icon"><span class="material-symbols-outlined">delete</span></div>
+        <h2 class="modal-title">Delete chat?</h2>
+        <p class="confirm-copy">This permanently removes this conversation.</p>
+        <div class="confirm-actions">
+          <button id="cancel-delete-chat-btn" class="modal-button" type="button">Cancel</button>
+          <button id="confirm-delete-chat-btn" class="modal-button modal-button--danger" type="button">Delete</button>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- Image viewer -->
+    <div id="image-lightbox-modal" class="lightbox-modal hidden opacity-0 lightbox-overlay" onclick="closeLightbox(event)">
+      <div class="lightbox-content-wrapper">
+        <img id="lightbox-img" src="" alt="Expanded generated image" class="lightbox-image" onclick="event.stopPropagation(); closeLightbox(event)" />
+        <div class="lightbox-actions" onclick="event.stopPropagation()">
+          <button id="download-lightbox-btn" class="modal-button" type="button" onclick="downloadLightboxImage()"><span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">download</span> Download</button>
+          <button class="modal-close" style="background:#1b1b1b" type="button" onclick="closeLightbox(event)" aria-label="Close image" title="Close image"><span class="material-symbols-outlined">close</span></button>
+        </div>
+      </div>
+    </div>
+
+
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
+    <script src="/js/firebase-config.js?v=19"></script>
+    <script src="/js/auth.js?v=19"></script>
+    <script src="/js/utils.js?v=19"></script>
+    <script src="/js/chat.js?v=19"></script>
+  </body>
+</html>

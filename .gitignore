@@ -1,0 +1,6 @@
+node_modules/
+.env
+
+.mingit/
+synapse_aura_ui_design.jpg
+synapse_chat_ui_2560.png

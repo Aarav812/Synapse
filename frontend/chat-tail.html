@@ -1,0 +1,91 @@
+    <!-- History dialog -->
+    <section id="history-modal" class="chat-modal hidden opacity-0" role="dialog" aria-modal="true" aria-label="Chat history">
+      <div id="history-modal-content" class="chat-modal-panel scale-95">
+        <header class="modal-header">
+          <div><h2 class="modal-title">Chat history</h2><p class="modal-subtitle">Open or manage previous conversations.</p></div>
+          <button id="close-history-btn" class="modal-close" type="button" aria-label="Close history"><span class="material-symbols-outlined">close</span></button>
+        </header>
+        <div class="history-toolbar">
+          <label class="history-search-wrap">
+            <span class="material-symbols-outlined history-search-icon">search</span>
+            <input id="history-search-input" class="history-search-input" type="search" autocomplete="off" placeholder="Search conversations" aria-label="Search conversations" />
+          </label>
+          <button id="delete-all-history-btn" class="modal-text-button" type="button">Clear all</button>
+        </div>
+        <div id="history-list-container" class="chat-history-list"></div>
+      </div>
+    </section>
+
+    <!-- Clear history dialog -->
+    <section id="delete-history-modal" class="chat-modal hidden opacity-0" role="dialog" aria-modal="true" aria-label="Clear history confirmation">
+      <div id="delete-history-modal-content" class="chat-modal-panel confirm-panel scale-95">
+        <div class="confirm-icon"><span class="material-symbols-outlined">delete_forever</span></div>
+        <h2 class="modal-title">Clear all chat history?</h2>
+        <p class="confirm-copy">This permanently removes every saved conversation from this browser.</p>
+        <div class="confirm-actions">
+          <button id="cancel-delete-history-btn" class="modal-button" type="button">Cancel</button>
+          <button id="confirm-delete-history-btn" class="modal-button modal-button--danger" type="button">Clear history</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Delete single chat dialog -->
+    <section id="delete-chat-modal" class="chat-modal hidden opacity-0" role="dialog" aria-modal="true" aria-label="Delete chat confirmation">
+      <div id="delete-chat-modal-content" class="chat-modal-panel confirm-panel scale-95">
+        <div class="confirm-icon"><span class="material-symbols-outlined">delete</span></div>
+        <h2 class="modal-title">Delete chat?</h2>
+        <p class="confirm-copy">This permanently removes this conversation.</p>
+        <div class="confirm-actions">
+          <button id="cancel-delete-chat-btn" class="modal-button" type="button">Cancel</button>
+          <button id="confirm-delete-chat-btn" class="modal-button modal-button--danger" type="button">Delete</button>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- Image viewer -->
+    <div id="image-lightbox-modal" class="fixed inset-0 z-[150] hidden items-center justify-center bg-black/80 p-5 opacity-0 lightbox-overlay" onclick="closeLightbox(event)">
+      <div class="relative flex h-full w-full items-center justify-center">
+        <img id="lightbox-img" src="" alt="Expanded generated image" class="max-h-full max-w-full cursor-zoom-out rounded-xl object-contain shadow-2xl" onclick="event.stopPropagation(); closeLightbox(event)" />
+        <div class="absolute right-1 top-1 flex gap-2" onclick="event.stopPropagation()">
+          <button id="download-lightbox-btn" class="modal-button" type="button" onclick="downloadLightboxImage()"><span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">download</span> Download</button>
+          <button class="modal-close" style="background:#1b1b1b" type="button" onclick="closeLightbox(event)" aria-label="Close image"><span class="material-symbols-outlined">close</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Code canvas -->
+    <aside id="canvas-panel" class="canvas-panel hidden" aria-label="Code preview">
+      <header class="canvas-header">
+        <div class="canvas-header-left">
+          <div class="canvas-icon-wrap"><span class="material-symbols-outlined" style="font-size:17px">web</span></div>
+          <div><p id="canvas-title" class="canvas-title">Canvas</p><p id="canvas-subtitle" class="canvas-subtitle">Writing code…</p></div>
+        </div>
+        <div class="canvas-header-right">
+          <div class="canvas-tab-bar" role="tablist" aria-label="Canvas views">
+            <button id="canvas-tab-preview" class="canvas-tab active" type="button" role="tab" aria-selected="true" aria-controls="canvas-preview-tab" onclick="switchCanvasTab('preview')"><span class="material-symbols-outlined" style="font-size:15px">play_circle</span>Preview</button>
+            <button id="canvas-tab-code" class="canvas-tab" type="button" role="tab" aria-selected="false" aria-controls="canvas-code-tab" onclick="switchCanvasTab('code')"><span class="material-symbols-outlined" style="font-size:15px">code</span>Code</button>
+          </div>
+          <button id="canvas-download-btn" class="canvas-action-btn" type="button" title="Download HTML" aria-label="Download HTML"><span class="material-symbols-outlined" style="font-size:18px">download</span></button>
+          <button id="canvas-close-btn" class="canvas-action-btn" type="button" title="Close canvas" aria-label="Close canvas" onclick="closeCodePreview()"><span class="material-symbols-outlined" style="font-size:18px">close</span></button>
+        </div>
+      </header>
+      <div class="canvas-body">
+        <div id="canvas-preview-tab" class="canvas-tab-content active" role="tabpanel" aria-labelledby="canvas-tab-preview">
+          <div id="canvas-live-indicator" class="canvas-live-badge hidden"><span class="canvas-live-dot"></span>Live</div>
+          <iframe id="code-preview-iframe" class="canvas-iframe" sandbox="allow-scripts allow-modals allow-same-origin" title="Code preview" srcdoc="<html><body style='margin:0;background:#111;color:#eee;font-family:system-ui;display:grid;min-height:100vh;place-items:center'><p>Aura is preparing a preview…</p></body></html>"></iframe>
+        </div>
+        <div id="canvas-code-tab" class="canvas-tab-content hidden" role="tabpanel" aria-labelledby="canvas-tab-code"><pre id="canvas-code-view" class="canvas-code-pre"><code id="canvas-code-content" class="language-html"></code></pre></div>
+      </div>
+    </aside>
+    <div id="canvas-backdrop" class="canvas-backdrop hidden" onclick="closeCodePreview()"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="/js/firebase-config.js?v=19"></script>
+    <script src="/js/auth.js?v=19"></script>
+    <script src="/js/utils.js?v=19"></script>
+    <script src="/js/chat.js?v=19"></script>
+  </body>
+</html>

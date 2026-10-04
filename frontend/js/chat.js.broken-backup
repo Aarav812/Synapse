@@ -1,0 +1,1700 @@
+// ============================================
+// Synapse AI — Chat Logic (Aura AI)
+// ============================================
+
+
+const chatMessages = document.getElementById("chat-messages");
+const chatInput = document.getElementById("chat-input");
+const sendBtn = document.getElementById("send-btn");
+const heroSection = document.getElementById("hero-section");
+const emptyState = document.getElementById("empty-state");
+const userNameEl = document.getElementById("user-display-name");
+const userAvatarEl = document.getElementById("user-avatar");
+const logoutBtn = document.getElementById("logout-btn");
+
+// UI Elements for History & Navigation
+const navNewChatBtn = document.getElementById("nav-new-chat-btn");
+const navHistoryBtn = document.getElementById("nav-history-btn");
+const headerNewChatBtn = document.getElementById("header-new-chat-btn");
+const historyModal = document.getElementById("history-modal");
+const historyModalContent = document.getElementById("history-modal-content");
+const closeHistoryBtn = document.getElementById("close-history-btn");
+const historyListContainer = document.getElementById("history-list-container");
+const sidebarHistoryList = document.getElementById("history-list");
+const drawerToggle = document.getElementById("drawer-toggle");
+const headerLogo = document.getElementById("header-logo");
+
+// UI Elements for File Attachments
+const attachBtn = document.getElementById("attach-btn");
+const fileInput = document.getElementById("file-input");
+const attachmentPreviewContainer = document.getElementById("attachment-preview-container");
+// We removed individual preview elements as they will be injected dynamically
+
+// UI Elements for Model Selector
+const modelSelectorBtn = document.getElementById("model-selector-btn");
+const modelDropdown = document.getElementById("model-dropdown");
+const currentModelNameEl = document.getElementById("current-model-name");
+const modelOptions = document.querySelectorAll(".model-option");
+
+// UI Elements for Settings
+
+// Call on initial load
+renderSuggestionChips();
+
+// ── Orb State Management ──
+function setOrbState(state) {
+  const orb = document.getElementById('aura-state-orb');
+  if (!orb) return;
+  
+  // Reset classes
+  orb.classList.remove('orb-thinking', 'orb-responding', 'orb-error');
+  
+  switch (state) {
+    case 'thinking':
+      orb.classList.add('orb-thinking');
+      break;
+    case 'responding':
+      orb.classList.add('orb-responding');
+      break;
+    case 'error':
+      orb.classList.add('orb-error');
+      setTimeout(() => orb.classList.remove('orb-error'), 1500);
+      break;
+    default: // 'idle'
+      break;
+  }
+}
+
+// ── Scroll-to-Bottom Button ──
+const scrollToBottomBtn = document.getElementById("scroll-to-bottom-btn");
+
+function updateScrollBtn(providedDistFromBottom) {
+  if (!scrollToBottomBtn) return;
+  const distFromBottom = providedDistFromBottom !== undefined ? providedDistFromBottom : (document.documentElement.scrollHeight - window.scrollY - window.innerHeight);
+  // Compare distFromBottom; we use 200px threshold
+  if (distFromBottom > 200) {
+    scrollToBottomBtn.style.opacity = "1";
+    scrollToBottomBtn.style.pointerEvents = "auto";
+    scrollToBottomBtn.style.transform = "scale(1)";
+  } else {
+    scrollToBottomBtn.style.opacity = "0";
+    scrollToBottomBtn.style.pointerEvents = "none";
+    scrollToBottomBtn.style.transform = "scale(0.9)";
+  }
+}
+
+// ── Scroll To Bottom ──
+let userHasScrolledUp = false;
+let lastScrollY = window.scrollY || 0;
+
+let ticking = false;
+
+window.addEventListener("scroll", () => {
+  // Throttling scroll events with requestAnimationFrame to prevent main thread blocking and layout thrashing
+  if (!ticking) {
+    window.requestAnimationFrame(() => {
+      const currentScrollY = window.scrollY;
+      const distFromBottom = document.documentElement.scrollHeight - currentScrollY - window.innerHeight;
+
+      if (currentScrollY < lastScrollY) {
+        if (distFromBottom > 200) {
+          userHasScrolledUp = true;
+        }
+      } else if (distFromBottom <= 200) {
+        userHasScrolledUp = false;
+      }
+
+      lastScrollY = currentScrollY;
+      // Pass the precalculated distFromBottom to prevent duplicate expensive DOM reads
+      updateScrollBtn(distFromBottom);
+      ticking = false;
+    });
+    ticking = true;
+  }
+}, { passive: true });
+
+if (scrollToBottomBtn) {
+  scrollToBottomBtn.style.transition = "opacity 0.25s ease, transform 0.25s ease";
+  scrollToBottomBtn.addEventListener("click", () => {
+    userHasScrolledUp = false;
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
+    updateScrollBtn();
+  });
+}
+
+// ── Image Lightbox ──
+window.closeLightbox = function(event) {
+  if (event && event.stopPropagation) event.stopPropagation();
+  const modal = document.getElementById("image-lightbox-modal");
+  if (!modal) return;
+  modal.style.opacity = "0";
+  setTimeout(() => {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+    const img = document.getElementById("lightbox-img");
+    if (img) img.src = "";
+  }, 250);
+};
+
+window.openLightbox = function(src) {
+  const modal = document.getElementById("image-lightbox-modal");
+  const img = document.getElementById("lightbox-img");
+  if (!modal || !img) return;
+  img.src = src;
+  img.style.transform = "scale(0.9)";
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+  modal.style.opacity = "0";
+  setTimeout(() => {
+    modal.style.opacity = "1";
+    modal.style.transition = "opacity 0.25s ease";
+    img.style.transform = "scale(1)";
+    img.style.transition = "transform 0.3s cubic-bezier(0.34,1.56,0.64,1)";
+  }, 10);
+};
+
+window.downloadLightboxImage = function() {
+  const img = document.getElementById("lightbox-img");
+  if (!img || !img.src) return;
+  
+  const a = document.createElement("a");
+  a.href = img.src;
+  a.download = `Aura_Image_${Date.now()}.jpg`; // Default filename
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+};
+
+// Close lightbox on Escape key — only if no higher z-index modal is open
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    // Priority: canvas panel (z:80) > lightbox (z:150) > history/settings (z:100)
+    const canvasPanel = document.getElementById("canvas-panel");
+    if (canvasPanel && !canvasPanel.classList.contains("hidden")) {
+      window.closeCodePreview();
+      return;
+    }
+    
+    const lightboxModal = document.getElementById("image-lightbox-modal");
+    if (lightboxModal && !lightboxModal.classList.contains("hidden")) {
+      closeLightbox();
+      return;
+    }
+    const historyM = document.getElementById("history-modal");
+    if (historyM && !historyM.classList.contains("hidden")) {
+      closeHistoryModal();
+      return;
+    }
+    
+    const deleteM = document.getElementById("delete-history-modal");
+    if (deleteM && !deleteM.classList.contains("hidden")) {
+      closeDeleteHistoryModal();
+      return;
+    }
+  }
+});
+
+// ── Get AI Response (SSE Stream) ──
+async function getAuraResponse(multimodalState = {}) {
+  isStreaming = true;
+  abortController = new AbortController();
+  updateSendButton(true);
+  setOrbState('thinking');
+
+  // Hide empty state CTA when response starts
+  const ctaEl = document.getElementById('empty-state-cta');
+  if (ctaEl) ctaEl.style.display = 'none';
+
+  const typingEl = showTypingIndicator(multimodalState);
+
+  // Hoisted so they're accessible in catch block
+  let bubbleEl = null;
+  let rowEl = null;
+  let fullContent = "";
+  let fullReasoning = "";
+  let reasoningEl = null;
+
+  try {
+    const user = auth ? auth.currentUser : null;
+    if (!user) throw new Error("You're not signed in — the authentication service didn't load. Check your connection and refresh the page.");
+
+    const idToken = await user.getIdToken();
+
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`,
+      },
+      body: JSON.stringify({ 
+        messages: getMessagesForRequest(),
+        model: currentModel,
+        persona: currentModelName === "Aura Summary" 
+          ? "You are Aura Summary. Explain any topic in exactly TWO paragraphs (2-3 lines each). You MUST format your response exactly like this:\\n\\n**English:**\\n[Your English paragraph here with an example]\\n\\n**Hinglish:**\\n[Your Hinglish paragraph here with an example]\\n\\nDo NOT use bullet points or numbered lists, write only in continuous paragraph format."
+          : (localStorage.getItem("system_persona") || null)
+      }),
+      signal: abortController.signal,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Server error: ${response.status}`);
+    }
+
+    typingEl.remove();
+
+    ({ rowEl, bubbleEl } = appendMessage("ai", ""));
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const jsonStr = line.slice(6).trim();
+        if (!jsonStr) continue;
+
+        try {
+          const data = JSON.parse(jsonStr);
+
+          if (data.error) {
+            fullContent += `\n\n⚠️ ${data.error}`;
+            const errAnswerEl = bubbleEl.querySelector(".answer-content");
+            if (errAnswerEl) errAnswerEl.innerHTML = renderMarkdown(fullContent);
+            break;
+          }
+
+          if (data.done) break;
+
+          if (data.reasoning && currentModelName !== "Aura Summary") {
+            fullReasoning += data.reasoning;
+            // Create or update the thinking block
+            if (!reasoningEl) {
+              reasoningEl = document.createElement("details");
+              reasoningEl.className = "thinking-block";
+              reasoningEl.innerHTML = `<summary><span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;margin-right:4px;">psychology</span>Thinking...<span class="deep-think-timer" style="margin-left:auto;font-size:0.7rem;color:rgba(220,184,255,0.5);font-weight:500;"></span></summary><div class="deep-think-progress"></div><div class="thinking-content"></div>`;
+              reasoningEl.open = true;
+              bubbleEl.prepend(reasoningEl);
+              // Start a timer to show elapsed time
+              reasoningEl._startTime = Date.now();
+              reasoningEl._timer = setInterval(() => {
+                const elapsed = Math.round((Date.now() - reasoningEl._startTime) / 1000);
+                const timerEl = reasoningEl.querySelector(".deep-think-timer");
+                if (timerEl) timerEl.textContent = `${elapsed}s`;
+              }, 1000);
+            }
+            reasoningEl.querySelector(".thinking-content").innerHTML = renderMarkdown(fullReasoning);
+            scrollToBottom();
+          }
+
+          if (data.content) {
+            fullContent += data.content;
+
+            // ── Canvas Live Streaming ──
+            // Detect HTML block start and mark streaming (no auto-open)
+            if (currentModelName === "Aura AI") {
+              const htmlBlockMatch = fullContent.match(/```html\n?([\s\S]*)/);
+              if (htmlBlockMatch) {
+                // Extract code captured so far (before closing ```)
+                const codeMatch = fullContent.match(/```html\n?([\s\S]*?)(?:```|$)/);
+                const liveCode = codeMatch ? codeMatch[1] : htmlBlockMatch[1];
+
+                if (!canvasIsStreaming) {
+                  // First detection — mark streaming but don't open yet
+                  canvasIsStreaming = true;
+                }
+                // Push live update (debounced inside updateCanvasLive)
+                if (liveCode.length > 80) {
+                  updateCanvasLive(liveCode);
+                }
+              }
+            }
+
+            // When content starts, stop the reasoning progress bar but keep block OPEN
+            if (reasoningEl) {
+              const progressBar = reasoningEl.querySelector(".deep-think-progress");
+              if (progressBar) progressBar.remove();
+              // Update summary text to show it's done reasoning
+              const summary = reasoningEl.querySelector("summary");
+              if (summary && !reasoningEl._contentStarted) {
+                reasoningEl._contentStarted = true;
+                // Stop the timer
+                if (reasoningEl._timer) { clearInterval(reasoningEl._timer); reasoningEl._timer = null; }
+                const elapsed = Math.round((Date.now() - reasoningEl._startTime) / 1000);
+                summary.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;margin-right:4px;">psychology</span>Thought for ${elapsed}s`;
+              }
+            }
+            // Render content after the reasoning block
+            let contentContainer = bubbleEl.querySelector(".answer-content");
+            if (!contentContainer) {
+              contentContainer = document.createElement("div");
+              contentContainer.className = "answer-content";
+              bubbleEl.appendChild(contentContainer);
+            }
+            contentContainer.innerHTML = renderMarkdown(fullContent, true) + '<span class="typing-cursor"></span>';
+            setOrbState('responding');
+            scrollToBottom();
+          }
+        } catch (parseErr) {
+          // Skip malformed chunks
+        }
+      }
+    }
+
+    // Finalize: remove typing cursor, wire lightbox, append action bar
+    // Keep reasoning block open after stream is fully complete
+    if (reasoningEl) {
+      if (reasoningEl._timer) { clearInterval(reasoningEl._timer); reasoningEl._timer = null; }
+      reasoningEl.open = true;
+      const summary = reasoningEl.querySelector("summary");
+      if (summary) {
+        const elapsed = Math.round((Date.now() - (reasoningEl._startTime || Date.now())) / 1000);
+        summary.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;margin-right:4px;">psychology</span>Reasoning (${elapsed}s)`;
+      }
+    }
+    const answerEl = bubbleEl.querySelector(".answer-content");
+    if (answerEl) {
+      answerEl.innerHTML = renderMarkdown(fullContent);
+      answerEl.querySelectorAll("img").forEach(img => {
+        img.style.cursor = "zoom-in";
+        img.onclick = () => openLightbox(img.src);
+      });
+    }
+    if (rowEl) appendActionBar(rowEl, fullContent);
+
+    // ── Finalize Canvas if we were streaming code ──
+    if (canvasIsStreaming) {
+      const finalHtmlMatch = fullContent.match(/```html\n?([\s\S]*?)(?:```|$)/);
+      if (finalHtmlMatch && finalHtmlMatch[1].trim()) {
+        finalizeCanvas(finalHtmlMatch[1].trim());
+      } else {
+        finalizeCanvas(canvasLiveCode);
+      }
+    }
+
+    conversationHistory.push({ role: "assistant", content: fullContent });
+    saveSession();
+    
+    // (#2) Auto-rename the chat title after first AI response
+    autoRenameChat(fullContent);
+    
+    // (#6) Apply syntax highlighting to code blocks
+    if (window.hljs && bubbleEl) {
+      bubbleEl.querySelectorAll('pre code').forEach(block => {
+        hljs.highlightElement(block);
+      });
+    }
+  } catch (err) {
+    console.error("Chat error:", err);
+    if (typingEl && typingEl.parentNode) typingEl.remove();
+    
+    // Don't show error for intentional abort
+    if (err.name === "AbortError") {
+      // User stopped generation — finalize whatever was streamed
+      if (fullContent && fullContent.trim()) {
+        const answerEl = bubbleEl?.querySelector(".answer-content");
+        if (answerEl) answerEl.innerHTML = renderMarkdown(fullContent);
+        if (rowEl) appendActionBar(rowEl, fullContent);
+        conversationHistory.push({ role: "assistant", content: fullContent });
+        saveSession();
+      }
+      // Finalize canvas if we were streaming code when stopped
+      if (canvasIsStreaming && canvasLiveCode.trim()) {
+        finalizeCanvas(canvasLiveCode);
+      }
+    } else {
+      // Check if error was already partially handled in stream
+      const lastAiBubble = chatMessages.querySelector(".message-row.ai:last-child .ai-bubble");
+      if (!lastAiBubble || lastAiBubble.textContent === "") {
+          appendMessage(
+            "ai",
+            "⚠️ I'm having trouble connecting right now. Please check your connection and try again."
+          );
+      }
+      setOrbState('error');
+    }
+  } finally {
+    isStreaming = false;
+    abortController = null;
+    canvasIsStreaming = false;
+    updateSendButton(false);
+    animateSendButton();
+    scrollToBottom();
+    updateScrollBtn();
+    setOrbState('idle');
+  }
+}
+
+// ── Append Action Bar to AI Bubble ──
+function appendActionBar(rowEl, content) {
+  if (!rowEl) return;
+  // Remove any existing action bar
+  const old = rowEl.querySelector(".ai-action-bar");
+  if (old) old.remove();
+
+  const bar = document.createElement("div");
+  bar.className = "ai-action-bar";
+
+  // Copy
+  const copyBtn = document.createElement("button");
+  copyBtn.className = "action-btn";
+  copyBtn.title = "Copy response";
+  copyBtn.innerHTML = '<span class="material-symbols-outlined">content_copy</span>';
+  copyBtn.onclick = () => {
+    navigator.clipboard.writeText(content).then(() => {
+      copyBtn.innerHTML = '<span class="material-symbols-outlined">check</span>';
+      copyBtn.style.color = "#4ade80";
+      setTimeout(() => {
+        copyBtn.innerHTML = '<span class="material-symbols-outlined">content_copy</span>';
+        copyBtn.style.color = "";
+      }, 2000);
+    });
+  };
+
+  // Thumbs Up
+  const thumbUpBtn = document.createElement("button");
+  thumbUpBtn.className = "action-btn";
+  thumbUpBtn.title = "Good response";
+  thumbUpBtn.innerHTML = '<span class="material-symbols-outlined">thumb_up</span>';
+  thumbUpBtn.onclick = () => {
+    thumbUpBtn.style.color = "#5ea2ff";
+    thumbDownBtn.style.color = "";
+    thumbUpBtn.querySelector("span").style.fontVariationSettings = "'FILL' 1";
+    thumbDownBtn.querySelector("span").style.fontVariationSettings = "'FILL' 0";
+  };
+
+  // Thumbs Down
+  const thumbDownBtn = document.createElement("button");
+  thumbDownBtn.className = "action-btn";
+  thumbDownBtn.title = "Bad response";
+  thumbDownBtn.innerHTML = '<span class="material-symbols-outlined">thumb_down</span>';
+  thumbDownBtn.onclick = () => {
+    thumbDownBtn.style.color = "#ffb4ab";
+    thumbUpBtn.style.color = "";
+    thumbDownBtn.querySelector("span").style.fontVariationSettings = "'FILL' 1";
+    thumbUpBtn.querySelector("span").style.fontVariationSettings = "'FILL' 0";
+  };
+
+  // Retry
+  const retryBtn = document.createElement("button");
+  retryBtn.className = "action-btn";
+  retryBtn.title = "Retry response";
+  retryBtn.innerHTML = '<span class="material-symbols-outlined">refresh</span>';
+  retryBtn.onclick = () => {
+    if (isStreaming) return;
+    // Pop the last assistant message from history
+    if (conversationHistory.length > 0 && conversationHistory[conversationHistory.length - 1].role === "assistant") {
+      conversationHistory.pop();
+    }
+    // Remove last AI row from DOM
+    const rows = Array.from(chatMessages.querySelectorAll(".message-row.ai"));
+    if (rows.length > 0) rows[rows.length - 1].remove();
+    getAuraResponse();
+  };
+
+  // (#8) Export button
+  const exportBtn = document.createElement("button");
+  exportBtn.className = "action-btn";
+  exportBtn.title = "Export as PDF";
+  exportBtn.innerHTML = '<span class="material-symbols-outlined">picture_as_pdf</span>';
+  exportBtn.onclick = () => exportCurrentChat();
+
+  bar.appendChild(copyBtn);
+  bar.appendChild(thumbUpBtn);
+  bar.appendChild(thumbDownBtn);
+  bar.appendChild(retryBtn);
+  bar.appendChild(exportBtn);
+  bubbleEl.appendChild(bar);
+}
+
+// ── Append Message to Chat ──
+function appendMessage(role, content, explicitIndex = -1, isRawHtmlForUser = false) {
+  // Use explicitIndex if provided (e.g. during loadSession), 
+  // otherwise calculate based on current history length.
+  const index = explicitIndex !== -1 ? explicitIndex : conversationHistory.length;
+  
+  const row = document.createElement("div");
+  row.className = `message-row ${role}`;
+  row.dataset.index = index;
+
+  const avatar = document.createElement("div");
+  avatar.className = `message-avatar ${role === "ai" ? "ai-avatar" : "user-avatar"}`;
+
+  if (role === "ai") {
+    avatar.innerHTML = "✦";
+  } else {
+    const user = auth ? auth.currentUser : null;
+    if (user?.photoURL) {
+      const avatarImg = document.createElement('img');
+      avatarImg.src = user.photoURL;
+      avatarImg.alt = 'You';
+      avatar.innerHTML = '';
+      avatar.appendChild(avatarImg);
+    } else {
+      const initial = (user?.displayName || user?.email || "U")[0].toUpperCase();
+      avatar.textContent = initial;
+    }
+  }
+
+  const bubble = document.createElement("div");
+  bubble.className = role === "ai" ? "ai-bubble" : "user-bubble";
+  
+    // For user messages, wrap in a container to support edit button
+    if (role === "user") {
+      // Correctly handle either string content or multimodal content
+      let textToDisplay = content;
+      if (typeof content !== "string" && Array.isArray(content)) {
+        const textItem = content.find(c => c.type === "text");
+        textToDisplay = textItem ? textItem.text : "[Attachment]";
+      }
+      // Guard against undefined/null so we never render the literal "undefined"
+      textToDisplay = textToDisplay ?? "";
+      bubble.innerHTML = isRawHtmlForUser ? textToDisplay : escapeHtml(textToDisplay);
+    
+    // Add Edit Button
+    const editBtn = document.createElement("button");
+    editBtn.className = "edit-message-btn";
+    editBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;">edit</span>';
+    editBtn.title = "Edit message";
+    editBtn.onclick = () => openEditMode(row, index);
+    row.appendChild(editBtn);
+  } else {
+    // Model badge removed per user request
+
+
+    const contentDiv = document.createElement("div");
+    contentDiv.className = "answer-content";
+    contentDiv.innerHTML = renderMarkdown(content);
+    // Wire up images for lightbox
+    contentDiv.querySelectorAll("img").forEach(img => {
+      img.style.cursor = "zoom-in";
+      img.onclick = () => openLightbox(img.src);
+    });
+    bubble.appendChild(contentDiv);
+
+    // Add action bar for completed (non-empty) AI messages (used during history load)
+    if (content && content.trim()) {
+      appendActionBar(row, content);
+    }
+  }
+
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+
+  // ── Message Timestamp ──
+  const ts = document.createElement('div');
+  ts.className = 'message-timestamp';
+  ts.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  row.appendChild(ts);
+
+  chatMessages.appendChild(row);
+  // Force scroll for user messages; AI messages respect user's scroll position
+  scrollToBottom(role === "user");
+  updateScrollBtn();
+
+  return { rowEl: row, bubbleEl: bubble };
+}
+
+// ── Typing Indicator (#16 — Skeleton Shimmer) ──
+function showTypingIndicator(multimodalState = {}) {
+  const row = document.createElement("div");
+  row.className = "message-row ai";
+  row.id = "typing-row";
+
+  const avatar = document.createElement("div");
+  avatar.className = "message-avatar ai-avatar";
+  avatar.innerHTML = "✦";
+
+  // Smart typing text
+  let typingText = "Aura is thinking";
+  if (multimodalState.hasImage) {
+    typingText = "Analyzing image";
+  } else if (multimodalState.hasAudio) {
+    typingText = "Listening to audio";
+  } else if (multimodalState.hasVideo) {
+    typingText = "Analyzing video";
+  } else if (currentModelName === "Aura AI" && aura1Mode === "deep_think") {
+    typingText = "Reasoning deeply";
+  }
+  
+  const typing = document.createElement("div");
+  typing.className = "typing-indicator-skeleton";
+  typing.innerHTML = `
+    <div class="typing-label">
+      <span class="skeleton-dot"></span>
+      <span class="skeleton-dot"></span>
+      <span class="skeleton-dot"></span>
+      <span class="typing-label-text">${typingText}</span>
+    </div>
+    <div class="skeleton-line"></div>
+    <div class="skeleton-line"></div>
+    <div class="skeleton-line"></div>
+  `;
+
+  row.appendChild(avatar);
+  row.appendChild(typing);
+  chatMessages.appendChild(row);
+  scrollToBottom();
+
+  return row;
+}
+
+// ── Update Send Button State ──
+function updateSendButton(streaming) {
+  if (!sendBtn) return;
+  if (streaming) {
+    sendBtn.classList.add("hidden");
+    if (stopBtn) stopBtn.classList.remove("hidden");
+  } else {
+    sendBtn.classList.remove("hidden");
+    sendBtn.disabled = false;
+    sendBtn.style.opacity = "1";
+    if (stopBtn) stopBtn.classList.add("hidden");
+    animateSendButton();
+  }
+}
+
+function scrollToBottom(force = false) {
+  if (force) userHasScrolledUp = false;
+  // Only auto-scroll if user is near the bottom, or if forced (e.g. user sends a new message)
+  if (!force && userHasScrolledUp) return;
+  window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "auto" });
+  updateScrollBtn();
+}
+
+// ── Artifact Code Store (maps unique IDs to raw HTML strings) ──
+// Moved to utils.js
+
+// ── Simple Markdown Renderer ──
+// Moved to utils.js
+
+// ── Copy Code to Clipboard ──
+function copyCode(btn) {
+  const wrapper = btn.closest(".code-block-wrapper");
+  const codeEl = wrapper.querySelector("code");
+  if (!codeEl) return;
+  
+  const text = codeEl.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.classList.add("copied");
+    btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px;">check</span> Copied!`;
+    setTimeout(() => {
+      btn.classList.remove("copied");
+      btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px;">content_copy</span> Copy`;
+    }, 2000);
+  }).catch(() => {
+    // Fallback for older browsers
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.cssText = "position:fixed;opacity:0;";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+    btn.classList.add("copied");
+    btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px;">check</span> Copied!`;
+    setTimeout(() => {
+      btn.classList.remove("copied");
+      btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px;">content_copy</span> Copy`;
+    }, 2000);
+  });
+}
+window.copyCode = copyCode;
+
+// ── Mobile Virtual Keyboard Handling ──
+if (window.visualViewport) {
+  const chatFooter = document.getElementById("chat-footer");
+  const footerGradient = document.querySelector(".footer-gradient");
+  
+  window.visualViewport.addEventListener("resize", () => {
+    if (!chatFooter) return;
+    const offsetBottom = window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop;
+    if (offsetBottom > 50) {
+      // Keyboard is open
+      chatFooter.style.bottom = offsetBottom + "px";
+      if (footerGradient) footerGradient.style.bottom = offsetBottom + "px";
+    } else {
+      chatFooter.style.bottom = "0px";
+      if (footerGradient) footerGradient.style.bottom = "0px";
+    }
+  });
+}
+
+// ── Conversation Branching (Edit Logic) ──
+function openEditMode(rowEl, index) {
+  const bubble = rowEl.querySelector(".user-bubble");
+  if (!bubble || bubble.querySelector(".edit-textarea")) return;
+
+  // Get current text from history
+  let currentContent = conversationHistory[index]?.content;
+  let textToEdit = "";
+  
+  if (typeof currentContent === "string") {
+    textToEdit = currentContent;
+  } else if (Array.isArray(currentContent)) {
+    textToEdit = currentContent.find(c => c.type === "text")?.text || "";
+  }
+
+  // Preserve original HTML for cancel
+  const originalHTML = bubble.innerHTML;
+
+  // Build edit UI safely to prevent XSS from user content
+  bubble.innerHTML = `
+    <textarea class="edit-textarea"></textarea>
+    <div class="edit-actions">
+      <button class="edit-btn cancel">Cancel</button>
+      <button class="edit-btn save">Save & Resubmit</button>
+    </div>
+  `;
+
+  const textarea = bubble.querySelector(".edit-textarea");
+  // Set value programmatically — prevents XSS from </textarea> injection
+  textarea.value = textToEdit;
+  textarea.focus();
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+  bubble.querySelector(".cancel").onclick = () => {
+    bubble.innerHTML = originalHTML;
+  };
+
+  bubble.querySelector(".save").onclick = () => {
+    const newText = textarea.value.trim();
+    if (newText) {
+      submitEdit(index, newText);
+    } else {
+      bubble.innerHTML = originalHTML;
+    }
+  };
+}
+
+async function submitEdit(index, newText) {
+  // If we are currently streaming, stop it
+  if (isStreaming && abortController) {
+    abortController.abort();
+  }
+
+  // Double check index bounds
+  if (index < 0 || index >= conversationHistory.length) {
+    console.error("[Edit Logic] Index out of bounds:", index);
+    return;
+  }
+
+  // 1. Truncate History
+  conversationHistory = conversationHistory.slice(0, index + 1);
+  
+  // 2. Update the edited message
+  const msg = conversationHistory[index];
+  if (!msg) return;
+
+  if (typeof msg.content === "string") {
+    msg.content = newText;
+  } else if (Array.isArray(msg.content)) {
+    const textPart = msg.content.find(c => c.type === "text");
+    if (textPart) textPart.text = newText;
+  }
+
+  // 3. Clear DOM after this message
+  const rows = Array.from(chatMessages.querySelectorAll(".message-row"));
+  rows.forEach(row => {
+    const rowIndex = parseInt(row.dataset.index);
+    if (rowIndex > index) {
+      row.remove();
+    }
+  });
+
+  // 4. Update the edited bubble UI
+  const editedRow = chatMessages.querySelector(`.message-row[data-index="${index}"]`);
+  if (editedRow) {
+    const bubble = editedRow.querySelector(".user-bubble");
+    bubble.innerHTML = escapeHtml(newText);
+  }
+
+  // 5. Trigger new response
+  saveSession();
+  getAuraResponse();
+}
+
+// ── Auto-focus Input ──
+document.addEventListener("DOMContentLoaded", () => {
+  // Only auto-focus on desktop (mobile would open keyboard)
+  if (chatInput && window.innerWidth > 768) {
+    setTimeout(() => chatInput.focus(), 500);
+  }
+
+  // ── Page Transition Fade-in ──
+  const overlay = document.getElementById('page-overlay');
+  if (overlay) {
+    overlay.style.opacity = '0';
+    overlay.style.pointerEvents = 'none';
+  }
+
+  // ── Draft Input Persistence ──
+  const draftKey = 'synapse_draft_input';
+  const savedDraft = localStorage.getItem(draftKey);
+  if (savedDraft && chatInput) {
+    chatInput.value = savedDraft;
+    chatInput.dispatchEvent(new Event('input'));
+    chatInput.classList.add('has-draft');
+  }
+
+  if (chatInput) {
+    const charCounter = document.getElementById('char-counter');
+    chatInput.addEventListener('input', () => {
+      const val = chatInput.value;
+      
+      // Update character counter
+      if (charCounter) {
+        charCounter.textContent = `${val.length} / 4000`;
+        if (val.length >= 4000) charCounter.style.color = '#ffb4ab';
+        else charCounter.style.color = '';
+      }
+      const charLimitArcSvg = document.querySelector('.char-limit-arc');
+      const charLimitArc = document.querySelector('.char-limit-arc .arc-value');
+      if (charLimitArc && charLimitArcSvg) {
+        if (val.length > 0) {
+          charLimitArcSvg.style.opacity = '1';
+          const percent = Math.min(val.length / 4000, 1);
+          const offset = 125.6 - (percent * 125.6);
+          charLimitArc.style.strokeDashoffset = offset;
+          charLimitArc.style.stroke = val.length >= 4000 ? '#ffb4ab' : 'var(--accent)';
+        } else {
+          charLimitArcSvg.style.opacity = '0';
+        }
+      }
+
+      // Handle draft persistence
+      if (val.trim()) {
+        localStorage.setItem(draftKey, val);
+        chatInput.classList.add('has-draft');
+      } else {
+        localStorage.removeItem(draftKey);
+        chatInput.classList.remove('has-draft');
+      }
+    });
+  }
+
+
+  // ── Swipe to Dismiss Drawer (Mobile) ──
+  const drawerEl = document.getElementById('drawer');
+  const drawerToggleEl = document.getElementById('drawer-toggle');
+  if (drawerEl && drawerToggleEl) {
+    let startX = 0;
+    let currentX = 0;
+    let isDragging = false;
+
+    drawerEl.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+      currentX = startX;
+      isDragging = true;
+    }, { passive: true });
+
+    drawerEl.addEventListener('touchmove', (e) => {
+      if (!isDragging) return;
+      currentX = e.touches[0].clientX;
+      const diff = currentX - startX;
+      if (diff < 0) {
+        // Dragging left — slide drawer out
+        drawerEl.style.transform = `translateX(${Math.max(diff, -280)}px)`;
+        drawerEl.style.transition = 'none';
+      }
+    }, { passive: true });
+
+    drawerEl.addEventListener('touchend', () => {
+      isDragging = false;
+      drawerEl.style.transition = '';
+      const diff = currentX - startX;
+      if (diff < -80) {
+        // Enough swipe to close
+        drawerToggleEl.checked = false;
+        drawerEl.style.transform = '';
+      } else {
+        drawerEl.style.transform = '';
+      }
+    });
+  }
+
+  // ── Sidebar collapse (desktop) ──
+  // The hamburger in the sidebar header hides the rail; a matching hamburger
+  // in the top bar brings it back. The choice is remembered between visits.
+  const sidebarCollapseEl = document.getElementById('sidebar-collapse');
+  if (sidebarCollapseEl) {
+    if (localStorage.getItem('sidebar_collapsed') === '1') {
+      sidebarCollapseEl.checked = true;
+    }
+    sidebarCollapseEl.addEventListener('change', () => {
+      localStorage.setItem('sidebar_collapsed', sidebarCollapseEl.checked ? '1' : '0');
+    });
+    document.querySelectorAll('[data-sidebar-toggle]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        // Narrow screens use the overlay drawer instead of the docked rail.
+        if (window.matchMedia('(max-width: 767px)').matches) {
+          if (drawerToggleEl) drawerToggleEl.checked = !drawerToggleEl.checked;
+          return;
+        }
+        sidebarCollapseEl.checked = !sidebarCollapseEl.checked;
+        sidebarCollapseEl.dispatchEvent(new Event('change'));
+      });
+    });
+  }
+
+  // ── Keyboard Shortcuts ──
+  document.addEventListener('keydown', (e) => {
+    // Cmd/Ctrl+K opens history modal.
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      openHistoryModal();
+    }
+    // Cmd/Ctrl+B toggles the sidebar.
+    if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+      e.preventDefault();
+      const toggle = document.querySelector('[data-sidebar-toggle]');
+      if (toggle) toggle.click();
+    }
+    // Cmd/Ctrl+N starts a new chat, matching the ⌘N hint in the sidebar.
+    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+      e.preventDefault();
+      createNewChat();
+    }
+  });
+
+  // ── Model Accent Colors in selector button ──
+  updateModelAccentColor();
+  updateActiveModelIndicator(currentModelName);
+  
+  // ── Header Scroll Shadow ──
+  const headerEl = document.querySelector('header');
+  if (headerEl) {
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 10) {
+        headerEl.classList.add('scrolled');
+      } else {
+        headerEl.classList.remove('scrolled');
+      }
+    }, { passive: true });
+  }
+  // (#6) Highlight existing code blocks on page load
+  if (window.hljs) {
+    document.querySelectorAll('pre code').forEach(block => {
+      hljs.highlightElement(block);
+    });
+  }
+});
+
+// ── Export Chat as PDF ──
+function exportCurrentChat() {
+  if (conversationHistory.length === 0) {
+    showToast('No conversation to export', 'error');
+    return;
+  }
+  if (typeof html2pdf !== "function") {
+    showToast('PDF engine failed to load — check your connection and refresh.', 'error');
+    return;
+  }
+
+  const user = auth ? auth.currentUser : null;
+  const userName = user?.displayName || user?.email || 'You';
+  const index = getHistoryIndex();
+  const entry = index.find(c => c.id === currentChatId);
+  const chatTitle = entry?.title || 'Chat Export';
+  const exportDate = new Date().toLocaleDateString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+
+  // Build message HTML
+  let messagesHtml = '';
+  conversationHistory.forEach(msg => {
+    let content = '';
+    if (typeof msg.content === 'string') {
+      content = msg.content;
+    } else if (Array.isArray(msg.content)) {
+      const textItem = msg.content.find(c => c.type === 'text');
+      content = textItem ? textItem.text : '[Attachment]';
+    }
+
+    const isAI = msg.role === 'assistant';
+    const roleLabel = isAI ? `✦ Aura <span class="model-badge">${currentModelName}</span>` : `👤 ${escapeHtml(userName)}`;
+    const bubbleClass = isAI ? 'ai-msg' : 'user-msg';
+
+    // Convert markdown to simple HTML for PDF
+    let htmlContent = escapeHtml(content)
+      // Code blocks
+      .replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
+        `<pre class="code-block"><code>${code.trimEnd()}</code></pre>`)
+      // Inline code
+      .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
+      // Bold
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      // Italic
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      // Headers
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+      // Bullet lists
+      .replace(/^[•\-\*] (.+)$/gm, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
+      // Numbered lists
+      .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+      // Line breaks
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/\n/g, '<br>');
+
+    messagesHtml += `
+      <div class="message ${bubbleClass}">
+        <div class="message-role">${roleLabel}</div>
+        <div class="message-content"><p>${htmlContent}</p></div>
+      </div>`;
+  });
+
+  // ── 1-Click Direct PDF Export using html2pdf.js ──
+  const element = document.createElement('div');
+  element.innerHTML = `
+    <div class="pdf-export-container" style="padding: 20px; font-family: 'Inter', sans-serif; color: #1a1b21;">
+      <div style="border-bottom: 3px solid #5ea2ff; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end;">
+        <div>
+          <h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;">SYNAPSE<span style="color: #5ea2ff;">AI</span></h1>
+          <h2 style="margin: 5px 0 0 0; font-size: 16px; font-weight: 600; color: #333;">${escapeHtml(chatTitle)}</h2>
+        </div>
+        <div style="text-align: right; font-size: 10px; color: #666; line-height: 1.5;">
+          <div>Model: ${escapeHtml(currentModelName)}</div>
+          <div>Exported: ${exportDate}</div>
+          <div>${conversationHistory.length} messages</div>
+        </div>
+      </div>
+      <div class="pdf-body">
+        ${messagesHtml}
+      </div>
+      <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 15px; font-size: 9px; color: #999; display: flex; justify-content: space-between;">
+        <span>Synapse AI — Confidential</span>
+        <span>${escapeHtml(chatTitle)}</span>
+      </div>
+    </div>
+  `;
+
+  // Inject styles for the PDF elements
+  const style = document.createElement('style');
+  style.innerHTML = `
+    .pdf-export-container .message { margin-bottom: 20px; page-break-inside: avoid; }
+    .pdf-export-container .message-role { font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
+    .pdf-export-container .model-badge { background: #e8f3ff; color: #2b6cb0; border-radius: 3px; padding: 1px 4px; font-size: 8px; font-weight: 600; text-transform: none; }
+    .pdf-export-container .message-content { background: #f9f9fa; border-radius: 8px; padding: 12px 16px; font-size: 11px; line-height: 1.6; border: 1px solid #eee; }
+    .pdf-export-container .ai-msg .message-content { border-left: 3px solid #5ea2ff; }
+    .pdf-export-container .user-msg .message-content { border-left: 3px solid #7701d0; background: #faf5ff; border-color: #e4d4ff; }
+    .pdf-export-container .ai-msg .message-role { color: #2b6cb0; }
+    .pdf-export-container .user-msg .message-role { color: #5b21b6; }
+    .pdf-export-container p { margin: 4px 0; }
+    .pdf-export-container h1 { font-size: 14px; margin: 10px 0 5px; }
+    .pdf-export-container h2 { font-size: 13px; margin: 10px 0 5px; }
+    .pdf-export-container h3 { font-size: 12px; margin: 10px 0 5px; }
+    .pdf-export-container strong { color: #000; }
+    .pdf-export-container ul, .pdf-export-container ol { padding-left: 20px; margin: 5px 0; }
+    .pdf-export-container .code-block { background: #f1f3f7; border-radius: 6px; padding: 10px; margin: 8px 0; font-family: monospace; font-size: 9px; white-space: pre-wrap; word-wrap: break-word; page-break-inside: avoid; }
+    .pdf-export-container .inline-code { background: #e8f3ff; color: #2b6cb0; padding: 1px 4px; border-radius: 3px; font-family: monospace; font-size: 10px; }
+  `;
+  element.appendChild(style);
+
+  // Configure html2pdf
+  const safeFilename = chatTitle.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
+  const opt = {
+    margin:       [10, 10, 10, 10],
+    filename:     `SynapseAI_${safeFilename}.pdf`,
+    image:        { type: 'jpeg', quality: 0.95 },
+    html2canvas:  { 
+      scale: 1.5,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff',
+      windowWidth: 900
+    },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  // Loading overlay so user knows PDF is generating
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#fff;font-family:Inter,sans-serif;';
+  overlay.innerHTML = '<div style="width:40px;height:40px;border:3px solid rgba(255,255,255,0.2);border-top-color:#5ea2ff;border-radius:50%;animation:spin 0.8s linear infinite;"></div><div style="font-size:14px;font-weight:500;">Generating PDF...</div><style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
+  document.body.appendChild(overlay);
+
+  // IMPORTANT: element must be in DOM and on-screen for html2canvas to render it.
+  // We place it below the visible area but within the document flow.
+  element.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 900px;
+    z-index: -1;
+    opacity: 1;
+    background: #fff;
+    pointer-events: none;
+  `;
+  document.body.appendChild(element);
+
+  // Small delay so the overlay renders first, then we capture
+  setTimeout(() => {
+    html2pdf().set(opt).from(element).save().then(() => {
+      document.body.removeChild(element);
+      document.body.removeChild(overlay);
+      showToast('PDF downloaded!', 'success');
+    }).catch(err => {
+      console.error('PDF Export Error:', err);
+      document.body.removeChild(element);
+      document.body.removeChild(overlay);
+      showToast('PDF failed — try again', 'error');
+    });
+  }, 100);
+}
+window.exportCurrentChat = exportCurrentChat;
+
+
+// (#10) Model Warning when loading old chat with different model
+function showModelWarning(originalModel) {
+  if (!originalModel || originalModel === currentModelName) return;
+  
+  // Remove existing warning
+  const existing = document.querySelector('.model-warning-banner');
+  if (existing) existing.remove();
+  
+  const banner = document.createElement('div');
+  banner.className = 'model-warning-banner';
+  banner.innerHTML = `
+    <span class="material-symbols-outlined">info</span>
+    <span>This chat was with <strong>${originalModel}</strong></span>
+    <button onclick="switchToModel('${originalModel}'); this.closest('.model-warning-banner').remove();">Switch back</button>
+    <button onclick="this.closest('.model-warning-banner').remove();" style="background:none;border:none;color:rgba(255,200,100,0.5);padding:2px;cursor:pointer;"><span class="material-symbols-outlined" style="font-size:16px;">close</span></button>
+  `;
+  chatMessages.insertBefore(banner, chatMessages.firstChild);
+}
+
+window.switchToModel = function(modelName) {
+  const option = Array.from(modelOptions).find(o => o.getAttribute('data-name') === modelName);
+  if (option) option.click();
+};
+
+// (#29) PWA Install Prompt
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  showPWAInstallBanner();
+});
+
+function showPWAInstallBanner() {
+  if (localStorage.getItem('pwa_dismissed')) return;
+  
+  const drawerNav = document.querySelector('#drawer nav');
+  if (!drawerNav) return;
+  
+  // Don't add duplicate
+  if (document.querySelector('.pwa-install-banner')) return;
+  
+  const banner = document.createElement('div');
+  banner.className = 'pwa-install-banner';
+  banner.innerHTML = `
+    <div class="pwa-icon">
+      <span class="material-symbols-outlined" style="color:#fff;font-size:18px;font-variation-settings:'FILL' 1;">install_mobile</span>
+    </div>
+    <div class="pwa-text">
+      <div class="pwa-title">Install Synapse AI</div>
+      <div class="pwa-desc">Add to home screen for quick access</div>
+    </div>
+    <button class="pwa-close" onclick="event.stopPropagation(); this.closest('.pwa-install-banner').remove(); localStorage.setItem('pwa_dismissed','1');">
+      <span class="material-symbols-outlined" style="font-size:16px;">close</span>
+    </button>
+  `;
+  banner.addEventListener('click', async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    const result = await deferredInstallPrompt.userChoice;
+    if (result.outcome === 'accepted') {
+      showToast('Synapse AI installed!', 'success');
+    }
+    deferredInstallPrompt = null;
+    banner.remove();
+  });
+  
+  // Insert before the divider in drawer nav
+  const divider = drawerNav.querySelector('.h-px');
+  if (divider) drawerNav.insertBefore(banner, divider);
+  else drawerNav.appendChild(banner);
+}
+
+// ============================================
+// (#19) Focus Trap Utility
+// ============================================
+const _focusTrapHandlers = new WeakMap();
+
+function trapFocus(container) {
+  const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  
+  function handler(e) {
+    if (e.key !== 'Tab') return;
+    
+    const focusables = [...container.querySelectorAll(focusableSelector)].filter(el => el.offsetParent !== null);
+    if (focusables.length === 0) return;
+    
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    
+    if (e.shiftKey) {
+      if (document.activeElement === first || !container.contains(document.activeElement)) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (document.activeElement === last || !container.contains(document.activeElement)) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  }
+  
+  _focusTrapHandlers.set(container, handler);
+  document.addEventListener('keydown', handler);
+}
+
+function releaseFocusTrap(container) {
+  const handler = _focusTrapHandlers.get(container);
+  if (handler) {
+    document.removeEventListener('keydown', handler);
+    _focusTrapHandlers.delete(container);
+  }
+}
+
+// ============================================
+// (#22) ARIA Improvements — applied once on load
+// ============================================
+(function applyAriaLabels() {
+  // Typing indicator area
+  const chatMsgs = document.getElementById('chat-messages');
+  if (chatMsgs) chatMsgs.setAttribute('aria-live', 'polite');
+  
+  // Model dropdown
+  const modelDropdown = document.getElementById('model-dropdown');
+  if (modelDropdown) {
+    modelDropdown.setAttribute('role', 'listbox');
+    modelDropdown.setAttribute('aria-label', 'AI model selection');
+    modelDropdown.querySelectorAll('.model-option').forEach(opt => {
+      opt.setAttribute('role', 'option');
+    });
+  }
+  
+
+  // Chat input
+  const chatInputEl = document.getElementById('chat-input');
+  if (chatInputEl) chatInputEl.setAttribute('aria-label', 'Message input');
+  
+  // Send button
+  const sendBtnEl = document.getElementById('send-btn');
+  if (sendBtnEl) sendBtnEl.setAttribute('aria-label', 'Send message');
+})();
+
+// ── Toast Notification System ──
+let toastTimeout = null;
+function showToast(message, type = 'default', duration = 2500) {
+  let toast = document.getElementById('synapse-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'synapse-toast';
+    toast.className = 'synapse-toast';
+    document.body.appendChild(toast);
+  }
+  if (toastTimeout) clearTimeout(toastTimeout);
+  
+  // Build toast content with icon
+  let iconHtml = '';
+  if (type === 'success') {
+    iconHtml = '<span class="material-symbols-outlined toast-icon" style="font-variation-settings:\'FILL\' 1;">check_circle</span>';
+  } else if (type === 'error') {
+    iconHtml = '<span class="material-symbols-outlined toast-icon" style="font-variation-settings:\'FILL\' 1;">error</span>';
+  }
+  
+  toast.innerHTML = iconHtml + `<span>${message}</span>`;
+  toast.className = `synapse-toast ${type}`;
+  requestAnimationFrame(() => {
+    toast.classList.add('show');
+  });
+  toastTimeout = setTimeout(() => {
+    toast.classList.remove('show');
+  }, duration);
+}
+window.showToast = showToast;
+
+// ── Model Accent Color Helper ──
+function updateModelAccentColor() {
+  const el = document.getElementById('current-model-name');
+  if (!el) return;
+  const name = currentModelName;
+  if (name === 'Aura AI') { el.style.color = '#7c5cff'; }
+  else if (name === 'Aura Summary') { el.style.color = '#4caf50'; }
+  else if (name === 'Aura Bhai') { el.style.color = '#a855f7'; }
+
+  else { el.style.color = ''; }
+}
+
+
+// ══════════════════════════════════════════
+// CANVAS PANEL — Gemini-style side Canvas
+// ══════════════════════════════════════════
+
+// ── Canvas State ──
+let canvasLiveCode = "";       // currently-streaming HTML
+let canvasLiveTimer = null;    // debounce timer for live preview updates
+let canvasIsStreaming = false; // true while Aura AI is streaming code to Canvas
+
+// ── Open Canvas Panel ──
+function openCanvasPanel(title = "Web App", subtitle = "Writing code...") {
+  const panel = document.getElementById("canvas-panel");
+  const backdrop = document.getElementById("canvas-backdrop");
+  if (!panel) return;
+
+  // Set title / subtitle
+  const titleEl = document.getElementById("canvas-title");
+  const subtitleEl = document.getElementById("canvas-subtitle");
+  if (titleEl) titleEl.textContent = title;
+  if (subtitleEl) subtitleEl.textContent = subtitle;
+
+  // Add writing animation
+  panel.classList.add("canvas-writing");
+
+  // Show panel + backdrop
+  panel.classList.remove("hidden");
+  if (window.innerWidth < 768 && backdrop) backdrop.classList.remove("hidden");
+
+  // Enable split view
+  document.body.classList.add("canvas-open");
+
+  // Show Live badge
+  const liveBadge = document.getElementById("canvas-live-indicator");
+  if (liveBadge) liveBadge.classList.remove("hidden");
+
+  // Auto-switch to Code tab while streaming — preview is blank with partial HTML
+  switchCanvasTab('code');
+}
+
+// ── Update Canvas with Live Code (called while streaming) ──
+function updateCanvasLive(htmlCode) {
+  canvasLiveCode = htmlCode;
+  const codeEl = document.getElementById("canvas-code-content");
+
+  // Only update the CODE tab during streaming — iframe gets full HTML only at the end
+  if (codeEl) {
+    codeEl.textContent = htmlCode;
+    // Scroll the code view to bottom so user sees the latest line being written
+    const codeView = document.getElementById("canvas-code-view");
+    if (codeView) codeView.scrollTop = codeView.scrollHeight;
+  }
+
+  // Clear any pending iframe timer (we don't update iframe during streaming)
+  if (canvasLiveTimer) { clearTimeout(canvasLiveTimer); canvasLiveTimer = null; }
+}
+
+// ── Finalize Canvas after streaming is done ──
+function finalizeCanvas(htmlCode) {
+  canvasLiveCode = htmlCode;
+  canvasIsStreaming = false;
+
+  // Force open the panel now that code is complete
+  openCanvasPanel("Web App", "Ready · HTML / CSS / JS");
+
+  const panel = document.getElementById("canvas-panel");
+  const liveBadge = document.getElementById("canvas-live-indicator");
+  const subtitleEl = document.getElementById("canvas-subtitle");
+  const iframe = document.getElementById("code-preview-iframe");
+  const codeEl = document.getElementById("canvas-code-content");
+
+  // Stop writing animation
+  if (panel) panel.classList.remove("canvas-writing");
+
+  // Hide live badge
+  if (liveBadge) liveBadge.classList.add("hidden");
+
+  // Update subtitle
+  if (subtitleEl) subtitleEl.textContent = "Ready · HTML / CSS / JS";
+
+  // Final code render + syntax highlighting
+  if (codeEl) {
+    codeEl.textContent = htmlCode;
+    if (window.hljs) hljs.highlightElement(codeEl);
+  }
+
+  // Store globally for download
+  window.currentPreviewCode = htmlCode;
+
+  // Render the complete HTML into iframe via blob URL (most reliable method)
+  if (iframe) {
+    if (canvasLiveTimer) { clearTimeout(canvasLiveTimer); canvasLiveTimer = null; }
+    if (iframe._blobUrl) URL.revokeObjectURL(iframe._blobUrl);
+    const blob = new Blob([htmlCode], { type: "text/html" });
+    const blobUrl = URL.createObjectURL(blob);
+    iframe._blobUrl = blobUrl;
+    iframe.removeAttribute("srcdoc");
+    iframe.src = blobUrl;
+
+    // Auto-switch to Preview tab once iframe is loaded
+    iframe.onload = () => {
+      switchCanvasTab('preview');
+      iframe.onload = null; // clear handler
+    };
+  } else {
+    // No iframe — just switch to preview tab anyway
+    switchCanvasTab('preview');
+  }
+}
+
+// ── Open Canvas for a completed artifact (clicking "Open Preview" button) ──
+window.previewCode = async function(btn) {
+  const wrapper = btn.closest(".artifact-card");
+  if (!wrapper) return;
+
+  const artifactId = wrapper.getAttribute("data-artifact-id");
+  if (!artifactId) return;
+
+  let rawCode = artifactStore.get(artifactId);
+  if (!rawCode) {
+    try {
+      rawCode = await getFromDB("artifacts", artifactId);
+    } catch (dbErr) {
+      console.error("Failed to retrieve artifact from DB:", dbErr);
+    }
+  }
+  if (!rawCode) { showToast("Code not available. Please regenerate.", "error"); return; }
+
+  openCanvasPanel("Web App", "Ready · HTML / CSS / JS");
+  finalizeCanvas(rawCode);
+};
+
+// ── Close Canvas ──
+window.closeCodePreview = function() {
+  const panel = document.getElementById("canvas-panel");
+  const backdrop = document.getElementById("canvas-backdrop");
+  const iframe = document.getElementById("code-preview-iframe");
+
+  if (!panel) return;
+
+  panel.classList.add("hidden");
+  if (backdrop) backdrop.classList.add("hidden");
+  document.body.classList.remove("canvas-open");
+
+  // Cleanup iframe
+  if (iframe) {
+    if (canvasLiveTimer) clearTimeout(canvasLiveTimer);
+    if (iframe._blobUrl) {
+      URL.revokeObjectURL(iframe._blobUrl);
+      iframe._blobUrl = null;
+    }
+    iframe.removeAttribute("srcdoc");
+    iframe.src = "about:blank";
+  }
+
+  canvasLiveCode = "";
+  canvasIsStreaming = false;
+};
+
+// ── Switch Canvas Tab (Preview / Code) ──
+window.switchCanvasTab = function(tab) {
+  const previewTab = document.getElementById("canvas-preview-tab");
+  const codeTab = document.getElementById("canvas-code-tab");
+  const previewBtn = document.getElementById("canvas-tab-preview");
+  const codeBtn = document.getElementById("canvas-tab-code");
+
+  if (tab === "preview") {
+    previewTab?.classList.remove("hidden");
+    previewTab?.classList.add("active");
+    codeTab?.classList.add("hidden");
+    codeTab?.classList.remove("active");
+    previewBtn?.classList.add("active");
+    codeBtn?.classList.remove("active");
+  } else {
+    codeTab?.classList.remove("hidden");
+    codeTab?.classList.add("active");
+    previewTab?.classList.add("hidden");
+    previewTab?.classList.remove("active");
+    codeBtn?.classList.add("active");
+    previewBtn?.classList.remove("active");
+  }
+};
+
+// ── Download Artifact ──
+window.downloadCodePreview = function() {
+  if (!window.currentPreviewCode) {
+    showToast("No code available to download.", "error");
+    return;
+  }
+  
+  const blob = new Blob([window.currentPreviewCode], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `synapse_artifact_${Date.now()}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  
+  showToast("Code downloaded successfully!", "success");
+};
+
+
+// ── Web Speech API (Voice Input) ──
+const micBtn = document.getElementById("mic-btn");
+if (micBtn) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  
+  if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    
+    let isRecording = false;
+
+    recognition.onstart = () => {
+      isRecording = true;
+      micBtn.classList.add("recording");
+      chatInput.placeholder = "Listening...";
+      showToast("Listening...", "info");
+    };
+
+    recognition.onresult = (event) => {
+      let finalTranscript = '';
+      let interimTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+
+      if (finalTranscript) {
+        const currentVal = chatInput.value;
+        chatInput.value = currentVal ? currentVal + " " + finalTranscript : finalTranscript;
+        // Adjust height if necessary
+        chatInput.style.height = 'auto';
+        chatInput.style.height = (chatInput.scrollHeight) + 'px';
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error", event.error);
+      isRecording = false;
+      micBtn.classList.remove("recording");
+      chatInput.placeholder = "Message Aura...";
+      if (event.error !== 'no-speech') {
+        let errorMsg = "Microphone error: " + event.error;
+        if (event.error === 'not-allowed') {
+          errorMsg = "Please allow microphone access in your browser settings.";
+        } else if (event.error === 'network') {
+          errorMsg = "Voice input requires an internet connection.";
+        }
+        showToast(errorMsg, "error");
+      }
+    };
+
+    recognition.onend = () => {
+      isRecording = false;
+      micBtn.classList.remove("recording");
+      chatInput.placeholder = "Message Aura...";
+    };
+
+    micBtn.addEventListener("click", () => {
+      if (isRecording) {
+        recognition.stop();
+      } else {
+        try {
+          recognition.start();
+        } catch(e) {
+          console.error(e);
+        }
+      }
+    });
+  } else {
+    micBtn.addEventListener("click", () => {
+      showToast("Voice input is not supported in this browser.", "error");
+    });
+  }
+}
+
+// ── Canvas Actions (Copy / Download) ──
+const canvasCopyBtn = document.getElementById("canvas-copy-btn");
+const canvasDownloadBtn = document.getElementById("canvas-download-btn");
+
+if (canvasCopyBtn) {
+  canvasCopyBtn.addEventListener("click", () => {
+    if (window.currentPreviewCode) {
+      navigator.clipboard.writeText(window.currentPreviewCode).then(() => {
+        showToast("Code copied to clipboard", "success");
+      });
+    } else {
+      showToast("No code to copy", "error");
+    }
+  });
+}
+
+if (canvasDownloadBtn) {
+  canvasDownloadBtn.addEventListener("click", () => {
+    if (window.currentPreviewCode) {
+      const blob = new Blob([window.currentPreviewCode], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "aura-coder-export.html";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("Download started", "success");
+    } else {
+      showToast("No code to download", "error");
+    }
+  });
+}
+
+// ── Delete Chat Modal ──
+let chatToDelete = null;
+
+window.confirmDeleteSession = function(id) {
+  chatToDelete = id;
+  const modal = document.getElementById("delete-chat-modal");
+  const content = document.getElementById("delete-chat-modal-content");
+  if (!modal || !content) return;
+  modal.classList.remove("hidden");
+  // force reflow
+  void modal.offsetWidth;
+  modal.classList.remove("opacity-0");
+  content.classList.remove("scale-95");
+};
+
+window.closeDeleteChatModal = function() {
+  chatToDelete = null;
+  const modal = document.getElementById("delete-chat-modal");
+  const content = document.getElementById("delete-chat-modal-content");
+  if (!modal || !content) return;
+  modal.classList.add("opacity-0");
+  content.classList.add("scale-95");
+  setTimeout(() => {
+    modal.classList.add("hidden");
+  }, 250);
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+  const cancelBtn = document.getElementById("cancel-delete-chat-btn");
+  const confirmBtn = document.getElementById("confirm-delete-chat-btn");
+  if (cancelBtn) cancelBtn.addEventListener("click", closeDeleteChatModal);
+  if (confirmBtn) confirmBtn.addEventListener("click", () => {
+    if (chatToDelete) {
+      deleteSession(chatToDelete);
+      closeDeleteChatModal();
+    }
+  });
+});
