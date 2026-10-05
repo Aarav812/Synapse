@@ -1453,7 +1453,8 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
   #drawer-toggle:checked ~ #drawer-overlay { position: fixed; z-index: 55; inset: 0; display: block !important; background: rgba(0, 0, 0, .58); backdrop-filter: blur(4px); }
   .chat-workspace { --rail: 0px; margin-left: 0; padding-bottom: max(158px, calc(142px + env(safe-area-inset-bottom, 0px))); }
   .sidebar-reveal-btn, .sidebar-collapse-btn { display: none !important; }
-  /* Floating pill header on mobile */
+
+  /* ── Floating pill header ── */
   .chat-header {
     top: 8px;
     height: 52px;
@@ -1473,30 +1474,59 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
   .model-selector-label { display: none; }
   #current-model-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #aura1-mode-toggle { transform: scale(0.85); transform-origin: left center; margin-left: -2px; }
-  .chat-content { padding: 0 14px; }
-  .chat-content { padding-top: 62px; }
+
+  /* ── Chat content — safe-area horizontal insets for notched phones ── */
+  .chat-content {
+    padding: 0 max(14px, env(safe-area-inset-right, 14px)) 0 max(14px, env(safe-area-inset-left, 14px));
+    padding-top: 62px;
+  }
+
+  /* ── Ambient orbs ── */
   .chat-ambient .bg-orb-1 { left: -22%; width: 100vw; height: 100vw; }
   .chat-ambient .bg-orb-2 { right: -40%; width: 88vw; height: 88vw; }
+
+  /* ── Empty state ── */
   #empty-state { min-height: calc(100dvh - 194px); padding: 62px 0 30px; }
   .welcome-overline { margin-bottom: 15px; }
   .welcome-heading-container { margin-bottom: var(--s4); }
-  #aura-greeting.welcome-question { font-size: clamp(32px, 10.6vw, 48px); }
+  /* Slightly tighter clamp so greeting fits without wrapping on 360px phones */
+  #aura-greeting.welcome-question { font-size: clamp(28px, 8.8vw, 44px); }
   .empty-subtitle { max-width: 340px; margin-top: var(--s2); font-size: 13px; }
-  .suggestion-grid { gap: var(--s1); width: 100%; }
-  .category-chip.suggestion-card { min-height: 118px; gap: 10px; padding: var(--s2) !important; border-radius: 20px !important; }
+
+  /* ── Suggestion grid — keep 2-col on 421-767px, tighter cards ── */
+  .suggestion-grid { gap: var(--s1); width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; }
+  .category-chip.suggestion-card { min-height: 108px; gap: 10px; padding: var(--s2) !important; border-radius: 20px !important; }
   .suggestion-card-icon { width: 34px; height: 34px; border-radius: 12px; }
   .suggestion-card-icon .material-symbols-outlined { font-size: 18px; }
   .suggestion-card-title { font-size: 12.5px; }
+  .suggestion-card-desc { -webkit-line-clamp: 2; line-clamp: 2; font-size: 11px; }
+
+  /* ── Messages ── */
   #chat-messages { padding-top: 30px; }
   .message-row { gap: 9px; margin-bottom: 38px !important; }
   .message-avatar { width: 26px !important; height: 26px !important; border-radius: 9px !important; font-size: 13px !important; }
   .user-bubble { max-width: 88% !important; font-size: 13px !important; }
   .ai-bubble { padding: 11px 13px !important; font-size: 13.5px !important; }
-  /* Action bar: ensure it doesn't get clipped */
-  .ai-action-bar { left: 36px; bottom: -34px; gap: 4px; }
+
+  /* ── Code blocks — always scrollable on mobile ── */
+  .ai-bubble pre,
+  .code-block-wrapper { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .ai-bubble pre code { white-space: pre; word-break: normal; overflow-wrap: normal; }
+
+  /* ── Tables — block-level scroll on mobile ── */
+  .answer-content table { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* ── AI action bar — bounded to viewport width ── */
+  .ai-action-bar { left: 36px; bottom: -34px; gap: 4px; max-width: calc(100vw - 48px); }
   .action-btn { width: 30px !important; min-width: 30px !important; height: 30px !important; min-height: 30px !important; }
-  /* Composer */
-  .chat-composer-area { left: 0; padding: 12px 12px max(10px, env(safe-area-inset-bottom, 10px)); }
+
+  /* ── Composer ── */
+  .chat-composer-area {
+    left: 0;
+    padding: 12px max(12px, env(safe-area-inset-right, 12px)) max(10px, env(safe-area-inset-bottom, 10px)) max(12px, env(safe-area-inset-left, 12px));
+  }
+  /* Wrap model selector + mode toggle if both are visible */
+  .composer-controls { flex-wrap: wrap; gap: 6px; }
   .composer-help { padding: 7px 10px 0; }
   .composer-help span:last-child { display: none; }
   #text-input-bar { min-height: 56px; gap: 3px; padding: 8px 8px 8px 12px !important; border-radius: 22px !important; }
@@ -1504,15 +1534,36 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
   .composer-button { width: 36px; height: 36px; }
   #send-btn, #stop-btn { width: 38px !important; height: 38px !important; }
   #chat-input { line-height: 22px !important; }
-  #scroll-to-bottom-btn { right: 16px; bottom: max(118px, calc(108px + env(safe-area-inset-bottom, 0px))); }
-  /* Modals: full bottom sheet treatment */
+
+  /* ── Model dropdown — never overflow viewport ── */
+  #model-dropdown {
+    width: min(290px, calc(100vw - 24px));
+    right: 0;
+    left: auto;
+  }
+  .composer-controls #model-dropdown {
+    right: auto;
+    left: 0;
+    width: min(290px, calc(100vw - 24px));
+  }
+
+  /* ── Source chips — prevent horizontal overflow ── */
+  .web-search-chip { max-width: min(200px, calc(50vw - 20px)); }
+  .web-search-chips { max-width: 100%; }
+
+  /* ── Scroll-to-bottom button ── */
+  #scroll-to-bottom-btn {
+    right: max(16px, env(safe-area-inset-right, 16px));
+    bottom: max(118px, calc(108px + env(safe-area-inset-bottom, 0px)));
+  }
+
+  /* ── Modals: full bottom sheet ── */
   .chat-modal { align-items: flex-end; padding: 0; }
   .chat-modal-panel {
     width: 100%;
     max-height: 88dvh;
     border-bottom: 0;
     border-radius: 22px 22px 0 0;
-    /* Bottom sheet: account for home indicator */
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   #personality-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1549,6 +1600,11 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
 @media (max-width: 420px) {
   #header-logo .brand-name { display: none; }
   #model-selector-btn { max-width: 130px; }
+
+  /* Welcome heading tighter still on tiny screens */
+  #aura-greeting.welcome-question { font-size: clamp(24px, 7.6vw, 36px); }
+  .empty-subtitle { font-size: 12px; }
+
   /* Single column suggestion cards with horizontal layout */
   .suggestion-grid { grid-template-columns: 1fr; max-width: none; }
   .category-chip.suggestion-card {
@@ -1560,10 +1616,14 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
     padding: 14px !important;
   }
   .suggestion-card-desc { -webkit-line-clamp: 1; line-clamp: 1; }
+
   /* Tighter message bubbles */
   .user-bubble { max-width: 92% !important; }
-  /* Composer */
-  .chat-composer-area { padding: 10px 10px max(8px, env(safe-area-inset-bottom, 8px)); }
+
+  /* Composer — full safe-area insets on all sides */
+  .chat-composer-area {
+    padding: 10px max(10px, env(safe-area-inset-right, 10px)) max(8px, env(safe-area-inset-bottom, 8px)) max(10px, env(safe-area-inset-left, 10px));
+  }
   #text-input-bar { min-height: 52px; border-radius: 20px !important; }
 }
 

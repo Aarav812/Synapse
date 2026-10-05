@@ -87,6 +87,9 @@ try {
 /**
  * Searches DuckDuckGo and returns up to 4 results with title, snippet & url.
  * Uses duck-duck-scrape with automatic fallback to DuckDuckGo HTML scraping.
+ *
+ * Debug logging prefix: [DDG Debug]
+ *
  * @param {string} query
  * @returns {Promise<Array<{title:string, snippet:string, url:string}>>}
  */
@@ -95,85 +98,178 @@ async function searchDuckDuckGo(query) {
   const cleanQuery = query.trim();
   if (!cleanQuery) return [];
 
+  console.log("[DDG Debug] Query:", cleanQuery);
+
   // 1. Try duck-duck-scrape first
   if (duckDuckScrape) {
     try {
+      console.log("[DDG Debug] Attempting duck-duck-scrape...");
       const results = await duckDuckScrape.search(cleanQuery, {
         safeSearch: duckDuckScrape.SafeSearchType.MODERATE,
       });
+      console.log("[DDG Debug] duck-duck-scrape raw result count:", results?.results?.length ?? 0);
       const hits = (results.results || []).slice(0, 4);
       if (hits.length > 0) {
+        console.log("[DDG Debug] Returning", hits.length, "result(s) from duck-duck-scrape.");
         return hits.map((r) => ({
           title: r.title || "",
           snippet: r.description || r.snippet || "",
           url: r.url || "",
         }));
       }
+      console.log("[DDG Debug] duck-duck-scrape returned 0 results — falling back to HTML endpoint.");
     } catch (scrapeErr) {
+      console.error("[DDG Debug] Search Error:", scrapeErr);
       console.warn("[search] duck-duck-scrape primary search failed, falling back to direct DDG:", scrapeErr.message);
     }
   }
 
-  // 2. Resilient fallback to DuckDuckGo HTML endpoint
+  // 2. Resilient fallback — DuckDuckGo HTML GET endpoint with browser-realistic headers
   try {
-    const res = await fetch("https://html.duckduckgo.com/html/", {
-      method: "POST",
+    const encodedQuery = encodeURIComponent(cleanQuery);
+    const ddgUrl = `https://html.duckduckgo.com/html/?q=${encodedQuery}`;
+
+    console.log("[DDG Debug] Fetching HTML endpoint:", ddgUrl);
+
+    const response = await fetch(ddgUrl, {
+      method: "GET",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
         "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept":
+          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Referer": "https://duckduckgo.com/",
+        "DNT": "1",
+        "Connection": "keep-alive",
       },
-      body: new URLSearchParams({ q: cleanQuery }).toString(),
     });
-    if (!res.ok) {
-      throw new Error(`DDG HTML returned status ${res.status}`);
+
+    console.log("[DDG Debug] Raw Response:", {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+    });
+
+    if (!response.ok) {
+      throw new Error(`DDG HTML endpoint returned HTTP ${response.status} ${response.statusText}`);
     }
-    const html = await res.text();
+
+    const html = await response.text();
+    console.log("[DDG Debug] HTML body length:", html.length, "chars");
+
     const results = [];
-    const blocks = html.split('<div class="result results_links results_links_deep web-result ');
-    for (let i = 1; i < blocks.length && results.length < 4; i++) {
-      const block = blocks[i];
-      const titleMatch = block.match(/<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/);
-      const snippetMatch = block.match(/<a[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/a>/);
-      if (titleMatch) {
-        let rawUrl = titleMatch[1];
-        let actualUrl = rawUrl;
-        const uddgMatch = rawUrl.match(/[?&]uddg=([^&]+)/);
-        if (uddgMatch) {
-          try {
-            actualUrl = decodeURIComponent(uddgMatch[1]);
-          } catch (_) {}
-        } else if (rawUrl.startsWith("//")) {
-          actualUrl = "https:" + rawUrl;
-        }
 
-        const cleanTitle = titleMatch[2]
-          .replace(/<[^>]+>/g, "")
-          .replace(/&amp;/g, "&")
-          .replace(/&quot;/g, '"')
-          .replace(/&#39;/g, "'")
-          .trim();
-        const cleanSnippet = snippetMatch
-          ? snippetMatch[1]
-              .replace(/<[^>]+>/g, "")
-              .replace(/&amp;/g, "&")
-              .replace(/&quot;/g, '"')
-              .replace(/&#39;/g, "'")
-              .trim()
-          : "";
+    // Pattern A — modern DDG class: result__body or web-result
+    // Try multiple split strategies in priority order so we handle DDG markup changes gracefully.
 
-        if (actualUrl && cleanTitle) {
-          results.push({
-            title: cleanTitle,
-            snippet: cleanSnippet,
-            url: actualUrl,
-          });
+    // Strategy 1: split on `<div class="result ` (catches multiple DDG result div variants)
+    const blockSplits = [
+      { sep: '<div class="result results_links results_links_deep web-result ' },
+      { sep: '<div class="result ' },
+      { sep: 'result__body' },
+    ];
+
+    let blocks = [];
+    for (const { sep } of blockSplits) {
+      const parts = html.split(sep);
+      if (parts.length > 1) {
+        blocks = parts;
+        console.log("[DDG Debug] HTML split strategy matched:", JSON.stringify(sep), "→", parts.length - 1, "candidate block(s)");
+        break;
+      }
+    }
+
+    if (blocks.length > 1) {
+      for (let i = 1; i < blocks.length && results.length < 4; i++) {
+        const block = blocks[i];
+
+        // Extract URL + title from result__a anchor
+        const titleMatch = block.match(
+          /<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/
+        );
+        // Extract snippet
+        const snippetMatch = block.match(
+          /<(?:a|span)[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/(?:a|span)>/
+        );
+
+        if (titleMatch) {
+          let rawUrl = titleMatch[1];
+          let actualUrl = rawUrl;
+
+          // DDG sometimes wraps URLs in redirects — extract the real URL
+          const uddgMatch = rawUrl.match(/[?&]uddg=([^&]+)/);
+          if (uddgMatch) {
+            try { actualUrl = decodeURIComponent(uddgMatch[1]); } catch (_) {}
+          } else if (rawUrl.startsWith("//")) {
+            actualUrl = "https:" + rawUrl;
+          }
+
+          const cleanTitle = titleMatch[2]
+            .replace(/<[^>]+>/g, "")
+            .replace(/&amp;/g, "&")
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">")
+            .trim();
+
+          const cleanSnippet = snippetMatch
+            ? snippetMatch[1]
+                .replace(/<[^>]+>/g, "")
+                .replace(/&amp;/g, "&")
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'")
+                .replace(/&lt;/g, "<")
+                .replace(/&gt;/g, ">")
+                .trim()
+            : "";
+
+          if (actualUrl && cleanTitle) {
+            results.push({ title: cleanTitle, snippet: cleanSnippet, url: actualUrl });
+          }
         }
       }
     }
+
+    // Strategy 2 (last resort): scan for any result__a href + result__snippet pairs
+    if (results.length === 0) {
+      console.log("[DDG Debug] Block-split yielded 0 results — trying global regex scan.");
+      const anchorRe = /<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g;
+      const snippetRe = /<(?:a|span)[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/(?:a|span)>/g;
+
+      const snippets = [];
+      let sm;
+      while ((sm = snippetRe.exec(html)) !== null) {
+        snippets.push(
+          sm[1].replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim()
+        );
+      }
+
+      let am;
+      let idx = 0;
+      while ((am = anchorRe.exec(html)) !== null && results.length < 4) {
+        let rawUrl = am[1];
+        let actualUrl = rawUrl;
+        const uddgMatch = rawUrl.match(/[?&]uddg=([^&]+)/);
+        if (uddgMatch) {
+          try { actualUrl = decodeURIComponent(uddgMatch[1]); } catch (_) {}
+        } else if (rawUrl.startsWith("//")) {
+          actualUrl = "https:" + rawUrl;
+        }
+        const cleanTitle = am[2].replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
+        if (actualUrl && cleanTitle) {
+          results.push({ title: cleanTitle, snippet: snippets[idx] || "", url: actualUrl });
+          idx++;
+        }
+      }
+    }
+
+    console.log("[DDG Debug] Final parsed result count:", results.length);
     return results;
   } catch (err) {
-    console.error("[search] DuckDuckGo search failed:", err.message);
+    console.error("[DDG Debug] Search Error:", err);
+    console.error("[search] DuckDuckGo HTML fallback failed:", err.message);
     return [];
   }
 }
@@ -605,7 +701,7 @@ app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
               ? results.map((r, i) =>
                   `[${i + 1}] ${r.title}\nURL: ${r.url}\n${r.snippet}`
                 ).join("\n\n")
-              : "No relevant results found.";
+              : "No recent results found for this query on DuckDuckGo.";
 
             const callId = call.id || "call_search_1";
             conversationMessages = [
