@@ -86,7 +86,7 @@ html {
   text-size-adjust: 100%;
 }
 @media (max-width: 640px) {
-  html { scroll-padding-top: 72px; }
+  html { scroll-padding-top: calc(72px + env(safe-area-inset-top, 0px)); }
 }
 
 body {
@@ -364,7 +364,8 @@ body {
   justify-content: center;
   padding: 1.25rem 1rem;
   pointer-events: none;
-  /* Safe area support for notched phones */
+  /* Safe area support for notched phones / installed PWA status bar */
+  padding-top: max(1.25rem, env(safe-area-inset-top));
   padding-left: max(1rem, env(safe-area-inset-left));
   padding-right: max(1rem, env(safe-area-inset-right));
 }
@@ -1284,12 +1285,16 @@ body {
 /* ── Tablet breakpoint ── */
 @media (max-width: 768px) {
   .navbar { height: 62px; }
-  .navbar-shell { padding: 1rem 1rem; }
+  /* Preserve notch insets when the pill padding is tightened */
+  .navbar-shell {
+    padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) 1rem max(1rem, env(safe-area-inset-left));
+  }
 }
 
 /* ── Mobile breakpoint ── */
 @media (max-width: 640px) {
-  .hero { padding: clamp(6rem, 15vw, 9rem) 1.15rem clamp(2.5rem, 5vw, 4rem); }
+  /* + safe-area keeps the hero clear of the floating pill on notched phones */
+  .hero { padding: calc(clamp(6rem, 15vw, 9rem) + env(safe-area-inset-top, 0px)) 1.15rem clamp(2.5rem, 5vw, 4rem); }
   .features-grid,
   .models-grid { grid-template-columns: 1fr; }
 
@@ -1359,6 +1364,55 @@ body {
   .badge { font-size: 0.75rem; padding: 0.45rem 0.8rem 0.45rem 0.6rem; }
   .feature-card, .model-card { padding: 1rem; }
   .model-card-top { margin-bottom: 0.75rem; }
+}
+
+/* =====================================================================
+   Mobile polishing — safe tap targets, lighter GPU load
+   ===================================================================== */
+@media (max-width: 640px) {
+  /* Phone GPUs struggle with 48px backdrop blurs stacked over the WebGL
+     background; a lighter radius keeps the glass look without the jank. */
+  :root { --glass-blur: 26px; }
+
+  /* Large, thumb-friendly rows in the slide-in menu */
+  .mobile-nav-link {
+    display: inline-flex;
+    min-height: 48px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Cards only need their compositor layer for the desktop tilt effect */
+  .feature-card,
+  .model-card { will-change: auto; }
+
+  /* Stop the large, continuously animated background layers. They are purely
+     decorative, and pausing them removes constant off-screen repainting. */
+  .bg-ambient::after,
+  .bg-orb { animation: none; }
+}
+
+/* Touch devices: remove the 300ms tap delay and the blue tap flash. */
+@media (hover: none) {
+  a,
+  button,
+  .btn,
+  .liquid-btn,
+  .nav-link,
+  .mobile-nav-link,
+  .footer-link,
+  .model-card,
+  .category-chip,
+  .mobile-menu-btn,
+  .mobile-nav-close {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* Touch screens latch :hover after a tap; without this the card would stay
+     lifted until the next tap elsewhere. */
+  .feature-card:hover,
+  .model-card:hover { transform: none; }
 }
 
 /* =====================================================================

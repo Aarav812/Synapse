@@ -76,17 +76,177 @@ function initFirebaseAdmin() {
 initFirebaseAdmin();
 
 // ── DuckDuckGo Web Search Helper ──
-let duckDuckScrape;
-try {
-  duckDuckScrape = require("duck-duck-scrape");
-} catch (_) {
-  // Package not installed — web search will be gracefully disabled.
-  console.warn("[search] duck-duck-scrape not found. Web search disabled. Run: npm install duck-duck-scrape");
+// NOTE: duck-duck-scrape was intentionally removed from the request path.
+// Its scraper trips DuckDuckGo's anti-bot "anomaly" detector, which then
+// poisons the immediately following request (HTTP 403/429/CAPTCHA), yielding
+// 0 results. We query the HTML endpoint directly with browser-realistic
+// headers. The dependency is no longer required and can be uninstalled.
+
+const DDG_HTML_ENDPOINT = "https://html.duckduckgo.com/html/";
+const DDG_LITE_ENDPOINT = "https://lite.duckduckgo.com/lite/";
+const DDG_FALLBACK_TEXT = "No recent results found for this query on DuckDuckGo.";
+const DDG_MAX_RESULTS = 4;
+const DDG_TIMEOUT_MS = 12000;
+
+const DDG_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.5",
+  "Referer": "https://duckduckgo.com/",
+  "DNT": "1",
+  "Connection": "keep-alive",
+  "Upgrade-Insecure-Requests": "1",
+};
+
+/** Strips tags/entities and normalises whitespace. */
+function cleanDdgText(value) {
+  return String(value || "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&#x27;/gi, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Resolves DDG redirect links (/l/?uddg=...) to the real destination URL. */
+function resolveDdgUrl(rawUrl) {
+  if (!rawUrl) return "";
+  let url = rawUrl.trim();
+  const uddg = url.match(/[?&]uddg=([^&]+)/);
+  if (uddg) {
+    try { url = decodeURIComponent(uddg[1]); } catch (_) {}
+  } else if (url.startsWith("//")) {
+    url = "https:" + url;
+  }
+  return url;
 }
 
 /**
- * Searches DuckDuckGo and returns up to 4 results with title, snippet & url.
- * Uses duck-duck-scrape with automatic fallback to DuckDuckGo HTML scraping.
+ * Parses DDG result markup into [{ title, url, snippet }].
+ * Handles both the standard HTML page (result__a/result__snippet) and the
+ * lite page (result-link). Always returns strings, never undefined values.
+ */
+function parseDdgHtml(html) {
+  const results = [];
+  const seen = new Set();
+
+  const add = (rawUrl, rawTitle, rawSnippet) => {
+    if (results.length >= DDG_MAX_RESULTS) return;
+    const url = resolveDdgUrl(rawUrl);
+    const title = cleanDdgText(rawTitle);
+    const snippet = cleanDdgText(rawSnippet);
+    if (!url || !title || !/^https?:\/\//i.test(url)) return;
+    const key = url.replace(/#.*$/, "").replace(/\/+$/, "");
+    if (seen.has(key)) return;
+    seen.add(key);
+    results.push({ title, url, snippet });
+  };
+
+  // Strategy 1: split into DDG organic result blocks. The narrow separators
+  // exclude ad blocks, which use a different class (result--ad).
+  const blockSeps = [
+    '<div class="result results_links results_links_deep web-result ',
+    '<div class="result results_links ',
+    '<div class="result ',
+  ];
+  let blocks = [];
+  for (const sep of blockSeps) {
+    const parts = html.split(sep);
+    if (parts.length > 1) {
+      blocks = parts.slice(1);
+      break;
+    }
+  }
+  for (const block of blocks) {
+    if (results.length >= DDG_MAX_RESULTS) break;
+    const anchor = block.match(
+      /<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/i
+    );
+    if (!anchor) continue;
+    // Skip sponsored/redirected ad anchors outright.
+    if (/result--ad|ad_provider|ad_domain|duckduckgo\.com\/y\.js/i.test(block)) continue;
+    const snippet = block.match(
+      /<(?:a|span|div)[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/(?:a|span|div)>/i
+    );
+    add(anchor[1], anchor[2], snippet?.[1] ?? "");
+  }
+
+  // Strategy 2: global anchor → nearest-snippet pairing (markup-drift fallback).
+  if (results.length === 0) {
+    const pairRe = /<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>([\s\S]{0,1500}?)(?:class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/(?:a|span|div)>|$)/gi;
+    for (const m of html.matchAll(pairRe)) {
+      if (results.length >= DDG_MAX_RESULTS) break;
+      if (/ad_provider|ad_domain|duckduckgo\.com\/y\.js/i.test(m[1])) continue;
+      add(m[1], m[2], m[4] ?? "");
+    }
+  }
+
+  // Strategy 3: lite.duckduckgo.com fallback markup: result-link anchors. The
+  // href may come before or after the class attribute, so parse attributes
+  // separately.
+  if (results.length === 0) {
+    const liteAnchorRe = /<a\b([^>]*class="[^"]*result-link[^"]*"[^>]*)>([\s\S]*?)<\/a>/gi;
+    for (const m of html.matchAll(liteAnchorRe)) {
+      if (results.length >= DDG_MAX_RESULTS) break;
+      const href = m[1].match(/href="([^"]*)"/);
+      add(href?.[1], m[2], "");
+    }
+  }
+
+  return results;
+}
+
+/** fetch() with a hard timeout so a hung DDG request can't stall the chat. */
+async function fetchDdg(url, options) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), DDG_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Small in-memory cache: DDG throttles repeated automated queries, and chat
+// turns often repeat the same search (retries, follow-ups, paraphrases).
+const DDG_CACHE_TTL_MS = 5 * 60 * 1000;
+const DDG_CACHE_MAX_ENTRIES = 200;
+const ddgResultCache = new Map();
+
+function getCachedDdgResults(key) {
+  const hit = ddgResultCache.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.at > DDG_CACHE_TTL_MS) {
+    ddgResultCache.delete(key);
+    return null;
+  }
+  // Return copies so callers can't mutate the cached entries.
+  return hit.results.map((r) => ({ ...r }));
+}
+
+function setCachedDdgResults(key, results) {
+  if (ddgResultCache.size >= DDG_CACHE_MAX_ENTRIES) {
+    ddgResultCache.delete(ddgResultCache.keys().next().value);
+  }
+  ddgResultCache.set(key, {
+    at: Date.now(),
+    results: results.map((r) => ({ ...r })),
+  });
+}
+
+/**
+ * Searches DuckDuckGo and returns up to 4 results as
+ * [{ title: string, url: string, snippet: string }].
+ *
+ * Uses DuckDuckGo's HTML endpoint directly (GET, then POST if blocked, then
+ * the lite endpoint) with browser-realistic headers to avoid 403/429/CAPTCHA.
  *
  * Debug logging prefix: [DDG Debug]
  *
@@ -100,178 +260,110 @@ async function searchDuckDuckGo(query) {
 
   console.log("[DDG Debug] Query:", cleanQuery);
 
-  // 1. Try duck-duck-scrape first
-  if (duckDuckScrape) {
-    try {
-      console.log("[DDG Debug] Attempting duck-duck-scrape...");
-      const results = await duckDuckScrape.search(cleanQuery, {
-        safeSearch: duckDuckScrape.SafeSearchType.MODERATE,
-      });
-      console.log("[DDG Debug] duck-duck-scrape raw result count:", results?.results?.length ?? 0);
-      const hits = (results.results || []).slice(0, 4);
-      if (hits.length > 0) {
-        console.log("[DDG Debug] Returning", hits.length, "result(s) from duck-duck-scrape.");
-        return hits.map((r) => ({
-          title: r.title || "",
-          snippet: r.description || r.snippet || "",
-          url: r.url || "",
-        }));
-      }
-      console.log("[DDG Debug] duck-duck-scrape returned 0 results — falling back to HTML endpoint.");
-    } catch (scrapeErr) {
-      console.error("[DDG Debug] Search Error:", scrapeErr);
-      console.warn("[search] duck-duck-scrape primary search failed, falling back to direct DDG:", scrapeErr.message);
-    }
+  // Serve recent identical queries from cache — repeated requests are what
+  // trigger DDG's "anomaly"/202 throttling in the first place.
+  const cacheKey = cleanQuery.toLowerCase();
+  const cached = getCachedDdgResults(cacheKey);
+  if (cached) {
+    console.log("[DDG Debug] Cache hit — returning", cached.length, "cached result(s).");
+    return cached;
   }
 
-  // 2. Resilient fallback — DuckDuckGo HTML GET endpoint with browser-realistic headers
-  try {
-    const encodedQuery = encodeURIComponent(cleanQuery);
-    const ddgUrl = `https://html.duckduckgo.com/html/?q=${encodedQuery}`;
+  const encodedQuery = encodeURIComponent(cleanQuery);
+  const looksLikeChallenge = (text) =>
+    /anomaly|unusual traffic|captcha|challenge|enable javascript|verify you are human/i.test(text || "");
 
+  try {
+    // 1) Primary: HTML GET endpoint with browser-realistic headers.
+    const ddgUrl = `${DDG_HTML_ENDPOINT}?q=${encodedQuery}`;
     console.log("[DDG Debug] Fetching HTML endpoint:", ddgUrl);
 
-    const response = await fetch(ddgUrl, {
-      method: "GET",
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept":
-          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Referer": "https://duckduckgo.com/",
-        "DNT": "1",
-        "Connection": "keep-alive",
-      },
-    });
+    let response = await fetchDdg(ddgUrl, { method: "GET", headers: DDG_HEADERS });
+    console.log("[DDG Debug] Raw Response:", response);
+    console.log("[DDG Debug] Raw Response status:", response.status, response.statusText);
 
-    console.log("[DDG Debug] Raw Response:", {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok,
-    });
-
-    if (!response.ok) {
-      throw new Error(`DDG HTML endpoint returned HTTP ${response.status} ${response.statusText}`);
-    }
-
-    const html = await response.text();
+    let html = await response.text();
     console.log("[DDG Debug] HTML body length:", html.length, "chars");
 
-    const results = [];
+    // DDG answers rate-limited traffic with HTTP 202 + a lightweight challenge
+    // page, and harder blocks with 403/429. 202 passes response.ok, so detect
+    // the challenge explicitly.
+    const getChallenged = response.status === 202 || looksLikeChallenge(html);
 
-    // Pattern A — modern DDG class: result__body or web-result
-    // Try multiple split strategies in priority order so we handle DDG markup changes gracefully.
+    if (!response.ok || getChallenged) {
+      console.warn(
+        `[DDG Debug] GET blocked/challenged (HTTP ${response.status}${looksLikeChallenge(html) ? ", challenge page" : ""}); retrying via POST form.`
+      );
+      const postResponse = await fetchDdg(DDG_HTML_ENDPOINT, {
+        method: "POST",
+        headers: { ...DDG_HEADERS, "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ q: cleanQuery }).toString(),
+      });
+      console.log("[DDG Debug] Raw Response:", postResponse);
+      console.log("[DDG Debug] Raw Response status (POST):", postResponse.status, postResponse.statusText);
 
-    // Strategy 1: split on `<div class="result ` (catches multiple DDG result div variants)
-    const blockSplits = [
-      { sep: '<div class="result results_links results_links_deep web-result ' },
-      { sep: '<div class="result ' },
-      { sep: 'result__body' },
-    ];
-
-    let blocks = [];
-    for (const { sep } of blockSplits) {
-      const parts = html.split(sep);
-      if (parts.length > 1) {
-        blocks = parts;
-        console.log("[DDG Debug] HTML split strategy matched:", JSON.stringify(sep), "→", parts.length - 1, "candidate block(s)");
-        break;
-      }
-    }
-
-    if (blocks.length > 1) {
-      for (let i = 1; i < blocks.length && results.length < 4; i++) {
-        const block = blocks[i];
-
-        // Extract URL + title from result__a anchor
-        const titleMatch = block.match(
-          /<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/
-        );
-        // Extract snippet
-        const snippetMatch = block.match(
-          /<(?:a|span)[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/(?:a|span)>/
-        );
-
-        if (titleMatch) {
-          let rawUrl = titleMatch[1];
-          let actualUrl = rawUrl;
-
-          // DDG sometimes wraps URLs in redirects — extract the real URL
-          const uddgMatch = rawUrl.match(/[?&]uddg=([^&]+)/);
-          if (uddgMatch) {
-            try { actualUrl = decodeURIComponent(uddgMatch[1]); } catch (_) {}
-          } else if (rawUrl.startsWith("//")) {
-            actualUrl = "https:" + rawUrl;
-          }
-
-          const cleanTitle = titleMatch[2]
-            .replace(/<[^>]+>/g, "")
-            .replace(/&amp;/g, "&")
-            .replace(/&quot;/g, '"')
-            .replace(/&#39;/g, "'")
-            .replace(/&lt;/g, "<")
-            .replace(/&gt;/g, ">")
-            .trim();
-
-          const cleanSnippet = snippetMatch
-            ? snippetMatch[1]
-                .replace(/<[^>]+>/g, "")
-                .replace(/&amp;/g, "&")
-                .replace(/&quot;/g, '"')
-                .replace(/&#39;/g, "'")
-                .replace(/&lt;/g, "<")
-                .replace(/&gt;/g, ">")
-                .trim()
-            : "";
-
-          if (actualUrl && cleanTitle) {
-            results.push({ title: cleanTitle, snippet: cleanSnippet, url: actualUrl });
-          }
+      if (postResponse.ok && postResponse.status !== 202) {
+        const postHtml = await postResponse.text();
+        console.log("[DDG Debug] HTML body length (POST):", postHtml.length, "chars");
+        if (!looksLikeChallenge(postHtml)) {
+          response = postResponse;
+          html = postHtml;
         }
       }
     }
 
-    // Strategy 2 (last resort): scan for any result__a href + result__snippet pairs
-    if (results.length === 0) {
-      console.log("[DDG Debug] Block-split yielded 0 results — trying global regex scan.");
-      const anchorRe = /<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g;
-      const snippetRe = /<(?:a|span)[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/(?:a|span)>/g;
-
-      const snippets = [];
-      let sm;
-      while ((sm = snippetRe.exec(html)) !== null) {
-        snippets.push(
-          sm[1].replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim()
-        );
-      }
-
-      let am;
-      let idx = 0;
-      while ((am = anchorRe.exec(html)) !== null && results.length < 4) {
-        let rawUrl = am[1];
-        let actualUrl = rawUrl;
-        const uddgMatch = rawUrl.match(/[?&]uddg=([^&]+)/);
-        if (uddgMatch) {
-          try { actualUrl = decodeURIComponent(uddgMatch[1]); } catch (_) {}
-        } else if (rawUrl.startsWith("//")) {
-          actualUrl = "https:" + rawUrl;
-        }
-        const cleanTitle = am[2].replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
-        if (actualUrl && cleanTitle) {
-          results.push({ title: cleanTitle, snippet: snippets[idx] || "", url: actualUrl });
-          idx++;
-        }
-      }
+    if (!response.ok) {
+      console.warn(
+        `[DDG Debug] DDG returned HTTP ${response.status} ${response.statusText}; continuing to lite fallback.`
+      );
     }
 
+    let results = parseDdgHtml(html);
     console.log("[DDG Debug] Final parsed result count:", results.length);
+
+    // 2) Last resort: the lite endpoint has different markup and is sometimes
+    //    served when the main HTML endpoint is throttled.
+    if (results.length === 0) {
+      console.log("[DDG Debug] 0 results from HTML endpoint — trying lite endpoint.");
+      const liteResponse = await fetchDdg(`${DDG_LITE_ENDPOINT}?q=${encodedQuery}`, {
+        method: "GET",
+        headers: DDG_HEADERS,
+      });
+      console.log("[DDG Debug] Raw Response (lite):", liteResponse);
+      console.log("[DDG Debug] Raw Response status (lite):", liteResponse.status, liteResponse.statusText);
+
+      if (liteResponse.ok && liteResponse.status !== 202) {
+        const liteHtml = await liteResponse.text();
+        if (!looksLikeChallenge(liteHtml)) {
+          results = parseDdgHtml(liteHtml);
+          console.log("[DDG Debug] Lite parsed result count:", results.length);
+        }
+      }
+    }
+
+    if (results.length > 0) setCachedDdgResults(cacheKey, results);
     return results;
-  } catch (err) {
-    console.error("[DDG Debug] Search Error:", err);
-    console.error("[search] DuckDuckGo HTML fallback failed:", err.message);
+  } catch (error) {
+    console.error("[DDG Debug] Search Error:", error);
+    console.error("[search] DuckDuckGo search failed:", error?.message);
     return [];
   }
+}
+
+/**
+ * Formats search results for the tool message fed back to the LLM.
+ * Always returns a non-empty string: a JSON array of { title, url, snippet }
+ * snippets, or a clear fallback so the model never receives "" / undefined.
+ */
+function formatSearchResultsForTool(results) {
+  if (!Array.isArray(results) || results.length === 0) return DDG_FALLBACK_TEXT;
+  return JSON.stringify(
+    results.map((r) => ({
+      title: String(r?.title || ""),
+      url: String(r?.url || ""),
+      snippet: String(r?.snippet || ""),
+    }))
+  );
 }
 
 // Tool schema provided to the LLM so it can decide when to search.
@@ -283,6 +375,8 @@ const WEB_SEARCH_TOOL = {
       "Search the web via DuckDuckGo for real-time or up-to-date information. " +
       "Use this for: current events, live data (prices, sports scores, weather), " +
       "recent releases, or anything that might have changed after your training cutoff. " +
+      "Returns a JSON array of { title, url, snippet } objects, or a plain " +
+      "\"No recent results found...\" string when the search is empty. " +
       "Do NOT use for math, coding questions, general knowledge, or simple conversation.",
     parameters: {
       type: "object",
@@ -417,6 +511,10 @@ const AURA_BHAI_SYSTEM_PROMPT = `Be a friendly, expressive conversational AI wit
 
 // ── Model Configuration ──
 
+// Hard cap on a single image-generation request. flux.1-schnell normally
+// responds in seconds, so anything beyond this is a hung connection.
+const IMAGE_GEN_TIMEOUT_MS = 90 * 1000;
+
 // ── Chat Endpoint (SSE Streaming) ──
 app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
   const { messages, model, persona } = req.body;
@@ -478,7 +576,8 @@ app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
     targetModel = "nvidia/nemotron-3-super-120b-a12b";
     console.log(`[ALLROUNDER-FAST] Routing to ${targetModel}`);
   } else if (targetModel === "nvidia/nemotron-3.5-lightning-30b-a3b") {
-    // Aura Bhai
+    // Aura Bhai — served by the Nemotron Super 120B model.
+    targetModel = "nvidia/nemotron-3-super-120b-a12b";
     console.log(`[BHAI] Routing to ${targetModel}`);
   } else {
     // Unknown model name — fall back to Allrounder Deep Think
@@ -553,41 +652,70 @@ app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
 
       console.log(`[IMAGE] Generating image for prompt: "${promptText}"`);
       
-      const nvImgResponse = await fetch("https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.1-schnell", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${activeApiKey}`,
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify({
-          prompt: promptText,
-          seed: 0,
-          steps: 4,
-          cfg_scale: 0,
-          samples: 1,
-          height: 1024,
-          width: 1024
-        })
-      });
+      // Cap the upstream image request so a hung connection can't keep the SSE
+      // stream open forever; also abort it immediately if the client disconnects.
+      const imageAbort = new AbortController();
+      let imageTimedOut = false;
+      const imageTimer = setTimeout(() => {
+        imageTimedOut = true;
+        imageAbort.abort();
+      }, IMAGE_GEN_TIMEOUT_MS);
+      const onClientGone = () => imageAbort.abort();
+      if (upstreamAbort.signal.aborted) imageAbort.abort();
+      else upstreamAbort.signal.addEventListener("abort", onClientGone, { once: true });
 
-      if (!nvImgResponse.ok) {
-        throw new Error(`Image API error: ${nvImgResponse.status} ${nvImgResponse.statusText}`);
+      try {
+        const nvImgResponse = await fetch("https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.1-schnell", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${activeApiKey}`,
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          body: JSON.stringify({
+            prompt: promptText,
+            seed: 0,
+            steps: 4,
+            cfg_scale: 0,
+            samples: 1,
+            height: 1024,
+            width: 1024
+          }),
+          signal: imageAbort.signal,
+        });
+
+        if (!nvImgResponse.ok) {
+          throw new Error(`Image API error: ${nvImgResponse.status} ${nvImgResponse.statusText}`);
+        }
+
+        const imgData = await nvImgResponse.json();
+        if (!imgData.artifacts || !imgData.artifacts[0] || !imgData.artifacts[0].base64) {
+          throw new Error("Invalid response from Image API: missing artifacts");
+        }
+
+        // Convert base64 to a data URL
+        const imageUrl = `data:image/jpeg;base64,${imgData.artifacts[0].base64}`;
+
+        // Simulate streaming for the frontend UI by sending it as a single chunk
+        res.write(`data: ${JSON.stringify({ content: `![Generated Image](${imageUrl})` })}\n\n`);
+        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+        res.end();
+        return;
+      } catch (imgErr) {
+        if (imgErr.name === "AbortError") {
+          if (imageTimedOut) {
+            const timeoutErr = new Error(`Image generation timed out after ${IMAGE_GEN_TIMEOUT_MS / 1000}s. Please try again.`);
+            timeoutErr.code = "IMAGE_TIMEOUT";
+            throw timeoutErr;
+          }
+          // Client already disconnected — there's no one to report the error to.
+          if (clientGone) return;
+        }
+        throw imgErr;
+      } finally {
+        clearTimeout(imageTimer);
+        upstreamAbort.signal.removeEventListener("abort", onClientGone);
       }
-
-      const imgData = await nvImgResponse.json();
-      if (!imgData.artifacts || !imgData.artifacts[0] || !imgData.artifacts[0].base64) {
-        throw new Error("Invalid response from Image API: missing artifacts");
-      }
-
-      // Convert base64 to a data URL
-      const imageUrl = `data:image/jpeg;base64,${imgData.artifacts[0].base64}`;
-      
-      // Simulate streaming for the frontend UI by sending it as a single chunk
-      res.write(`data: ${JSON.stringify({ content: `![Generated Image](${imageUrl})` })}\n\n`);
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-      res.end();
-      return;
     }
 
     let systemPromptText = persona || AURA_SYSTEM_PROMPT;
@@ -694,14 +822,12 @@ app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
             res.write(`data: ${JSON.stringify({ searching: true, query: searchQuery })}\n\n`);
 
             const results = await searchDuckDuckGo(searchQuery);
-            searchSources = results;
+            searchSources = Array.isArray(results) ? results : [];
 
-            // Feed the search results back as a tool message
-            const toolResultContent = results.length > 0
-              ? results.map((r, i) =>
-                  `[${i + 1}] ${r.title}\nURL: ${r.url}\n${r.snippet}`
-                ).join("\n\n")
-              : "No recent results found for this query on DuckDuckGo.";
+            // Feed the results back as a tool message. The model receives a
+            // JSON array of { title, url, snippet } objects so it gets
+            // unambiguous grounding data, or the fallback string when empty.
+            const toolResultContent = formatSearchResultsForTool(results);
 
             const callId = call.id || "call_search_1";
             conversationMessages = [
@@ -724,7 +850,9 @@ app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
               },
             ];
 
-            console.log(`[search] Injected ${results.length} result(s) into context.`);
+            console.log(
+              `[search] Injected ${results.length} result(s) into context as ${results.length > 0 ? "JSON snippets" : "fallback text"}.`
+            );
           }
         }
       } catch (probeErr) {
@@ -872,6 +1000,11 @@ app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
       } else {
         errorMsg = `Image analysis failed: ${realErrorForClient}`;
       }
+    } else if (err.code === "IMAGE_TIMEOUT") {
+      // Report a hung upstream image request as a timeout, not a generic failure.
+      errorMsg = err.message;
+    } else if (isImageRequest) {
+      errorMsg = "Image generation failed. Please try again.";
     } else if (err.status === 429) {
       errorMsg = "Rate limit exceeded. Please wait a moment.";
     } else if (err.status === 401) {

@@ -352,8 +352,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!canvas || !window.THREE) return;
 
   const scene = new THREE.Scene();
+  // Cap the device pixel ratio: a 3x-DPR phone would otherwise render a
+  // multi-megapixel frame on every tick, which drains battery for a purely
+  // decorative backdrop.
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, -1);
 
@@ -427,15 +430,32 @@ document.addEventListener('DOMContentLoaded', () => {
     uniforms.resolution.value = [width, height];
   }
 
+  let rafId = null;
   function animate() {
     uniforms.time.value += 0.01;
     renderer.render(scene, camera);
-    requestAnimationFrame(animate);
+    rafId = requestAnimationFrame(animate);
   }
 
   window.addEventListener("resize", handleResize);
   handleResize();
-  animate();
+
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    // Honour the preference: draw one static frame instead of an endless loop.
+    renderer.render(scene, camera);
+  } else {
+    animate();
+    // Pause rendering whenever the tab/app is backgrounded — phones keep
+    // background tabs alive and would otherwise keep the GPU busy.
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      } else if (rafId === null) {
+        animate();
+      }
+    });
+  }
 })();
 
 console.log("%cMade with ❤️ by Aarav", "color: #7c5cff; font-size: 24px; font-weight: bold; background: #0a0a0a; padding: 10px; border-radius: 5px; border: 1px solid #7c5cff;");

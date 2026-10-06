@@ -497,7 +497,7 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
 .sidebar-recent-delete:focus-visible { opacity: 1; }
 .sidebar-recent-delete:hover { background: rgba(255, 90, 90, 0.15); color: #ff6b6b; }
 /* Touch devices have no hover state — keep the delete tappable at rest. */
-@media (hover: none) { .sidebar-recent-delete { opacity: 0.5; } }
+@media (hover: none) { .sidebar-recent-delete { width: 34px; height: 34px; opacity: 0.55; } }
 .sidebar-divider { height: 1px; margin: var(--s1) 3px; background: var(--hairline); }
 
 /* ── Upgrade to Pro (premium glass card) ───────────────────────────── */
@@ -1456,9 +1456,9 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
 
   /* ── Floating pill header ── */
   .chat-header {
-    top: 8px;
+    top: max(8px, env(safe-area-inset-top, 8px));
     height: 52px;
-    margin: 8px 10px 0;
+    margin: max(8px, env(safe-area-inset-top, 8px)) 10px 0;
     padding: 0 8px 0 10px;
     border-radius: 18px;
     border: 1px solid rgba(255,255,255,0.07);
@@ -1486,7 +1486,7 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
   .chat-ambient .bg-orb-2 { right: -40%; width: 88vw; height: 88vw; }
 
   /* ── Empty state ── */
-  #empty-state { min-height: calc(100dvh - 194px); padding: 62px 0 30px; }
+  #empty-state { min-height: calc(100dvh - 194px - env(safe-area-inset-top, 0px)); padding: 62px 0 30px; }
   .welcome-overline { margin-bottom: 15px; }
   .welcome-heading-container { margin-bottom: var(--s4); }
   /* Slightly tighter clamp so greeting fits without wrapping on 360px phones */
@@ -1503,7 +1503,7 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
 
   /* ── Messages ── */
   #chat-messages { padding-top: 30px; }
-  .message-row { gap: 9px; margin-bottom: 38px !important; }
+  .message-row { gap: 9px; margin-bottom: 42px !important; }
   .message-avatar { width: 26px !important; height: 26px !important; border-radius: 9px !important; font-size: 13px !important; }
   .user-bubble { max-width: 88% !important; font-size: 13px !important; }
   .ai-bubble { padding: 11px 13px !important; font-size: 13.5px !important; }
@@ -1517,8 +1517,8 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
   .answer-content table { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
   /* ── AI action bar — bounded to viewport width ── */
-  .ai-action-bar { left: 36px; bottom: -34px; gap: 4px; max-width: calc(100vw - 48px); }
-  .action-btn { width: 30px !important; min-width: 30px !important; height: 30px !important; min-height: 30px !important; }
+  .ai-action-bar { left: 36px; bottom: -38px; gap: 4px; max-width: calc(100vw - 52px); }
+  .action-btn { width: 34px !important; min-width: 34px !important; height: 34px !important; min-height: 34px !important; }
 
   /* ── Composer ── */
   .chat-composer-area {
@@ -1551,10 +1551,12 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
   .web-search-chip { max-width: min(200px, calc(50vw - 20px)); }
   .web-search-chips { max-width: 100%; }
 
-  /* ── Scroll-to-bottom button ── */
+  /* ── Scroll-to-bottom button ──
+     float above the fixed composer; `!important` is required because the
+     legacy rules in styles.css use it and would otherwise win the cascade. */
   #scroll-to-bottom-btn {
-    right: max(16px, env(safe-area-inset-right, 16px));
-    bottom: max(118px, calc(108px + env(safe-area-inset-bottom, 0px)));
+    right: max(16px, env(safe-area-inset-right, 16px)) !important;
+    bottom: max(150px, calc(140px + env(safe-area-inset-bottom, 0px))) !important;
   }
 
   /* ── Modals: full bottom sheet ── */
@@ -1566,9 +1568,18 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
     border-radius: 22px 22px 0 0;
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
+  /* A 16px field stops iOS Safari from auto-zooming the whole sheet on focus. */
+  .history-search-input { height: 42px; font-size: 16px; }
+  .modal-text-button { min-height: 42px; }
+  .modal-close { width: 40px; height: 40px; }
   #personality-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .canvas-panel { inset: 0; width: 100%; border: 0; border-radius: 0; }
   .canvas-backdrop { display: none !important; }
+
+  /* ── Keep decorative motion from burning battery ── */
+  .chat-ambient .bg-orb,
+  .chat-ambient .bg-prism,
+  .welcome-heading-container::before { animation: none; }
 }
 
 /* ── Short viewports ───────────────────────────────────────────────────
@@ -1627,6 +1638,25 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
   #text-input-bar { min-height: 52px; border-radius: 20px !important; }
 }
 
+/* Touch screens latch :hover after a tap — drop the lift so a tapped
+   suggestion card doesn't stay stuck mid-hover. */
+@media (hover: none) {
+  .category-chip.suggestion-card:hover { transform: none; }
+}
+
+/* ── Short landscape phones ─────────────────────────────────────────────
+   On a landscape handset the greeting and cards cannot all fit vertically,
+   so drop the copy and pack the suggestions into two compact columns. */
+@media (max-width: 900px) and (max-height: 480px) and (orientation: landscape) {
+  #empty-state { min-height: auto; padding: 44px 0 22px; }
+  .welcome-overline,
+  .empty-subtitle { display: none; }
+  .welcome-heading-container { margin-bottom: var(--s2); }
+  .suggestion-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .category-chip.suggestion-card { min-height: 0; }
+  .suggestion-grid .category-chip:nth-child(n) { animation: none; }
+}
+
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition-duration: 0.01ms !important; } }
 
 /* Utility Classes replacing Tailwind */
@@ -1663,6 +1693,11 @@ body.chat-page ::selection { background: rgba(124, 107, 255, 0.28); color: #fff;
 .history-modal-item-delete { display: flex; flex: 0 0 auto; width: 32px; height: 32px; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 999px; background: transparent; color: var(--ink-3); cursor: pointer; transition: color 160ms var(--ease-out), background 160ms var(--ease-out); }
 .history-modal-item-delete:hover { color: #ff6b6b; background: rgba(255, 255, 255, 0.06); }
 .history-modal-item-delete:focus-visible { outline: 2px solid var(--accent-soft); outline-offset: 1px; }
+/* Comfortable thumb target on phones. Declared after the base rule above so
+   the larger size actually wins the cascade. */
+@media (max-width: 767px) {
+  .history-modal-item-delete { width: 40px; height: 40px; }
+}
 
 /* Lightbox specific */
 .lightbox-modal { position: fixed; inset: 0; z-index: 150; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.8); padding: 1.25rem; display: flex; }

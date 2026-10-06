@@ -17,8 +17,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/atom-one-dark.min.css" />
-    <link rel="stylesheet" href="/css/styles.css?v=19" />
-    <link rel="stylesheet" href="/css/chat.css?v=19" />
+    <link rel="stylesheet" href="/css/styles.css?v=20" />
+    <link rel="stylesheet" href="/css/chat.css?v=20" />
 
 
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
@@ -203,7 +203,7 @@
               <button id="attach-btn" class="composer-button" type="button" aria-label="Attach files" title="Attach files">
                 <span class="material-symbols-outlined">attach_file</span>
               </button>
-              <textarea id="chat-input" rows="1" maxlength="4000" placeholder="Ask Aura anything..." aria-label="Ask Aura anything..."></textarea>
+              <textarea id="chat-input" rows="1" maxlength="4000" placeholder="Ask Aura anything..." aria-label="Ask Aura anything..." enterkeyhint="send"></textarea>
               <button id="mic-btn" class="composer-button" type="button" aria-label="Use voice input" title="Use voice input">
                 <span class="material-symbols-outlined">mic</span>
               </button>
@@ -242,7 +242,7 @@
         <div class="history-toolbar">
           <label class="history-search-wrap">
             <span class="material-symbols-outlined history-search-icon">search</span>
-            <input id="history-search-input" class="history-search-input" type="search" autocomplete="off" placeholder="Search conversations" aria-label="Search conversations" />
+            <input id="history-search-input" class="history-search-input" type="search" autocomplete="off" placeholder="Search conversations" aria-label="Search conversations" enterkeyhint="search" />
           </label>
           <button id="delete-all-history-btn" class="modal-text-button" type="button">Clear all</button>
         </div>
