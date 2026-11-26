@@ -174,11 +174,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   menuBtn.addEventListener('click', () => {
     overlay.style.display = 'flex';
+    document.body.classList.add('menu-open');
     requestAnimationFrame(() => overlay.classList.add('open'));
   });
 
   function closeMenu() {
     overlay.classList.remove('open');
+    document.body.classList.remove('menu-open');
     setTimeout(() => { overlay.style.display = 'none'; }, 300);
   }
 

@@ -71,6 +71,11 @@
   align-items: center;
   gap: 0.5rem;
   max-width: calc(100vw - 2rem);
+  /* A fixed element with both top and bottom set stretches to fill the gap.
+     Keep the toast intrinsically sized so a stale offset rule can never turn
+     it into a full-height column. */
+  height: fit-content;
+  max-height: calc(100dvh - 2rem);
 }
 .synapse-toast.show {
   opacity: 1;
@@ -2188,12 +2193,26 @@ header {
 @media (max-width: 767px) {
   .synapse-toast {
     top: calc(4.5rem + env(safe-area-inset-top, 0px));
-    max-width: calc(100vw - 2rem);
+    /* The 640px rule below anchors the toast with `bottom`; without this
+       reset both offsets apply and the fixed element stretches to a
+       full-height column. */
+    bottom: auto;
+    /* Centre with auto margins rather than right:50%, which would cap the
+       shrink-to-fit width at half the viewport and force needless wraps. */
+    right: max(1rem, env(safe-area-inset-right, 1rem));
+    left: max(1rem, env(safe-area-inset-left, 1rem));
+    width: fit-content;
+    margin-inline: auto;
+    transform: translateY(-8px);
+    max-width: min(calc(100vw - 2rem), 420px);
     font-size: 0.8rem;
     padding: 0.6rem 1.1rem;
     white-space: normal;
     text-align: center;
     border-radius: 16px;
+  }
+  .synapse-toast.show {
+    transform: translateY(0);
   }
 }
 
