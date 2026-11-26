@@ -565,23 +565,23 @@ app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
     console.log(`[IMAGE GEN] Routing to ${targetModel}`);
   } else if (targetModel === "minimax/minimax-m2.7") {
     // Aura Allrounder — Deep Think mode
-    targetModel = "meta/muse-glimmer-30b";
+    targetModel = "stepfun-ai/step-5-preview";
     console.log(`[ALLROUNDER-DEEP] Routing to ${targetModel}`);
   } else if (targetModel === "openai/gpt-oss-120b") {
     // Aura Summary
-    targetModel = "nvidia/nemotron-3-super-120b-a12b";
+    targetModel = "nvidia/nemotron-3.5-super-vl-120b-a12b";
     console.log(`[SUMMARY] Routing to ${targetModel}`);
   } else if (targetModel === "laguna-xs-2.1") {
     // Aura Allrounder (Fast)
-    targetModel = "nvidia/nemotron-3-super-120b-a12b";
+    targetModel = "nvidia/nemotron-3.5-super-vl-120b-a12b";
     console.log(`[ALLROUNDER-FAST] Routing to ${targetModel}`);
   } else if (targetModel === "nvidia/nemotron-3.5-lightning-30b-a3b") {
-    // Aura Bhai — served by the Nemotron Super 120B model.
-    targetModel = "nvidia/nemotron-3-super-120b-a12b";
+    // Aura Bhai — served by the Nemotron 3.5 Super VL 120B model.
+    targetModel = "nvidia/nemotron-3.5-super-vl-120b-a12b";
     console.log(`[BHAI] Routing to ${targetModel}`);
   } else {
     // Unknown model name — fall back to Allrounder Deep Think
-    targetModel = "meta/muse-glimmer-30b";
+    targetModel = "stepfun-ai/step-5-preview";
     console.log(`[FALLBACK] Unknown model, routing to ${targetModel}`);
   }
 
@@ -771,7 +771,7 @@ app.post("/api/chat", verifyFirebaseToken, rateLimit, async (req, res) => {
     };
 
     // Larger output budget for the big NVIDIA text models.
-    if (targetModel === "nvidia/nemotron-3-super-120b-a12b") {
+    if (targetModel === "nvidia/nemotron-3.5-super-vl-120b-a12b") {
       baseParams.max_tokens = 8192;
     }
 

@@ -84,6 +84,11 @@ html {
   background: var(--paper-3);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* The oversized hero glows used to extend past the viewport and made the
+     whole page horizontally pannable (which clipped the floating navbar).
+     `clip` contains them without creating a scroll container. */
+  overflow-x: hidden;
+  overflow-x: clip;
 }
 @media (max-width: 640px) {
   html { scroll-padding-top: calc(72px + env(safe-area-inset-top, 0px)); }
@@ -94,6 +99,7 @@ body {
   color: var(--ink);
   font-family: var(--font-sans);
   overflow-x: hidden;
+  overflow-x: clip;
   min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -362,12 +368,25 @@ body {
   z-index: 1000;
   display: flex;
   justify-content: center;
+  /* Keep the gap above the pill opaque so page content scrolling underneath
+     does not peek through it. */
+  --nav-top-gap: max(1.25rem, env(safe-area-inset-top, 1.25rem));
   padding: 1.25rem 1rem;
   pointer-events: none;
   /* Safe area support for notched phones / installed PWA status bar */
-  padding-top: max(1.25rem, env(safe-area-inset-top));
+  padding-top: var(--nav-top-gap);
   padding-left: max(1rem, env(safe-area-inset-left));
   padding-right: max(1rem, env(safe-area-inset-right));
+}
+.navbar-shell::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: var(--nav-top-gap);
+  background: var(--paper-0);
+  pointer-events: none;
 }
 
 .navbar {
@@ -1065,6 +1084,8 @@ body {
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 .mobile-nav-overlay.open { opacity: 1; }
+/* Lock the page behind the full-screen menu so it cannot scroll underneath. */
+body.menu-open { overflow: hidden; }
 .mobile-nav-close {
   position: absolute;
   top: max(1.75rem, env(safe-area-inset-top, 1.75rem));
@@ -1293,6 +1314,12 @@ body {
 
 /* ── Mobile breakpoint ── */
 @media (max-width: 640px) {
+  /* The auth card is taller than a phone viewport once the keyboard opens;
+     centring it in a scroll container clips the top and makes the first
+     fields unreachable. Start it at the top and let the sheet scroll. */
+  #auth-modal { align-items: flex-start !important; }
+  #auth-modal .auth-card { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+
   /* + safe-area keeps the hero clear of the floating pill on notched phones */
   .hero { padding: calc(clamp(6rem, 15vw, 9rem) + env(safe-area-inset-top, 0px)) 1.15rem clamp(2.5rem, 5vw, 4rem); }
   .features-grid,
@@ -1322,7 +1349,15 @@ body {
     padding: 0 0.5rem 0 1rem;
     border-radius: 40px;
   }
-  .navbar-shell { padding: 0.75rem 0.85rem; }
+  /* Keep notch/status-bar insets: the shorthand used to wipe out the
+     safe-area padding declared on the base rule. */
+  .navbar-shell {
+    --nav-top-gap: max(0.75rem, env(safe-area-inset-top, 0px));
+    padding: var(--nav-top-gap)
+      max(0.85rem, env(safe-area-inset-right, 0px))
+      0.75rem
+      max(0.85rem, env(safe-area-inset-left, 0px));
+  }
   .logo-text { font-size: 0.95rem; }
 
   /* Hero actions: stack on very small phones */

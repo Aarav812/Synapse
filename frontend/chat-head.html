@@ -14,8 +14,31 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/atom-one-dark.min.css" />
-    <link rel="stylesheet" href="/css/styles.css?v=19" />
-    <link rel="stylesheet" href="/css/chat.css?v=19" />
+    <link rel="stylesheet" href="/css/styles.css?v=22" />
+    <link rel="stylesheet" href="/css/chat.css?v=22" />
+
+    <!-- Defensive toast sizing: keep the toast a compact pill even if an
+         older cached stylesheet still applies both top and bottom offsets. -->
+    <style>
+      .synapse-toast {
+        height: fit-content !important;
+        max-height: calc(100dvh - 2rem) !important;
+      }
+      @media (max-width: 767px) {
+        .synapse-toast {
+          top: calc(4.5rem + env(safe-area-inset-top, 0px)) !important;
+          bottom: auto !important;
+          left: max(1rem, env(safe-area-inset-left, 1rem)) !important;
+          right: max(1rem, env(safe-area-inset-right, 1rem)) !important;
+          width: fit-content !important;
+          margin-inline: auto !important;
+          transform: translateY(-8px) !important;
+        }
+        .synapse-toast.show {
+          transform: translateY(0) !important;
+        }
+      }
+    </style>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
